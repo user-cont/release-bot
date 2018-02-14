@@ -12,12 +12,13 @@ to change, but right now bot will build sdist and then wheels for python2 and fo
 # Configuration
 Configuration is in a form of a yaml file. You can specify your config using `-c file.yaml` or `--configuration file.yaml`. If you do not specify it using an argument, bot will try to find `conf.yaml` in current working directory.
 Here are the configuration options:
+
 | Option        | Meaning       | Required      |
-| ------------- |:-------------:|:-------------:| 
-| repository_name     | Name of your Github repository  | Yes |
-| repository_owner    | Owner of the repository    		| Yes |
-| github_token		  | [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)   | Yes |
-| refresh_interval	  | Time in seconds betwwen checks on repository. Default is 180 | No |
+|------------- |-------------|-------------| 
+| `repository_name`     | Name of your Github repository  | Yes |
+| `repository_owner`    | Owner of the repository    		| Yes |
+| `github_token`		  | [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)   | Yes |
+| `refresh_interval`	  | Time in seconds betwwen checks on repository. Default is 180 | No |
 
 Sample config can be found in this repository
 
