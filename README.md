@@ -28,7 +28,8 @@ Best option for this is creating a github account for this bot so you can keep t
 This requires that you have following installed:
 * twine - `pip install twine`
 * wheel - for both versions of python
-⋅⋅* `pip install wheel`
-⋅⋅* `pip3 install wheel`
+  * `pip install wheel`
+  * `pip3 install wheel`
+  
 This + the bot.py imports. You also have to setup your PyPi login details in `$HOME/.pypirc` as described in [PyPi documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account)
 
