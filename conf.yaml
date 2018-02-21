@@ -4,3 +4,5 @@ repository_owner: owner
 github_token: xxxxxxxxxxxxxxxxxxxxxxxxx
 # time in seconds during checks for new releases
 refresh_interval: 300
+fedora_branches:
+  - f27
