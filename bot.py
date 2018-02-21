@@ -159,7 +159,7 @@ def release_in_fedora(project_root, new_version):
     debug_print(0, output.decode('utf-8').strip())
     if p.returncode != 0:
         err = err.decode('utf-8').strip()
-        debug_print(2, "Cloning fedora repository failed:\n" + err)
+        debug_print(2, "Retrieving sources failed:\n" + err)
         sys.exit(1)
 
     # copy new spec file
@@ -179,7 +179,7 @@ def release_in_fedora(project_root, new_version):
     debug_print(0, output.decode('utf-8').strip())
     if p.returncode != 0:
         err = err.decode('utf-8').strip()
-        debug_print(2, "Fetching new source from PyPi failed:\n" + err)
+        debug_print(2, "Retrieving new sources failed:\n" + err)
         sys.exit(1)
 
     # add new sources
@@ -220,7 +220,7 @@ def release_in_fedora(project_root, new_version):
     debug_print(0, output.decode('utf-8').strip())
     if p.returncode != 0:
         err = err.decode('utf-8').strip()
-        debug_print(2, "Committing and building failed:\n" + err)
+        debug_print(2, "Committing or building failed:\n" + err)
         sys.exit(1)
 
     # cycle through other branches and merge the changes there, push, build
@@ -235,7 +235,7 @@ def release_in_fedora(project_root, new_version):
         debug_print(0, output.decode('utf-8').strip())
         if p.returncode != 0:
             err = err.decode('utf-8').strip()
-            debug_print(2, "Merging on branch " + branch + " failed:\n" + err)
+            debug_print(2, "Merging od building on branch " + branch + " failed:\n" + err)
             sys.exit(1)
 
 
