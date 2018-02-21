@@ -17,6 +17,7 @@ conf = {"repository_name": '',
         "refresh_interval": 3 * 60,
         "debug": False,
         "configuration": '',
+        "fedora": False,
         "fedora_branches": []}
 required_items = ['repository_name', 'repository_owner', 'github_token']
 api_endpoint = "https://api.github.com/graphql"
@@ -29,6 +30,7 @@ def print_help():
     \t -h, --help\t Displays this help
     \t -d, --debug\t Turns on debugging output
     \t -c, --configuration\t Uses custom YAML configuration
+    \t --fedora\t Enable releasing on Fedora
     """)
     sys.exit(0)
 
@@ -54,6 +56,8 @@ def parse_arguments():
                 debug_print(2, "Supplied configuration file is not found:" + path)
                 sys.exit(1)
             conf['configuration'] = path
+        elif opt == '--fedora':
+            conf['fedora'] = True
 
 
 def load_configuration():
@@ -81,7 +85,6 @@ def send_query(query):
     query = {"query": 'query {repository(owner: "' + conf['repository_owner'] + '", name: "' + conf[
         'repository_name'] + '") {' + query + '}}'}
     headers = {'Authorization': 'token %s' % conf['github_token']}
-    debug_print(message=str(query))
     return requests.post(url=api_endpoint, json=query, headers=headers)
 
 
@@ -112,55 +115,43 @@ def get_latest_version_pypi():
         return r.json()['info']['version']
     else:
         debug_print(2, "Pypi package doesn't exist:\n" + r.text)
+        sys.exit(1)
+
+
+def shell_command(workdir, cmd, error_message):
+    p = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        cwd=workdir)
+    output, err = p.communicate()
+    debug_print(0, output.decode('utf-8').strip())
+    if p.returncode != 0:
+        err = err.decode('utf-8').strip()
+        debug_print(2, error_message + "\n" + err)
+        sys.exit(1)
 
 
 def release_on_pypi(project_root):
     if os.path.isdir(project_root):
-        p = subprocess.Popen(
-            "cd " + project_root + " && python setup.py sdist && python setup.py bdist_wheel && python3 setup.py bdist_wheel && twine upload dist/*",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True)
-        output, err = p.communicate()
-        debug_print(0, output.decode('utf-8').strip())
-        if p.returncode != 0:
-            err = err.decode('utf-8').strip()
-            debug_print(2, "PyPi release failed for some reason. Here's why:\n" + err)
-            sys.exit(1)
+        shell_command(project_root,
+                      "python setup.py sdist && python setup.py bdist_wheel && python3 setup.py bdist_wheel && twine upload dist/*",
+                      "PyPi release failed for some reason. Here's why:")
 
 
 def release_in_fedora(project_root, new_version):
     tmp = tempfile.TemporaryDirectory()
 
     # clone the repository from dist-git and change into that directory and switch to master
-    p = subprocess.Popen(
-        "cd " + tmp.name + " && fedpkg clone " + conf['repository_name'] + " && cd " + conf[
-            "repository_name"] + " && fedpkg switch-branch master",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True)
-    output, err = p.communicate()
-    debug_print(0, output.decode('utf-8').strip())
-    if p.returncode != 0:
-        err = err.decode('utf-8').strip()
-        debug_print(2, "Cloning fedora repository failed:\n" + err)
-        sys.exit(1)
+    shell_command(tmp.name, "fedpkg clone " + conf['repository_name'] + " && cd " + conf[
+        "repository_name"] + " && fedpkg switch-branch master", "Cloning fedora repository failed:")
 
     # this is now source directory
     fedpkg_src = tmp.name + "/" + str(conf['repository_name'])
 
     # retrieve sources
-    p = subprocess.Popen(
-        "cd " + fedpkg_src + " && fedpkg sources",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True)
-    output, err = p.communicate()
-    debug_print(0, output.decode('utf-8').strip())
-    if p.returncode != 0:
-        err = err.decode('utf-8').strip()
-        debug_print(2, "Retrieving sources failed:\n" + err)
-        sys.exit(1)
+    shell_command(fedpkg_src, "fedpkg sources", "Retrieving sources failed:")
 
     # copy new spec file
     src = project_root + "/" + str(conf["repository_name"]) + ".spec"
@@ -170,19 +161,9 @@ def release_in_fedora(project_root, new_version):
     dir_listing = os.listdir(fedpkg_src)
 
     # get new source
-    p = subprocess.Popen(
-        "cd " + fedpkg_src + " && spectool -g *spec",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True)
-    output, err = p.communicate()
-    debug_print(0, output.decode('utf-8').strip())
-    if p.returncode != 0:
-        err = err.decode('utf-8').strip()
-        debug_print(2, "Retrieving new sources failed:\n" + err)
-        sys.exit(1)
+    shell_command(fedpkg_src, "spectool -g *spec", "Retrieving new sources failed:")
 
-    # add new sources
+    # find new sources
     dir_new_listing = os.listdir(fedpkg_src)
     sources = ""
     for item in dir_new_listing:
@@ -196,47 +177,34 @@ def release_in_fedora(project_root, new_version):
         tmp.cleanup()
         return
 
+    # add new sources
     cmd = "fedpkg new-sources " + sources
-    p = subprocess.Popen(
-        "cd " + fedpkg_src + " && " + cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True)
-    output, err = p.communicate()
-    debug_print(0, output.decode('utf-8').strip())
-    if p.returncode != 0:
-        err = err.decode('utf-8').strip()
-        debug_print(2, "Adding new sources failed:\n" + err)
-        sys.exit(1)
+    shell_command(fedpkg_src, cmd, "Adding new sources failed:")
 
     # commit this change and start a build
     commit_msg = "Update to " + new_version
-    p = subprocess.Popen(
-        "cd " + fedpkg_src + ' && fedpkg commit -m "' + commit_msg + '" && fedpkg push && fedpkg build',
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True)
-    output, err = p.communicate()
-    debug_print(0, output.decode('utf-8').strip())
-    if p.returncode != 0:
-        err = err.decode('utf-8').strip()
-        debug_print(2, "Committing or building failed:\n" + err)
-        sys.exit(1)
+    shell_command(fedpkg_src, 'fedpkg commit -m "' + commit_msg + '" && fedpkg push && fedpkg build',
+                  "Committing or building failed:")
 
     # cycle through other branches and merge the changes there, push, build
     for branch in conf['fedora_branches']:
-        p = subprocess.Popen(
-            "cd " + fedpkg_src + " && fedpkg switch-branch " + str(
-                branch) + " && git merge master && fedpkg push && fedpkg build",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True)
+        p = subprocess.Popen("fedpkg switch-branch " + str(
+            branch) + " && git merge master && fedpkg push && fedpkg build",
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             shell=True,
+                             cwd=fedpkg_src)
         output, err = p.communicate()
         debug_print(0, output.decode('utf-8').strip())
         if p.returncode != 0:
             err = err.decode('utf-8').strip()
-            debug_print(2, "Merging od building on branch " + branch + " failed:\n" + err)
-            sys.exit(1)
+            debug_print(1, "Merging od building on branch " + branch + " failed:\n" + err)
+            continue
+
+        # TODO: bodhi updates submission
+
+    # clean directory
+    tmp.cleanup()
 
 
 def get_latest_version_github():
@@ -304,10 +272,9 @@ def main():
         if len(r['data']['repository']['pullRequests']['edges']) == 0:
             break
         for edge in reversed(r['data']['repository']['pullRequests']['edges']):
-            print(edge['node']['title'])
             cursor = edge['cursor']
             if latest + ' release' == edge['node']['title'].lower():
-                print('found!')
+                debug_print(0, 'Found closed PR with PyPi release: "' + latest + ' release"')
                 found = True
     # now walk through PRs since the latest version and check for a new one
     while True:
@@ -318,7 +285,6 @@ def main():
             if len(r['data']['repository']['pullRequests']['edges']) <= 0:
                 break
             for edge in r['data']['repository']['pullRequests']['edges']:
-                print(edge['node']['title'])
                 cursor = edge['cursor']
                 if re.match('\d\.\d\.\d release', edge['node']['title'].lower()):
                     version = edge['node']['title'].split()
@@ -369,7 +335,12 @@ def main():
         if version_tuple(latest) < version_tuple(new_release['version']):
             debug_print(0, "Newer version on github, triggering PyPi release")
             release_on_pypi(new_release['fs_path'])
+            if conf['fedora']:
+                release_in_fedora(new_release['fs_path'], new_release['version'])
             new_release['tempdir'].cleanup()
+        else:
+            debug_print(0,
+                        "PyPi version " + latest + " | Github version " + get_latest_version_github() + " -> nothing to do")
         time.sleep(conf['refresh_interval'])
 
 
