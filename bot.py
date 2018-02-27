@@ -9,7 +9,7 @@ import os
 import getopt
 import yaml
 import subprocess
-import shutil
+import locale
 
 conf = {"repository_name": '',
         "repository_owner": '',
@@ -19,7 +19,8 @@ conf = {"repository_name": '',
         "configuration": '',
         "fedora": False,
         "fedora_branches": []}
-required_items = ['repository_name', 'repository_owner', 'github_token']
+required_items = {"all": ['repository_name', 'repository_owner', 'github_token'],
+                  "fedora": []}
 api_endpoint = "https://api.github.com/graphql"
 api3_endpoint = "https://api.github.com/"
 pypi_url = "https://pypi.python.org/pypi/"
@@ -42,7 +43,7 @@ def debug_print(level=0, message=""):
 
 
 def parse_arguments():
-    opts, args = getopt.getopt(sys.argv[1:], "hdc:", ["help", "debug", "configuration="])
+    opts, args = getopt.getopt(sys.argv[1:], "hdc:", ["help", "debug", "configuration=", "fedora"])
     for opt, arg in opts:
         if opt == '-h' or opt == '--help':
             print_help()
@@ -75,10 +76,14 @@ def load_configuration():
         if item in conf:
             conf[item] = file[item]
     # check if required items are present
-    for item in required_items:
-        if len(conf[item]) <= 0:
-            debug_print(2, "Item '" + item + "' is required in configuration!")
-            sys.exit(1)
+    parts_required = ["all"]
+    if conf['fedora']:
+        parts_required.append('fedora')
+    for part in parts_required:
+        for item in required_items[part]:
+            if len(conf[item]) <= 0:
+                debug_print(2, "Item '" + item + "' is required in configuration!")
+                sys.exit(1)
 
 
 def send_query(query):
@@ -118,6 +123,47 @@ def get_latest_version_pypi():
         sys.exit(1)
 
 
+# updates spec with new version and changelog for that version, changes release to 1
+def update_spec(spec_path, config_path, author_name, author_email):
+    if os.path.isfile(spec_path) and os.path.isfile(config_path):
+        # make changelog and get version
+        with open(config_path) as conf_file:
+            release_conf = yaml.load(conf_file)
+            # set changelog author
+            if 'author_name' in release_conf and 'author_email' in release_conf:
+                author_name = release_conf['author_name']
+                author_email = release_conf['author_email']
+            locale.setlocale(locale.LC_TIME, "en_US")
+            changelog = "* " + time.strftime("%a %b %d %Y") + " " + str(author_name) + " <" + str(author_email) + "> " + \
+                        release_conf['version'] + "-1\n"
+            # add entries
+            if 'changelog' in release_conf:
+                for item in release_conf['changelog']:
+                    changelog += "- " + item + "\n"
+            else:
+                changelog += "- " + release_conf['version'] + " release"
+        # change the version and add changelog in spec file
+        with open(spec_path, 'r+') as spec_file:
+            spec = spec_file.read()
+            # replace version
+            spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + release_conf['version'], spec)
+            # make release 1
+            spec = re.sub(r'(Release:\s*)([0-9]*)(.*)', r'\g<1>1\g<3>', spec)
+            # insert changelog
+            spec = re.sub(r'(%changelog\n)', r'\g<1>' + changelog + '\n', spec)
+            # write and close
+            spec_file.seek(0)
+            spec_file.write(spec)
+            spec_file.truncate()
+            spec_file.close()
+    else:
+        if not os.path.isfile(config_path):
+            debug_print(2, "release-conf.yaml is not found in repository root!\n")
+        else:
+            debug_print(2, "Spec file is not found in  dist-git repository!\n")
+        sys.exit(1)
+
+
 def shell_command(workdir, cmd, error_message):
     p = subprocess.Popen(
         cmd,
@@ -140,7 +186,7 @@ def release_on_pypi(project_root):
                       "PyPi release failed for some reason. Here's why:")
 
 
-def release_in_fedora(project_root, new_version):
+def release_in_fedora(project_root, new_version, author_name, author_email):
     tmp = tempfile.TemporaryDirectory()
 
     # clone the repository from dist-git and change into that directory and switch to master
@@ -153,10 +199,10 @@ def release_in_fedora(project_root, new_version):
     # retrieve sources
     shell_command(fedpkg_src, "fedpkg sources", "Retrieving sources failed:")
 
-    # copy new spec file
-    src = project_root + "/" + str(conf["repository_name"]) + ".spec"
-    dst = fedpkg_src + "/" + str(conf["repository_name"]) + ".spec"
-    shutil.copy(src, dst)
+    # update spec file
+    spec_path = fedpkg_src + "/" + str(conf["repository_name"]) + ".spec"
+    conf_path = project_root + "/release-conf.yaml"
+    update_spec(spec_path, conf_path, author_name, author_email)
 
     dir_listing = os.listdir(fedpkg_src)
 
@@ -185,6 +231,12 @@ def release_in_fedora(project_root, new_version):
     commit_msg = "Update to " + new_version
     shell_command(fedpkg_src, 'fedpkg commit -m "' + commit_msg + '" && fedpkg push && fedpkg build',
                   "Committing or building failed:")
+
+    # load branches
+    with open(conf_path, 'r') as release_conf_file:
+        release_conf = yaml.load(release_conf_file)
+        if 'fedora_branches' in release_conf:
+            conf['fedora_branches'] = release_conf['fedora_branches']
 
     # cycle through other branches and merge the changes there, push, build
     for branch in conf['fedora_branches']:
@@ -232,17 +284,20 @@ def get_latest_version_github():
 
 
 # checks closed PRs
-def walk_through_closed_prs(start='', direction='after'):
+def walk_through_closed_prs(start='', direction='after', which="last"):
     while True:
-        q = '''pullRequests(states: MERGED last: 5 ''' + (direction + ': "' + start + '"' if len(start) > 0 else '') + ''') {
+        q = '''pullRequests(states: MERGED ''' + which + ''': 5 ''' + (direction + ': "' + start + '"' if len(start) > 0 else '') + ''') {
           edges {
             cursor
             node {
               id
               title
-              mergedAt
               mergeCommit {
                 oid
+                author {
+                    name
+                    email
+                }
               }
             }
           }
@@ -276,12 +331,19 @@ def main():
             if latest + ' release' == edge['node']['title'].lower():
                 debug_print(0, 'Found closed PR with PyPi release: "' + latest + ' release"')
                 found = True
+                break
     # now walk through PRs since the latest version and check for a new one
     while True:
         found = False
-        new_release = {'version': '0.0.0', 'commitish': '', 'fs_path': '', 'tempdir': None}
-        while not found:
-            r = walk_through_closed_prs(cursor)
+        new_release = {'version': '0.0.0',
+                       'commitish': '',
+                       'merge_author_name': '',
+                       'merge_author_email': '',
+                       'fs_path': '',
+                       'tempdir': None,
+                       }
+        while True:
+            r = walk_through_closed_prs(cursor, which="first")
             if len(r['data']['repository']['pullRequests']['edges']) <= 0:
                 break
             for edge in r['data']['repository']['pullRequests']['edges']:
@@ -290,7 +352,10 @@ def main():
                     version = edge['node']['title'].split()
                     new_release['version'] = version[0]
                     new_release['commitish'] = edge['node']['mergeCommit']['oid']
+                    new_release['merge_author_name'] = edge['node']['mergeCommit']['author']['name']
+                    new_release['merge_author_email'] = edge['node']['mergeCommit']['author']['email']
                     found = True
+                    break
 
         # if found, make a new release on github
         # this has to be done using older github api because v4 doesn't support this yet
@@ -336,7 +401,9 @@ def main():
             debug_print(0, "Newer version on github, triggering PyPi release")
             release_on_pypi(new_release['fs_path'])
             if conf['fedora']:
-                release_in_fedora(new_release['fs_path'], new_release['version'])
+                debug_print(0, "Triggering Fedora release")
+                release_in_fedora(new_release['fs_path'], new_release['version'], new_release['merge_author_name'],
+                                  new_release['merge_author_email'])
             new_release['tempdir'].cleanup()
         else:
             debug_print(0,
