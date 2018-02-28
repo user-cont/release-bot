@@ -93,6 +93,9 @@ def load_configuration():
             if len(CONFIGURATION[item]) <= 0:
                 debug_print(2, f"Item {item!r} is required in configuration!")
                 sys.exit(1)
+    # make sure the types are right where it matters
+    str(CONFIGURATION['repository_name'])
+    str(CONFIGURATION['repository_owner'])
 
 
 def send_query(query):
@@ -133,11 +136,11 @@ def parse_changelog(previous_version, version, path):
 
 def get_latest_version_pypi():
     """Get latest version of the package from PyPi"""
-    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']!s}/json")
+    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']}/json")
     if response.status_code == 200:
         return response.json()['info']['version']
     else:
-        debug_print(2, f"Pypi package doesn't exist:\n{r.text}")
+        debug_print(2, f"Pypi package doesn't exist:\n{response.text}")
         sys.exit(1)
 
 
@@ -189,26 +192,30 @@ def update_spec(spec_path, config_path, author_name, author_email):
         sys.exit(1)
 
 
-def shell_command(work_directory, cmd, error_message):
+def shell_command(work_directory, cmd, error_message, fail=True):
     """
     Execute a shell command
 
     :param work_directory: A directory to execute the command in
     :param cmd: The shell command
     :param error_message: An error message to return in case of failure
+    :param fail: If failure should cause termination of the bot
+    :return: Boolean indicating success/failure
     """
-    shell = subprocess.Popen(
+    shell = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         shell=True,
-        cwd=work_directory)
-    output, err = shell.communicate()
-    debug_print(0, output.decode('utf-8').strip())
+        cwd=work_directory,
+        universal_newlines=True)
+    debug_print(0, f"{shell.args}\n{shell.stdout}")
     if shell.returncode != 0:
-        err = err.decode('utf-8').strip()
-        debug_print(2, error_message + "\n" + err)
-        sys.exit(1)
+        debug_print(2, f"{error_message}\n{shell.stderr}")
+        if fail:
+            sys.exit(1)
+        return False
+    return True
 
 
 def release_on_pypi(project_root):
@@ -217,11 +224,12 @@ def release_on_pypi(project_root):
 
     :param project_root: The root directory of the project
     """
+    error_message = "PyPi release failed for some reason. Here's why:"
     if os.path.isdir(project_root):
-        shell_command(project_root,
-                      ("python setup.py sdist && python setup.py bdist_wheel && "
-                       "python3 setup.py bdist_wheel && twine upload dist/*"),
-                      "PyPi release failed for some reason. Here's why:")
+        shell_command(project_root, "python setup.py sdist", error_message)
+        shell_command(project_root, "python setup.py bdist_wheel", error_message)
+        shell_command(project_root, "python3 setup.py bdist_wheel", error_message)
+        shell_command(project_root, "twine upload dist/*", error_message)
 
 
 def release_in_fedora(project_root, new_version, author_name, author_email):
@@ -235,18 +243,23 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
     """
     tmp = tempfile.TemporaryDirectory()
 
-    # clone the repository from dist-git and change into that directory and switch to master
-    shell_command(tmp.name, "fedpkg clone " + CONFIGURATION['repository_name'] + " && cd " + CONFIGURATION[
-        "repository_name"] + " && fedpkg switch-branch master", "Cloning fedora repository failed:")
+    # clone the repository from dist-git
+    shell_command(tmp.name,
+                  f"fedpkg clone {CONFIGURATION['repository_name']!r}",
+                  "Cloning fedora repository failed:")
 
     # this is now source directory
-    fedpkg_src = f"{tmp.name}/{CONFIGURATION['repository_name']!s}"
+    fedpkg_src = f"{tmp.name}/{CONFIGURATION['repository_name']!r}"
+    # make sure the current branch is master
+    shell_command(fedpkg_src,
+                  "fedpkg switch-branch master",
+                  "Switching to master failed:")
 
     # retrieve sources
     shell_command(fedpkg_src, "fedpkg sources", "Retrieving sources failed:")
 
     # update spec file
-    spec_path = f"{fedpkg_src}/{CONFIGURATION['repository_name']!s}.spec"
+    spec_path = f"{fedpkg_src}/{CONFIGURATION['repository_name']!r}.spec"
     conf_path = f"{project_root}/release-conf.yaml"
     update_spec(spec_path, conf_path, author_name, author_email)
 
@@ -261,7 +274,7 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
     for item in dir_new_listing:
         if item not in dir_listing:
             # this is a new file therefore it should be added to sources
-            sources += item + " "
+            sources += f"{item!r} "
 
     # if there are no new sources, abort update
     if len(sources.strip()) <= 0:
@@ -270,33 +283,42 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
         return
 
     # add new sources
-    cmd = "fedpkg new-sources " + sources
-    shell_command(fedpkg_src, cmd, "Adding new sources failed:")
+    shell_command(fedpkg_src, f"fedpkg new-sources {sources}", "Adding new sources failed:")
 
-    # commit this change and start a build
-    commit_msg = "Update to " + new_version
-    shell_command(fedpkg_src, 'fedpkg commit -m "' + commit_msg + '" && fedpkg push && fedpkg build',
-                  "Committing or building failed:")
+    # commit this change, push it and start a build
+    shell_command(fedpkg_src,
+                  f"fedpkg commit -m 'Update to {new_version}'",
+                  "Committing on master branch failed:")
+    shell_command(fedpkg_src, "fedpkg push", "Pushing master branch failed:")
+    shell_command(fedpkg_src, "fedpkg build", "Building master branch failed:")
 
     # load branches
     with open(conf_path, 'r') as release_conf_file:
         release_conf = yaml.load(release_conf_file)
         if 'fedora_branches' in release_conf:
-            CONFIGURATION['fedora_branches'] = release_conf['fedora_branches']
+            CONFIGURATION['fedora_branches'] = str(release_conf['fedora_branches'])
 
     # cycle through other branches and merge the changes there, push, build
     for branch in CONFIGURATION['fedora_branches']:
-        p = subprocess.Popen("fedpkg switch-branch " + str(
-            branch) + " && git merge master && fedpkg push && fedpkg build",
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE,
-                             shell=True,
-                             cwd=fedpkg_src)
-        output, err = p.communicate()
-        debug_print(0, output.decode('utf-8').strip())
-        if p.returncode != 0:
-            err = err.decode('utf-8').strip()
-            debug_print(1, f"Merging od building on branch {branch} failed:\n{err}")
+        success = shell_command(fedpkg_src,
+                                f"fedpkg switch-branch {branch!r}",
+                                f"Switching to branch {branch!r} failed:", fail=False)
+        if not success:
+            continue
+        success = shell_command(fedpkg_src,
+                                f"git merge master --ff-only",
+                                f"Merging master to branch {branch!r} failed:", fail=False)
+        if not success:
+            continue
+        success = shell_command(fedpkg_src,
+                                "fedpkg push",
+                                f"Pushing branch {branch!r} to Fedora failed:", fail=False)
+        if not success:
+            continue
+        success = shell_command(fedpkg_src,
+                                "fedpkg build",
+                                f"Building branch {branch!r} in Fedora failed:", fail=False)
+        if not success:
             continue
 
         # TODO: bodhi updates submission
@@ -417,9 +439,10 @@ def main():
                 if re.match(r'\d\.\d\.\d release', edge['node']['title'].lower()):
                     version = edge['node']['title'].split()
                     new_release['version'] = version[0]
-                    new_release['commitish'] = edge['node']['mergeCommit']['oid']
-                    new_release['merge_author_name'] = edge['node']['mergeCommit']['author']['name']
-                    new_release['merge_author_email'] = edge['node']['mergeCommit']['author']['email']
+                    merge_commit = edge['node']['mergeCommit']
+                    new_release['commitish'] = merge_commit['oid']
+                    new_release['merge_author_name'] = merge_commit['author']['name']
+                    new_release['merge_author_email'] = merge_commit['author']['email']
                     found = True
                     break
 
