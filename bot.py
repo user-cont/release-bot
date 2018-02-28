@@ -232,6 +232,81 @@ def release_on_pypi(project_root):
         shell_command(project_root, "twine upload dist/*", error_message)
 
 
+def update_package(fedpkg_root, project_root, new_version, author_name, author_email, branch):
+    """
+    Pulls in new source, patches spec file, commits,
+    pushes and builds new version on specified branch
+
+    :param fedpkg_root: The root of dist-git repository
+    :param project_root: The root directory of the project
+    :param new_version: New version number
+    :param author_name: Merge commit author
+    :param author_email: Merge commit author's email
+    :param branch: What Fedora branch is this
+    :return: True on success, False on failure
+    """
+    fail = True if branch.lower() == "master" else False
+
+    # retrieve sources
+    if not shell_command(fedpkg_root,
+                         "fedpkg sources",
+                         "Retrieving sources failed:",
+                         fail):
+        return False
+
+    # update spec file
+    spec_path = f"{fedpkg_root}/{CONFIGURATION['repository_name']!r}.spec"
+    conf_path = f"{project_root}/release-conf.yaml"
+    update_spec(spec_path, conf_path, author_name, author_email)
+
+    dir_listing = os.listdir(fedpkg_root)
+
+    # get new source
+    if not shell_command(fedpkg_root,
+                         "spectool -g *spec",
+                         "Retrieving new sources failed:",
+                         fail):
+        return False
+
+    # find new sources
+    dir_new_listing = os.listdir(fedpkg_root)
+    sources = ""
+    for item in dir_new_listing:
+        if item not in dir_listing:
+            # this is a new file therefore it should be added to sources
+            sources += f"{item!r} "
+
+    # if there are no new sources, abort update
+    if len(sources.strip()) <= 0:
+        debug_print(1, "There are no new sources, won't continue releasing to fedora")
+        return False
+
+    # add new sources
+    if not shell_command(fedpkg_root,
+                         f"fedpkg new-sources {sources}",
+                         "Adding new sources failed:",
+                         fail):
+        return False
+
+    # commit this change, push it and start a build
+    if not shell_command(fedpkg_root,
+                         f"fedpkg commit -m 'Update to {new_version}'",
+                         "Committing on master branch failed:",
+                         fail):
+        return False
+    if not shell_command(fedpkg_root,
+                         "fedpkg push",
+                         f"Pushing {branch!r} branch failed:",
+                         fail):
+        return False
+    if not shell_command(fedpkg_root,
+                         "fedpkg build",
+                         f"Building {branch!r} branch failed:",
+                         fail):
+        return False
+    return True
+
+
 def release_in_fedora(project_root, new_version, author_name, author_email):
     """
     Release project in Fedora
@@ -249,77 +324,53 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
                   "Cloning fedora repository failed:")
 
     # this is now source directory
-    fedpkg_src = f"{tmp.name}/{CONFIGURATION['repository_name']!r}"
+    fedpkg_root = f"{tmp.name}/{CONFIGURATION['repository_name']!r}"
     # make sure the current branch is master
-    shell_command(fedpkg_src,
+    shell_command(fedpkg_root,
                   "fedpkg switch-branch master",
                   "Switching to master failed:")
 
-    # retrieve sources
-    shell_command(fedpkg_src, "fedpkg sources", "Retrieving sources failed:")
-
-    # update spec file
-    spec_path = f"{fedpkg_src}/{CONFIGURATION['repository_name']!r}.spec"
-    conf_path = f"{project_root}/release-conf.yaml"
-    update_spec(spec_path, conf_path, author_name, author_email)
-
-    dir_listing = os.listdir(fedpkg_src)
-
-    # get new source
-    shell_command(fedpkg_src, "spectool -g *spec", "Retrieving new sources failed:")
-
-    # find new sources
-    dir_new_listing = os.listdir(fedpkg_src)
-    sources = ""
-    for item in dir_new_listing:
-        if item not in dir_listing:
-            # this is a new file therefore it should be added to sources
-            sources += f"{item!r} "
-
-    # if there are no new sources, abort update
-    if len(sources.strip()) <= 0:
-        debug_print(1, "There are no new sources, won't continue releasing to fedora")
+    result = update_package(fedpkg_root,
+                            project_root,
+                            new_version,
+                            author_name,
+                            author_email,
+                            "master")
+    if not result:
         tmp.cleanup()
         return
 
-    # add new sources
-    shell_command(fedpkg_src, f"fedpkg new-sources {sources}", "Adding new sources failed:")
-
-    # commit this change, push it and start a build
-    shell_command(fedpkg_src,
-                  f"fedpkg commit -m 'Update to {new_version}'",
-                  "Committing on master branch failed:")
-    shell_command(fedpkg_src, "fedpkg push", "Pushing master branch failed:")
-    shell_command(fedpkg_src, "fedpkg build", "Building master branch failed:")
-
     # load branches
+    conf_path = f"{project_root}/release-conf.yaml"
     with open(conf_path, 'r') as release_conf_file:
         release_conf = yaml.load(release_conf_file)
         if 'fedora_branches' in release_conf:
             CONFIGURATION['fedora_branches'] = str(release_conf['fedora_branches'])
 
-    # cycle through other branches and merge the changes there, push, build
+    # cycle through other branches and merge the changes there, or do them from scratch, push, build
     for branch in CONFIGURATION['fedora_branches']:
-        success = shell_command(fedpkg_src,
-                                f"fedpkg switch-branch {branch!r}",
-                                f"Switching to branch {branch!r} failed:", fail=False)
-        if not success:
+        if not shell_command(fedpkg_root,
+                             f"fedpkg switch-branch {branch!r}",
+                             f"Switching to branch {branch!r} failed:", fail=False):
             continue
-        success = shell_command(fedpkg_src,
-                                f"git merge master --ff-only",
-                                f"Merging master to branch {branch!r} failed:", fail=False)
-        if not success:
+        if not shell_command(fedpkg_root,
+                             f"git merge master --ff-only",
+                             f"Merging master to branch {branch!r} failed:", fail=False):
+            debug_print(0, f"Trying to make the changes on branch {branch!r} from scratch")
+            update_package(fedpkg_root,
+                           project_root,
+                           new_version,
+                           author_name,
+                           author_email,
+                           branch)
             continue
-        success = shell_command(fedpkg_src,
-                                "fedpkg push",
-                                f"Pushing branch {branch!r} to Fedora failed:", fail=False)
-        if not success:
+        if not shell_command(fedpkg_root,
+                             "fedpkg push",
+                             f"Pushing branch {branch!r} to Fedora failed:", fail=False):
             continue
-        success = shell_command(fedpkg_src,
-                                "fedpkg build",
-                                f"Building branch {branch!r} in Fedora failed:", fail=False)
-        if not success:
-            continue
+        shell_command(fedpkg_root,
+                      "fedpkg build",
+                      f"Building branch {branch!r} in Fedora failed:", fail=False)
 
         # TODO: bodhi updates submission
 
