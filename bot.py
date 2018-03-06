@@ -10,11 +10,12 @@ from datetime import datetime
 import time
 import zipfile
 import os
-import getopt
+import argparse
 import subprocess
 import locale
 import yaml
 import requests
+
 
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
@@ -31,17 +32,6 @@ API3_ENDPOINT = "https://api.github.com/"
 PYPI_URL = "https://pypi.python.org/pypi/"
 
 
-def print_help():
-    """Prints help statement"""
-    print("""USAGE: python bot.py [OPTIONS] [--configuration file]
-    \t -h, --help\t Displays this help
-    \t -d, --debug\t Turns on debugging output
-    \t -c, --configuration\t Uses custom YAML configuration
-    \t --fedora\t Enable releasing on Fedora
-    """)
-    sys.exit(0)
-
-
 def debug_print(level=0, message=""):
     """Wrapper for logging"""
     levels = ["[DEBUG]", "[WARNING]", "[ERROR]"]
@@ -51,22 +41,24 @@ def debug_print(level=0, message=""):
 
 def parse_arguments():
     """Parse application arguments"""
-    opts, args = getopt.getopt(sys.argv[1:], "hdc:", ["help", "debug", "configuration=", "fedora"])
-    for opt, arg in opts:
-        if opt == '-h' or opt == '--help':
-            print_help()
-        elif opt == '-d' or opt == '--debug':
-            CONFIGURATION['debug'] = True
-        elif opt == '-c' or opt == '--configuration':
-            path = arg
-            if not os.path.isabs(path):
-                path = os.path.join(os.getcwd(), path)
-            if not os.path.isfile(path):
-                debug_print(2, f"Supplied configuration file is not found:{path}")
-                sys.exit(1)
-            CONFIGURATION['configuration'] = path
-        elif opt == '--fedora':
-            CONFIGURATION['fedora'] = True
+    parser = argparse.ArgumentParser(description="Automatic releases bot")
+    parser.add_argument("-d", "--debug", help="turn on debugging output",
+                        action="store_true", default=False)
+    parser.add_argument("-c", "--configuration", help="use custom YAML configuration",
+                        default='')
+    parser.add_argument("--fedora", help="enable releasing on Fedora",
+                        action="store_true", default=False)
+
+    args = parser.parse_args()
+    if 'configuration' in args:
+        path = args.configuration
+        if not os.path.isabs(path):
+            args.configuration = os.path.join(os.getcwd(), path)
+        if not os.path.isfile(path):
+            debug_print(2, f"Supplied configuration file is not found:{path}")
+            sys.exit(1)
+    for key, value in vars(args).items():
+        CONFIGURATION[key] = value
 
 
 def load_configuration():
