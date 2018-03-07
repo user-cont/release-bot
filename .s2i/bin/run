@@ -1,0 +1,3 @@
+#!/bin/bash
+
+release-bot --debug --configuration=$HOME/conf.yaml
