@@ -41,7 +41,7 @@ Here are the possible options:
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
 | `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |  
 
-Sample config can be found in this repository.
+Sample config named `release-conf-example.yaml` can be found in this repository.
 
 # Requirements
 Releasing to PyPi requires to have `wheel` package both for python 2 and python 3, therefore please install `requirements.txt` with both versions of `pip`.

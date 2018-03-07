@@ -477,11 +477,12 @@ def version_tuple(version):
 def main():
     """Provides bot logic"""
     CONFIGURATION['logger'] = set_logging()
-    CONFIGURATION['logger'].info("Release bot reporting for duty!")
 
     parse_arguments()
     load_configuration()
     headers = {'Authorization': f"token {CONFIGURATION['github_token']}"}
+
+    CONFIGURATION['logger'].info("Release bot reporting for duty!")
 
     # check for closed merge requests
     latest = get_latest_version_pypi()
