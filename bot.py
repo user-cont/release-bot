@@ -13,9 +13,9 @@ import os
 import argparse
 import subprocess
 import locale
+import logging
 import yaml
 import requests
-
 
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
@@ -24,19 +24,13 @@ CONFIGURATION = {"repository_name": '',
                  "debug": False,
                  "configuration": '',
                  "fedora": False,
-                 "fedora_branches": []}
+                 "fedora_branches": [],
+                 "logger": None}
 REQUIRED_ITEMS = {"all": ['repository_name', 'repository_owner', 'github_token'],
                   "fedora": []}
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
 PYPI_URL = "https://pypi.python.org/pypi/"
-
-
-def debug_print(level=0, message=""):
-    """Wrapper for logging"""
-    levels = ["[DEBUG]", "[WARNING]", "[ERROR]"]
-    if CONFIGURATION['debug'] or level > 0:
-        print(f"{levels[level]} {message}\n", file=sys.stderr if level > 0 else sys.stdout)
 
 
 def parse_arguments():
@@ -55,10 +49,45 @@ def parse_arguments():
         if not os.path.isabs(path):
             args.configuration = os.path.join(os.getcwd(), path)
         if not os.path.isfile(path):
-            debug_print(2, f"Supplied configuration file is not found:{path}")
+            CONFIGURATION['logger'].error(
+                f"Supplied configuration file is not found: {args.configuration}")
             sys.exit(1)
+    if args.debug:
+        CONFIGURATION['logger'].setLevel(logging.DEBUG)
     for key, value in vars(args).items():
         CONFIGURATION[key] = value
+
+
+def set_logging(
+        logger_name="release-bot",
+        level=logging.INFO,
+        handler_class=logging.StreamHandler,
+        handler_kwargs=None,
+        msg_format='%(asctime)s.%(msecs).03d %(filename)-17s %(levelname)-6s %(message)s',
+        date_format='%H:%M:%S'):
+    """
+    Set personal logger for this library.
+    :param logger_name: str, name of the logger
+    :param level: int, see logging.{DEBUG,INFO,ERROR,...}: level of logger and handler
+    :param handler_class: logging.Handler instance, default is StreamHandler (/dev/stderr)
+    :param handler_kwargs: dict, keyword arguments to handler's constructor
+    :param msg_format: str, formatting style
+    :param date_format: str, date style in the logs
+    :return: logger instance
+    """
+    logger = logging.getLogger(logger_name)
+    # do we want to propagate to root logger?
+    # logger.propagate = False
+    logger.setLevel(level)
+
+    handler_kwargs = handler_kwargs or {}
+    handler = handler_class(**handler_kwargs)
+
+    formatter = logging.Formatter(msg_format, date_format)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    return logger
 
 
 def load_configuration():
@@ -69,7 +98,7 @@ def load_configuration():
         if os.path.isfile(path):
             CONFIGURATION['configuration'] = path
         else:
-            debug_print(2, "Cannot find valid configuration")
+            CONFIGURATION['logger'].error("Cannot find valid configuration")
             sys.exit(1)
     with open(CONFIGURATION['configuration'], 'r') as ymlfile:
         file = yaml.load(ymlfile)
@@ -83,7 +112,7 @@ def load_configuration():
     for part in parts_required:
         for item in REQUIRED_ITEMS[part]:
             if len(CONFIGURATION[item]) <= 0:
-                debug_print(2, f"Item {item!r} is required in configuration!")
+                CONFIGURATION['logger'].error(f"Item {item!r} is required in configuration!")
                 sys.exit(1)
     # make sure the types are right where it matters
     str(CONFIGURATION['repository_name'])
@@ -104,7 +133,7 @@ def detect_api_errors(response):
         msg = ""
         for err in response['errors']:
             msg += "\t" + err['message'] + "\n"
-        debug_print(2, "There are errors in github response:\n" + msg)
+        CONFIGURATION['logger'].error("There are errors in github response:\n" + msg)
         sys.exit(1)
 
 
@@ -132,7 +161,7 @@ def get_latest_version_pypi():
     if response.status_code == 200:
         return response.json()['info']['version']
     else:
-        debug_print(2, f"Pypi package doesn't exist:\n{response.text}")
+        CONFIGURATION['logger'].error(f"Pypi package doesn't exist:\n{response.text}")
         sys.exit(1)
 
 
@@ -178,9 +207,9 @@ def update_spec(spec_path, config_path, author_name, author_email):
             spec_file.close()
     else:
         if not os.path.isfile(config_path):
-            debug_print(2, "release-conf.yaml is not found in repository root!\n")
+            CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
         else:
-            debug_print(2, "Spec file is not found in  dist-git repository!\n")
+            CONFIGURATION['logger'].error("Spec file is not found in  dist-git repository!\n")
         sys.exit(1)
 
 
@@ -201,9 +230,9 @@ def shell_command(work_directory, cmd, error_message, fail=True):
         shell=True,
         cwd=work_directory,
         universal_newlines=True)
-    debug_print(0, f"{shell.args}\n{shell.stdout}")
+    CONFIGURATION['logger'].debug(f"{shell.args}\n{shell.stdout}")
     if shell.returncode != 0:
-        debug_print(2, f"{error_message}\n{shell.stderr}")
+        CONFIGURATION['logger'].error(f"{error_message}\n{shell.stderr}")
         if fail:
             sys.exit(1)
         return False
@@ -270,7 +299,8 @@ def update_package(fedpkg_root, project_root, new_version, author_name, author_e
 
     # if there are no new sources, abort update
     if len(sources.strip()) <= 0:
-        debug_print(1, "There are no new sources, won't continue releasing to fedora")
+        CONFIGURATION['logger'].warning(
+            "There are no new sources, won't continue releasing to fedora")
         return False
 
     # add new sources
@@ -348,7 +378,8 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
         if not shell_command(fedpkg_root,
                              f"git merge master --ff-only",
                              f"Merging master to branch {branch!r} failed:", fail=False):
-            debug_print(0, f"Trying to make the changes on branch {branch!r} from scratch")
+            CONFIGURATION['logger'].debug(
+                f"Trying to make the changes on branch {branch!r} from scratch")
             update_package(fedpkg_root,
                            project_root,
                            new_version,
@@ -394,7 +425,7 @@ def get_latest_version_github():
     release = response['data']['repository']['releases']['nodes'][0]
     if not release['isPrerelease'] and not release['isDraft']:
         return release['name']
-    debug_print(1, "Latest github release is a Prerelease")
+    CONFIGURATION['logger'].warning("Latest github release is a Prerelease")
     return None
 
 
@@ -445,6 +476,9 @@ def version_tuple(version):
 
 def main():
     """Provides bot logic"""
+    CONFIGURATION['logger'] = set_logging()
+    CONFIGURATION['logger'].info("Release bot reporting for duty!")
+
     parse_arguments()
     load_configuration()
     headers = {'Authorization': f"token {CONFIGURATION['github_token']}"}
@@ -461,7 +495,8 @@ def main():
         for edge in reversed(response['data']['repository']['pullRequests']['edges']):
             cursor = edge['cursor']
             if latest + ' release' == edge['node']['title'].lower():
-                debug_print(0, f'Found closed PR with PyPi release: "{latest} release"')
+                CONFIGURATION['logger'].debug(
+                    f'Found closed PR with PyPi release: "{latest} release"')
                 found = True
                 break
     # now walk through PRs since the latest version and check for a new one
@@ -492,8 +527,8 @@ def main():
         # if found, make a new release on github
         # this has to be done using older github api because v4 doesn't support this yet
         if found:
-            debug_print(message=(f"found version: {new_release['version']}, "
-                                 f"commit id: {new_release['commitish']}"))
+            CONFIGURATION['logger'].error(message=(f"found version: {new_release['version']}, "
+                                                   f"commit id: {new_release['commitish']}"))
             payload = {"tag_name": new_release['version'],
                        "target_commitish": new_release['commitish'],
                        "name": new_release['version'],
@@ -503,8 +538,8 @@ def main():
                    f"{CONFIGURATION['repository_name']}/releases")
             response = requests.post(url=url, headers=headers, json=payload)
             if response.status_code != 201:
-                debug_print(2, (f"Something went wrong with creating "
-                                f"new release on github:\n{response.text}"))
+                CONFIGURATION['logger'].error((f"Something went wrong with creating "
+                                               f"new release on github:\n{response.text}"))
                 sys.exit(1)
             else:
                 # download the new release to a temporary directory
@@ -534,18 +569,19 @@ def main():
         latest = get_latest_version_pypi()
         # check if a new release was made
         if version_tuple(latest) < version_tuple(new_release['version']):
-            debug_print(0, "Newer version on github, triggering PyPi release")
+            CONFIGURATION['logger'].debug("Newer version on github, triggering PyPi release")
             release_on_pypi(new_release['fs_path'])
             if CONFIGURATION['fedora']:
-                debug_print(0, "Triggering Fedora release")
+                CONFIGURATION['logger'].debug("Triggering Fedora release")
                 release_in_fedora(new_release['fs_path'],
                                   new_release['version'],
                                   new_release['merge_author_name'],
                                   new_release['merge_author_email'])
             new_release['tempdir'].cleanup()
         else:
-            debug_print(0, (f"PyPi version {latest} | "
-                            f"Github version {get_latest_version_github()} -> nothing to do"))
+            CONFIGURATION['logger'].debug((f"PyPi version {latest} | "
+                                           f"Github version {get_latest_version_github()} "
+                                           "-> nothing to do"))
         time.sleep(CONFIGURATION['refresh_interval'])
 
 
