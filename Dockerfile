@@ -28,6 +28,9 @@ USER 1001
 RUN pip3 install --user release-bot && \
     pip install --user wheel
 
+# S2I scripts
+COPY ./.s2i/bin/  $STI_SCRIPTS_PATH
+
 WORKDIR $HOME
 
 CMD release-bot --help
