@@ -1,0 +1,97 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: release-bot
+  annotations:
+    description: S2I Relase-bot image builder
+    tags: release-bot s2i
+    iconClass: icon-python
+labels:
+  template: release-bot
+  role: releasebot_application_builder
+objects:
+  - kind : ImageStream
+    apiVersion : v1
+    metadata :
+        name : ${APP_NAME}
+        labels :
+          appid : release-bot-${APP_NAME}
+  - kind : ImageStream
+    apiVersion : v1
+    metadata :
+      name : ${APP_NAME}-s2i
+      labels :
+        appid : release-bot-${APP_NAME}
+    spec :
+      tags :
+        - name : latest
+          from :
+            kind : DockerImage
+            name : koscicz/release-bot:latest
+  - kind : BuildConfig
+    apiVersion : v1
+    metadata :
+      name : ${APP_NAME}
+      labels :
+        appid : release-bot-${APP_NAME}
+    spec :
+      triggers :
+        - type : ConfigChange
+        - type : ImageChange
+      source :
+        type : Git
+        git :
+          uri : ${SOURCE_REPOSITORY}
+          contextDir : ${SOURCE_REPOSITORY}
+        sourceSecret :
+          name : release-bot-secret
+      strategy :
+        type : Source
+        sourceStrategy :
+          from :
+            kind : ImageStreamTag
+            name : ${APP_NAME}-s2i:latest
+      output :
+        to :
+          kind : ImageStreamTag
+          name : ${APP_NAME}:latest
+  - kind : DeploymentConfig
+    apiVersion : v1
+    metadata :
+      name: ${APP_NAME}
+      labels :
+        appid : release-bot-${APP_NAME}
+    spec :
+      strategy :
+        type : Rolling
+      triggers :
+         - type : ConfigChange
+         - type : ImageChange
+           imageChangeParams :
+             automatic : true
+             containerNames :
+               - ${APP_NAME}
+             from :
+               kind : ImageStreamTag
+               name : ${APP_NAME}:latest
+      replicas : 1
+      selector :
+        deploymentconfig : ${APP_NAME}
+      template :
+        metadata :
+          labels :
+            appid: release-bot-${APP_NAME}
+            deploymentconfig : ${APP_NAME}
+        spec :
+          containers :
+            - name : ${APP_NAME}
+              image : ${APP_NAME}:latest
+parameters :
+  - name : APP_NAME
+    description : Name of application
+    value :
+    required : true
+  - name : SOURCE_REPOSITORY
+    description : Git source repository
+    value :
+    required : true

@@ -10,11 +10,10 @@ LABEL summary="Automated releasing from GitHub repositories" \
       name="release-bot" \
       description="Automated releasing from GitHub repositories" \
       io.k8s.description="Automated releasing from GitHub repositories" \
-      io.k8s.display-name="Ruby 2.4" \
-      io.openshift.expose-services="8080:http" \
-      io.openshift.tags="builder,ruby,ruby24,rh-ruby24" \
+      io.k8s.display-name="Release Bot" \
+      io.openshift.tags="builder" \
       io.openshift.s2i.scripts-url="$STI_SCRIPTS_URL" \
-      usage="s2i build <SOURCE-REPOSITORY> release-bot <APP-NAME>"
+      usage="s2i build <SOURCE-REPOSITORY> koscicz/release-bot <APP-NAME>"
 
 RUN dnf install -y python3 python2 python-pip fedpkg git
 
@@ -26,11 +25,13 @@ RUN mkdir -p ${HOME} && \
 USER 1001
 
 RUN pip3 install --user release-bot && \
-    pip install --user wheel
+    pip install --user wheel && \
+    chgrp -R 0 /opt/app-root && \
+    chmod -R g=u /opt/app-root
 
 # S2I scripts
 COPY ./.s2i/bin/  $STI_SCRIPTS_PATH
 
 WORKDIR $HOME
 
-CMD release-bot --help
+CMD $STI_SCRIPTS_PATH/usage
