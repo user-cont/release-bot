@@ -422,10 +422,15 @@ def get_latest_version_github():
 
     detect_api_errors(response)
 
-    release = response['data']['repository']['releases']['nodes'][0]
-    if not release['isPrerelease'] and not release['isDraft']:
-        return release['name']
-    CONFIGURATION['logger'].warning("Latest github release is a Prerelease")
+    # check for empty response
+    if response['data']['repository']['releases']['nodes']:
+        release = response['data']['repository']['releases']['nodes'][0]
+        if not release['isPrerelease'] and not release['isDraft']:
+            return release['name']
+        CONFIGURATION['logger'].debug("Latest github release is a Prerelease")
+    else:
+        CONFIGURATION['logger'].debug("There is no latest github release")
+        return '0.0.0'
     return None
 
 
