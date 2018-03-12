@@ -533,8 +533,8 @@ def main():
         # if found, make a new release on github
         # this has to be done using older github api because v4 doesn't support this yet
         if found:
-            CONFIGURATION['logger'].error(message=(f"found version: {new_release['version']}, "
-                                                   f"commit id: {new_release['commitish']}"))
+            CONFIGURATION['logger'].error((f"found version: {new_release['version']}, "
+                                           f"commit id: {new_release['commitish']}"))
             payload = {"tag_name": new_release['version'],
                        "target_commitish": new_release['commitish'],
                        "name": new_release['version'],
