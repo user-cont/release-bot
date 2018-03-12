@@ -151,7 +151,7 @@ def parse_changelog(previous_version, version, path):
         # detect position of this version header
         pos_start = file.find("# " + version)
         pos_end = file.find("# " + previous_version)
-        return file[pos_start + len("# " + version):pos_end].strip()
+        return file[pos_start + len("# " + version):(pos_end if pos_end >= 0 else len(file))].strip()
     return "No changelog provided"
 
 
