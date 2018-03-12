@@ -25,7 +25,7 @@ RUN mkdir -p ${HOME} && \
 USER 1001
 
 RUN pip3 install --user release-bot && \
-    pip install --user wheel && \
+    pip install --user wheel PyYaml && \
     chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
 
