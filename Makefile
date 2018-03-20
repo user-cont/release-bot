@@ -2,3 +2,6 @@
 
 test:
 	PYTHONPATH=$(CURDIR) pytest-3 tests/
+
+travis:
+	PYTHONPATH=$(CURDIR) pytest tests/
