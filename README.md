@@ -1,4 +1,4 @@
-Release bot
+Release bot [![Build Status](https://travis-ci.org/kosciCZ/release-bot.svg?branch=master)](https://travis-ci.org/kosciCZ/release-bot) [![PyPI version](https://badge.fury.io/py/release-bot.svg)](https://badge.fury.io/py/release-bot)
 ============
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for 
 release pull requests. The PR must be named in this format `0.1.0 release`. No other format is supported yet. Once 
