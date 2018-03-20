@@ -184,7 +184,7 @@ def update_spec(spec_path, config_path, author_name, author_email):
             if 'author_name' in release_conf and 'author_email' in release_conf:
                 author_name = release_conf['author_name']
                 author_email = release_conf['author_email']
-            locale.setlocale(locale.LC_TIME, "en_US")
+            locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
             changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {author_name!s} "
                          f"<{author_email!s}> {release_conf['version']}-1\n")
             # add entries
