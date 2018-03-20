@@ -6,7 +6,7 @@ import json
 import sys
 import re
 import tempfile
-from datetime import datetime
+import datetime
 import time
 import zipfile
 import os
@@ -146,12 +146,14 @@ def parse_changelog(previous_version, version, path):
     :param str path: Path to CHANGELOG.md
     :return: Changelog entry or placeholder entry if no changelog is found
     """
-    if os.path.isfile(path + "/CHANGELOG.md"):
+    if os.path.isfile(path + "/CHANGELOG.md") and version_tuple(previous_version) < version_tuple(version):
         file = open(path + '/CHANGELOG.md', 'r').read()
         # detect position of this version header
         pos_start = file.find("# " + version)
         pos_end = file.find("# " + previous_version)
-        return file[pos_start + len("# " + version):(pos_end if pos_end >= 0 else len(file))].strip()
+        changelog = file[pos_start + len("# " + version):(pos_end if pos_end >= 0 else len(file))].strip()
+        if len(changelog) > 0:
+            return changelog
     return "No changelog provided"
 
 
@@ -183,14 +185,14 @@ def update_spec(spec_path, config_path, author_name, author_email):
                 author_name = release_conf['author_name']
                 author_email = release_conf['author_email']
             locale.setlocale(locale.LC_TIME, "en_US")
-            changelog = (f"* {datetime.now():%a %b %d %Y} {author_name!s} "
+            changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {author_name!s} "
                          f"<{author_email!s}> {release_conf['version']}-1\n")
             # add entries
             if 'changelog' in release_conf:
                 for item in release_conf['changelog']:
                     changelog += f"- {item}\n"
             else:
-                changelog += f"- {release_conf['version']} release"
+                changelog += f"- {release_conf['version']} release\n"
         # change the version and add changelog in spec file
         with open(spec_path, 'r+') as spec_file:
             spec = spec_file.read()
