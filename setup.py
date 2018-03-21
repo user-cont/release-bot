@@ -1,5 +1,3 @@
-import yaml
-
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -11,19 +9,14 @@ def get_requirements():
         return file.readlines()
 
 
-def get_version():
-    with open("./release-conf.yaml") as file:
-        conf = yaml.load(file)
-        return conf['version']
-
+version = {}
+with open("./release_bot/version.py") as fp:
+    exec(fp.read(), version)
 
 setup(
     name='release-bot',
-    version=get_version(),
-    py_modules=['release_bot'],
-    package_data={
-        'conf': ['release-conf.yaml']
-    },
+    version=version["__version__"],
+    packages=['release_bot'],
     python_requires='>=3.6',
     url='https://github.com/kosciCZ/release-bot/',
     license='GPLv3+',
@@ -39,6 +32,6 @@ setup(
         'Programming Language :: Python :: 3'
     ],
     entry_points={'console_scripts': [
-            'release-bot=release_bot:main',
-        ]}
+        'release-bot=release_bot.release_bot:main',
+    ]}
 )

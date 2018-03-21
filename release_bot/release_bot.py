@@ -17,6 +17,7 @@ import logging
 import yaml
 import requests
 
+
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
                  "github_token": '',
@@ -32,14 +33,21 @@ API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
 PYPI_URL = "https://pypi.python.org/pypi/"
 
+version = {}
+with open(os.path.join(os.path.dirname(__file__), "version.py")) as fp:
+    exec(fp.read(), version)
+    VERSION = version['__version__']
+
 
 def parse_arguments():
     """Parse application arguments"""
-    parser = argparse.ArgumentParser(description="Automatic releases bot")
+    parser = argparse.ArgumentParser(description="Automatic releases bot", prog='release-bot')
     parser.add_argument("-d", "--debug", help="turn on debugging output",
                         action="store_true", default=False)
     parser.add_argument("-c", "--configuration", help="use custom YAML configuration",
                         default='')
+    parser.add_argument("-v", "--version", help="display program version", action='version',
+                        version=f"%(prog)s {VERSION}")
     parser.add_argument("--fedora", help="enable releasing on Fedora",
                         action="store_true", default=False)
 
@@ -489,7 +497,7 @@ def main():
     load_configuration()
     headers = {'Authorization': f"token {CONFIGURATION['github_token']}"}
 
-    CONFIGURATION['logger'].info("Release bot reporting for duty!")
+    CONFIGURATION['logger'].info(f"release-bot v{VERSION} reporting for duty!")
 
     # check for closed merge requests
     latest = get_latest_version_pypi()
