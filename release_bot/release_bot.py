@@ -17,26 +17,24 @@ import logging
 import yaml
 import requests
 
-
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
                  "github_token": '',
                  "refresh_interval": 3 * 60,
                  "debug": False,
                  "configuration": '',
-                 "fedora": False,
-                 "fedora_branches": [],
                  "logger": None}
-REQUIRED_ITEMS = {"all": ['repository_name', 'repository_owner', 'github_token'],
-                  "fedora": []}
+# note that required items need to reference strings as their length is checked
+REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
+                  "release-conf": ['python_versions']}
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
 PYPI_URL = "https://pypi.python.org/pypi/"
 
-version = {}
+VERSION = {}
 with open(os.path.join(os.path.dirname(__file__), "version.py")) as fp:
-    exec(fp.read(), version)
-    VERSION = version['__version__']
+    exec(fp.read(), VERSION)
+    VERSION = VERSION['__version__']
 
 
 def parse_arguments():
@@ -114,12 +112,10 @@ def load_configuration():
         if item in CONFIGURATION:
             CONFIGURATION[item] = file[item]
     # check if required items are present
-    parts_required = ["all"]
-    if CONFIGURATION['fedora']:
-        parts_required.append('fedora')
+    parts_required = ["conf"]
     for part in parts_required:
         for item in REQUIRED_ITEMS[part]:
-            if len(CONFIGURATION[item]) <= 0:
+            if item not in file:
                 CONFIGURATION['logger'].error(f"Item {item!r} is required in configuration!")
                 sys.exit(1)
     # make sure the types are right where it matters
@@ -160,7 +156,7 @@ def parse_changelog(previous_version, version, path):
         pos_start = file.find("# " + version)
         pos_end = file.find("# " + previous_version)
         changelog = file[pos_start + len("# " + version):(pos_end if pos_end >= 0 else len(file))].strip()
-        if len(changelog) > 0:
+        if changelog:
             return changelog
     return "No changelog provided"
 
@@ -249,17 +245,20 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     return True
 
 
-def release_on_pypi(project_root):
+def release_on_pypi(conf_array):
     """
     Release project on PyPi
 
-    :param project_root: The root directory of the project
+    :param conf_array: Structure with information about the new release
     """
     error_message = "PyPi release failed for some reason. Here's why:"
+    project_root = conf_array['fs_path']
     if os.path.isdir(project_root):
         shell_command(project_root, "python setup.py sdist", error_message)
-        shell_command(project_root, "python setup.py bdist_wheel", error_message)
-        shell_command(project_root, "python3 setup.py bdist_wheel", error_message)
+        if 2 in conf_array['python_versions']:
+            shell_command(project_root, "python setup.py bdist_wheel", error_message)
+        if 3 in conf_array['python_versions']:
+            shell_command(project_root, "python3 setup.py bdist_wheel", error_message)
         shell_command(project_root, "twine upload dist/*", error_message)
 
 
@@ -339,6 +338,7 @@ def update_package(fedpkg_root, project_root, new_version, author_name, author_e
     return True
 
 
+# TODO: rewrite release_in_fedora to use the new configuration
 def release_in_fedora(project_root, new_version, author_name, author_email):
     """
     Release project in Fedora
@@ -376,6 +376,7 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
     conf_path = f"{project_root}/release-conf.yaml"
     with open(conf_path, 'r') as release_conf_file:
         release_conf = yaml.load(release_conf_file)
+        # TODO: this is done elsewhere and correctly, delete this
         if 'fedora_branches' in release_conf:
             CONFIGURATION['fedora_branches'] = str(release_conf['fedora_branches'])
 
@@ -489,6 +490,36 @@ def version_tuple(version):
     return tuple(map(int, (version.split("."))))
 
 
+def load_release_conf(conf_path, conf_array):
+    """
+    Load items from release-conf.yaml
+
+    :param conf_path: path to release-conf.yaml
+    :param conf_array: structure to load configuration into
+    """
+
+    if os.path.isfile(conf_path):
+        with open(conf_path) as conf_file:
+            conf = yaml.load(conf_file)
+            for item in conf:
+                if item in conf_array:
+                    conf_array[item] = conf[item]
+            for item in REQUIRED_ITEMS['release-conf']:
+                if item not in conf:
+                    CONFIGURATION['logger'].error(f"Item {item!r} is required in release-conf!")
+                    sys.exit(1)
+            if 'python_versions' in conf_array:
+                for index, version in enumerate(conf_array['python_versions']):
+                    conf_array['python_versions'][index] = int(version)
+            if 'fedora_branches' in conf_array:
+                for index, branch in enumerate(conf_array['fedora_branches']):
+                    conf_array['python_versions'][index] = str(branch)
+    else:
+        CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
+        if not REQUIRED_ITEMS['release-conf']:
+            sys.exit(1)
+
+
 def main():
     """Provides bot logic"""
     CONFIGURATION['logger'] = set_logging()
@@ -520,10 +551,14 @@ def main():
         found = False
         new_release = {'version': '0.0.0',
                        'commitish': '',
-                       'merge_author_name': '',
-                       'merge_author_email': '',
+                       'author_name': '',
+                       'author_email': '',
+                       'python_versions': [],
+                       'fedora': False,
+                       'fedora_branches': [],
                        'fs_path': '',
                        'tempdir': None}
+
         while True:
             response = walk_through_closed_prs(cursor, which="first")
             if len(response['data']['repository']['pullRequests']['edges']) <= 0:
@@ -535,8 +570,8 @@ def main():
                     new_release['version'] = version[0]
                     merge_commit = edge['node']['mergeCommit']
                     new_release['commitish'] = merge_commit['oid']
-                    new_release['merge_author_name'] = merge_commit['author']['name']
-                    new_release['merge_author_email'] = merge_commit['author']['email']
+                    new_release['author_name'] = merge_commit['author']['name']
+                    new_release['author_email'] = merge_commit['author']['email']
                     found = True
                     break
 
@@ -582,17 +617,22 @@ def main():
                               f"update for a release:\n{response.text}"))
                     sys.exit(1)
 
+                # load release configuration from release-conf.yaml in repository
+                load_release_conf(os.path.join(new_release['fs_path'], 'release-conf.yaml'),
+                                  new_release)
+
         latest = get_latest_version_pypi()
         # check if a new release was made
         if version_tuple(latest) < version_tuple(new_release['version']):
             CONFIGURATION['logger'].debug("Newer version on github, triggering PyPi release")
-            release_on_pypi(new_release['fs_path'])
-            if CONFIGURATION['fedora']:
+            release_on_pypi(new_release)
+            if new_release['fedora']:
                 CONFIGURATION['logger'].debug("Triggering Fedora release")
+                # TODO: fix releasing to fedora with new config system
                 release_in_fedora(new_release['fs_path'],
                                   new_release['version'],
-                                  new_release['merge_author_name'],
-                                  new_release['merge_author_email'])
+                                  new_release['author_name'],
+                                  new_release['author_email'])
             new_release['tempdir'].cleanup()
         else:
             CONFIGURATION['logger'].debug((f"PyPi version {latest} | "

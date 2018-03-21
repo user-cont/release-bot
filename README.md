@@ -6,13 +6,13 @@ this PR is closed (and merged) bot will create a new github release. Changelog w
 repository and must be named `CHANGELOG.md`. Changelog for the new version must begin with version heading, i.e `# 0.1.0`
 . Everything between this heading and the heading for previous version will be pulled into the changelog. 
 
-Once a release is complete, bot will upload this release to PyPi. Note that you have to setup your login details (see [Requirements](#requirements)). This is subject 
-to change, but right now bot will build sdist and then wheels for python2 and for python3 and upload them.
-
-After PyPi release, bot will try to release on Fedora dist-git, on `master` branch and branches specified in configuration. 
-This is only possible, if there won't be no merge conflicts, if they arise, you have to solve them first  before attempting the release again.
-You can enable releases to Fedora by running with `--fedora` argument. 
 A `release-conf.yaml` file is required. See [Configuration](#configuration) section for details.
+
+Once a release is complete, bot will upload this release to PyPi. Note that you have to setup your login details (see [Requirements](#requirements)).
+
+After PyPi release, if enabled in  `release-conf.yaml`, bot will try to release on Fedora dist-git, on `master` branch and branches specified in configuration. 
+It should not create merge conflicts, but in case it does, you have to solve them first  before attempting the release again.
+
 
 # Configuration
 Configuration is in a form of a yaml file. You can specify your config using `-c file.yaml` or `--configuration file.yaml`. If you do not specify it using an argument, bot will try to find `conf.yaml` in current working directory.
@@ -29,16 +29,16 @@ Sample config can be found in this repository.
 
 Best option for this is creating a github account for this bot so you can keep track of what changes were made by bot and what are your own.
 
-If you want to release in Fedora, you also have to have a `release-conf.yaml` file in the root of your project repository. 
-This file has to be updated with every release as it is a source of information for updating spec file.
+You also have to have a `release-conf.yaml` file in the root of your project repository. 
 Here are the possible options:
 
 | Option        | Meaning       | Required      |
 |---------------|---------------|---------------| 
-| `version`     | Version number | Yes |
+| `python_versions`     | List of major python versions that bot will build separate wheels for | Yes |
 | `changelog`   | List of changelog entries. If empty, changelog defaults to `$version release` | No |
 | `author_name`	| Author name for changelog. If not set, author of the merge commit is used	    | No |
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
+| `fedora`      | Whether to release on fedora. False by default | No |
 | `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |  
 
 Sample config named `release-conf-example.yaml` can be found in this repository.
