@@ -28,6 +28,8 @@ objects:
           from :
             kind : DockerImage
             name : koscicz/release-bot:latest
+          importPolicy:
+            scheduled: true
   - kind : BuildConfig
     apiVersion : v1
     metadata :
