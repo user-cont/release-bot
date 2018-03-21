@@ -1,4 +1,4 @@
-import release_bot
+import release_bot.release_bot as release_bot
 import pytest
 
 

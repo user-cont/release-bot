@@ -1,8 +1,8 @@
-import release_bot
+import release_bot.release_bot as release_bot
 import pytest
 import os
 # import datetime from release_bot, because it needs to be patched
-from release_bot import datetime
+from release_bot.release_bot import datetime
 
 FAKE_TIME = datetime.datetime(2018, 12, 24, 17, 35, 55)
 
