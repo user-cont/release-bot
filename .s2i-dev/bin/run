@@ -1,0 +1,3 @@
+#!/bin/bash
+
+python3 $HOME/release-bot/release_bot --debug --configuration=$HOME/conf.yaml
