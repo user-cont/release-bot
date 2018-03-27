@@ -1,0 +1,13 @@
+python_versions:
+  - 2
+  - 3
+changelog:
+  - Example changelog entry
+  - Another changelog entry
+author_name: John Smith
+author_email: jsmith@example.com
+fedora: True
+fedora_branches:
+  - f27
+  - f28
+  - 13

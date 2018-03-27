@@ -22,7 +22,7 @@ class TestSpecFile:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging()
+        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=70)
         release_bot.CONFIGURATION['debug'] = True
 
     def teardown_method(self, method):
@@ -34,12 +34,6 @@ class TestSpecFile:
     def valid_conf(self, tmpdir):
         conf = tmpdir.join("release-conf.yaml")
         conf.write("version: 0.0.2")
-        return conf
-
-    @pytest.fixture
-    def valid_conf_changelog(self, tmpdir):
-        conf = tmpdir.join("release-conf.yaml")
-        conf.write("version: 0.0.2\nchangelog:\n - Changelog entry 1\n - Changelog entry 2")
         return conf
 
     @pytest.fixture
@@ -71,28 +65,36 @@ class TestSpecFile:
     def valid_name(self):
         return "John Doe"
 
-    def test_missing_spec(self, valid_conf, valid_name, valid_email):
-        with pytest.raises(SystemExit) as error:
-            release_bot.update_spec("", valid_conf, valid_name, valid_email)
-        assert error.type == SystemExit
-        assert error.value.code == 1
+    @pytest.fixture
+    def valid_new_release(self):
+        new_release = {'version': '0.0.2',
+                       'commitish': 'xxx',
+                       'author_name': 'John Doe',
+                       'author_email': 'jdoe@example.com',
+                       'python_versions': [],
+                       'fedora': False,
+                       'fedora_branches': [],
+                       'changelog': [],
+                       'fs_path': '',
+                       'tempdir': None}
+        return new_release
 
-    def test_missing_conf(self, valid_spec, valid_name, valid_email):
+    def test_missing_spec(self, valid_new_release):
         with pytest.raises(SystemExit) as error:
-            release_bot.update_spec(valid_spec, "", valid_name, valid_email)
+            release_bot.update_spec("", valid_new_release)
         assert error.type == SystemExit
         assert error.value.code == 1
 
     # test with no defined changelog
-    def test_valid_conf(self, valid_spec, valid_conf, valid_name,
-                        valid_email, spec_updated, patch_datetime_now):
-        release_bot.update_spec(valid_spec, valid_conf, valid_name, valid_email)
+    def test_valid_conf(self, valid_spec, valid_new_release, spec_updated, patch_datetime_now):
+        release_bot.update_spec(valid_spec, valid_new_release)
         with open(valid_spec) as spec, open(spec_updated) as original:
             assert spec.read() == original.read()
 
     # test with defined changelog
-    def test_valid_conf_changelog(self, valid_spec, valid_conf_changelog, valid_name,
-                                  valid_email, spec_updated_changelog, patch_datetime_now):
-        release_bot.update_spec(valid_spec, valid_conf_changelog, valid_name, valid_email)
+    def test_valid_conf_changelog(self, valid_spec, valid_new_release,
+                                  spec_updated_changelog, patch_datetime_now):
+        valid_new_release['changelog'] = ['Changelog entry 1', 'Changelog entry 2']
+        release_bot.update_spec(valid_spec, valid_new_release)
         with open(valid_spec) as spec, open(spec_updated_changelog) as original:
             assert spec.read() == original.read()

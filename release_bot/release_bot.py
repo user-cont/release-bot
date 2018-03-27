@@ -171,37 +171,29 @@ def get_latest_version_pypi():
         sys.exit(1)
 
 
-def update_spec(spec_path, config_path, author_name, author_email):
+def update_spec(spec_path, new_release):
     """
     Update spec with new version and changelog for that version, change release to 1
 
     :param spec_path: Path to package .spec file
-    :param config_path: Path to repository configuration
-    :param author_name: Merge commit author
-    :param author_email: Merge commit author's email
+    :param new_release: an array containing info about new release, see main() for definition
     """
-    if os.path.isfile(spec_path) and os.path.isfile(config_path):
+    if os.path.isfile(spec_path):
         # make changelog and get version
-        with open(config_path) as conf_file:
-            release_conf = yaml.load(conf_file)
-            # set changelog author
-            if 'author_name' in release_conf and 'author_email' in release_conf:
-                author_name = release_conf['author_name']
-                author_email = release_conf['author_email']
-            locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
-            changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {author_name!s} "
-                         f"<{author_email!s}> {release_conf['version']}-1\n")
-            # add entries
-            if 'changelog' in release_conf:
-                for item in release_conf['changelog']:
-                    changelog += f"- {item}\n"
-            else:
-                changelog += f"- {release_conf['version']} release\n"
+        locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
+        changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release['author_name']!s} "
+                     f"<{new_release['author_email']!s}> {new_release['version']}-1\n")
+        # add entries
+        if new_release['changelog']:
+            for item in new_release['changelog']:
+                changelog += f"- {item}\n"
+        else:
+            changelog += f"- {new_release['version']} release\n"
         # change the version and add changelog in spec file
         with open(spec_path, 'r+') as spec_file:
             spec = spec_file.read()
             # replace version
-            spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + release_conf['version'], spec)
+            spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + new_release['version'], spec)
             # make release 1
             spec = re.sub(r'(Release:\s*)([0-9]*)(.*)', r'\g<1>1\g<3>', spec)
             # insert changelog
@@ -212,10 +204,7 @@ def update_spec(spec_path, config_path, author_name, author_email):
             spec_file.truncate()
             spec_file.close()
     else:
-        if not os.path.isfile(config_path):
-            CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
-        else:
-            CONFIGURATION['logger'].error("Spec file is not found in  dist-git repository!\n")
+        CONFIGURATION['logger'].error("Spec file is not found in  dist-git repository!\n")
         sys.exit(1)
 
 
@@ -262,17 +251,14 @@ def release_on_pypi(conf_array):
         shell_command(project_root, "twine upload dist/*", error_message)
 
 
-def update_package(fedpkg_root, project_root, new_version, author_name, author_email, branch):
+def update_package(fedpkg_root, branch, new_release):
     """
     Pulls in new source, patches spec file, commits,
     pushes and builds new version on specified branch
 
     :param fedpkg_root: The root of dist-git repository
-    :param project_root: The root directory of the project
-    :param new_version: New version number
-    :param author_name: Merge commit author
-    :param author_email: Merge commit author's email
     :param branch: What Fedora branch is this
+    :param new_release: an array containing info about new release, see main() for definition
     :return: True on success, False on failure
     """
     fail = True if branch.lower() == "master" else False
@@ -286,8 +272,7 @@ def update_package(fedpkg_root, project_root, new_version, author_name, author_e
 
     # update spec file
     spec_path = f"{fedpkg_root}/{CONFIGURATION['repository_name']!r}.spec"
-    conf_path = f"{project_root}/release-conf.yaml"
-    update_spec(spec_path, conf_path, author_name, author_email)
+    update_spec(spec_path, new_release)
 
     dir_listing = os.listdir(fedpkg_root)
 
@@ -321,7 +306,7 @@ def update_package(fedpkg_root, project_root, new_version, author_name, author_e
 
     # commit this change, push it and start a build
     if not shell_command(fedpkg_root,
-                         f"fedpkg commit -m 'Update to {new_version}'",
+                         f"fedpkg commit -m 'Update to {new_release['version']}'",
                          "Committing on master branch failed:",
                          fail):
         return False
@@ -338,15 +323,11 @@ def update_package(fedpkg_root, project_root, new_version, author_name, author_e
     return True
 
 
-# TODO: rewrite release_in_fedora to use the new configuration
-def release_in_fedora(project_root, new_version, author_name, author_email):
+def release_in_fedora(new_release):
     """
     Release project in Fedora
 
-    :param project_root: The root directory of the project
-    :param new_version: New version number
-    :param author_name: Merge commit author
-    :param author_email: Merge commit author's email
+    :param new_release: an array containing info about new release, see main() for definition
     """
     tmp = tempfile.TemporaryDirectory()
 
@@ -362,26 +343,13 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
                   "fedpkg switch-branch master",
                   "Switching to master failed:")
 
-    result = update_package(fedpkg_root,
-                            project_root,
-                            new_version,
-                            author_name,
-                            author_email,
-                            "master")
+    result = update_package(fedpkg_root, "master", new_release)
     if not result:
         tmp.cleanup()
         return
 
-    # load branches
-    conf_path = f"{project_root}/release-conf.yaml"
-    with open(conf_path, 'r') as release_conf_file:
-        release_conf = yaml.load(release_conf_file)
-        # TODO: this is done elsewhere and correctly, delete this
-        if 'fedora_branches' in release_conf:
-            CONFIGURATION['fedora_branches'] = str(release_conf['fedora_branches'])
-
     # cycle through other branches and merge the changes there, or do them from scratch, push, build
-    for branch in CONFIGURATION['fedora_branches']:
+    for branch in new_release['fedora_branches']:
         if not shell_command(fedpkg_root,
                              f"fedpkg switch-branch {branch!r}",
                              f"Switching to branch {branch!r} failed:", fail=False):
@@ -391,12 +359,7 @@ def release_in_fedora(project_root, new_version, author_name, author_email):
                              f"Merging master to branch {branch!r} failed:", fail=False):
             CONFIGURATION['logger'].debug(
                 f"Trying to make the changes on branch {branch!r} from scratch")
-            update_package(fedpkg_root,
-                           project_root,
-                           new_version,
-                           author_name,
-                           author_email,
-                           branch)
+            update_package(fedpkg_root, branch, new_release)
             continue
         if not shell_command(fedpkg_root,
                              "fedpkg push",
@@ -501,11 +464,16 @@ def load_release_conf(conf_path, conf_array):
     if os.path.isfile(conf_path):
         with open(conf_path) as conf_file:
             conf = yaml.load(conf_file)
-            for item in conf:
-                if item in conf_array:
-                    conf_array[item] = conf[item]
+            parsed_items = []
+            if conf:
+                for item in conf:
+                    if item in conf_array:
+                        # if item isn't empty, copy it into the configuration
+                        if conf[item]:
+                            conf_array[item] = conf[item]
+                            parsed_items.append(item)
             for item in REQUIRED_ITEMS['release-conf']:
-                if item not in conf:
+                if item not in parsed_items:
                     CONFIGURATION['logger'].error(f"Item {item!r} is required in release-conf!")
                     sys.exit(1)
             if 'python_versions' in conf_array:
@@ -513,10 +481,10 @@ def load_release_conf(conf_path, conf_array):
                     conf_array['python_versions'][index] = int(version)
             if 'fedora_branches' in conf_array:
                 for index, branch in enumerate(conf_array['fedora_branches']):
-                    conf_array['python_versions'][index] = str(branch)
+                    conf_array['fedora_branches'][index] = str(branch)
     else:
         CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
-        if not REQUIRED_ITEMS['release-conf']:
+        if REQUIRED_ITEMS['release-conf']:
             sys.exit(1)
 
 
@@ -556,6 +524,7 @@ def main():
                        'python_versions': [],
                        'fedora': False,
                        'fedora_branches': [],
+                       'changelog': [],
                        'fs_path': '',
                        'tempdir': None}
 
@@ -628,11 +597,7 @@ def main():
             release_on_pypi(new_release)
             if new_release['fedora']:
                 CONFIGURATION['logger'].debug("Triggering Fedora release")
-                # TODO: fix releasing to fedora with new config system
-                release_in_fedora(new_release['fs_path'],
-                                  new_release['version'],
-                                  new_release['author_name'],
-                                  new_release['author_email'])
+                release_in_fedora(new_release)
             new_release['tempdir'].cleanup()
         else:
             CONFIGURATION['logger'].debug((f"PyPi version {latest} | "
