@@ -234,21 +234,70 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     return True
 
 
+def pypi_build_sdist(project_root):
+    """
+    Builds source distribution out of setup.py
+
+    :param project_root: location of setup.py
+    """
+    if os.path.isfile(os.path.join(project_root, 'setup.py')):
+        shell_command(project_root, "python setup.py sdist", "Cannot build sdist:")
+    else:
+        CONFIGURATION['logger'].error(f"Cannot find setup.py:")
+        sys.exit(1)
+
+
+def pypi_build_wheel(project_root, python_version):
+    """
+    Builds wheel for specified version of python
+
+    :param project_root: location of setup.py
+    :param python_version: python version to build wheel for
+    """
+    interpreter = "python"
+    if python_version == 3:
+        interpreter = "python3"
+    elif python_version != 2:
+        # no other versions of python other than 2 and three are supported
+        CONFIGURATION['logger'].error(f"Unsupported python version: {python_version}")
+        sys.exit(1)
+
+    if not os.path.isfile(os.path.join(project_root, 'setup.py')):
+        CONFIGURATION['logger'].error(f"Cannot find setup.py:")
+        sys.exit(1)
+
+    shell_command(project_root, f"{interpreter} setup.py bdist_wheel",
+                  f"Cannot build wheel for python {python_version}")
+
+
+def pypi_upload(project_root):
+    """
+    Uploads the package distribution to PyPi
+
+    :param project_root: directory with dist/ folder
+    """
+    if os.path.isdir(os.path.join(project_root, 'dist')):
+        shell_command(project_root, "twine upload dist/*", "Cannot upload python distribution:")
+    else:
+        CONFIGURATION['logger'].error(f"dist/ folder cannot be found:")
+        sys.exit(1)
+
+
 def release_on_pypi(conf_array):
     """
     Release project on PyPi
 
-    :param conf_array: Structure with information about the new release
+    :param conf_array: structure with information about the new release
     """
-    error_message = "PyPi release failed for some reason. Here's why:"
     project_root = conf_array['fs_path']
     if os.path.isdir(project_root):
-        shell_command(project_root, "python setup.py sdist", error_message)
-        if 2 in conf_array['python_versions']:
-            shell_command(project_root, "python setup.py bdist_wheel", error_message)
-        if 3 in conf_array['python_versions']:
-            shell_command(project_root, "python3 setup.py bdist_wheel", error_message)
-        shell_command(project_root, "twine upload dist/*", error_message)
+        pypi_build_sdist(project_root)
+        for version in conf_array['python_versions']:
+            pypi_build_wheel(project_root, version)
+        pypi_upload(project_root)
+    else:
+        CONFIGURATION['logger'].error("Cannot find project root for PyPi release:")
+        sys.exit(1)
 
 
 def update_package(fedpkg_root, branch, new_release):

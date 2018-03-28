@@ -3,3 +3,4 @@ requests
 PyYAML
 wheel
 twine
+flexmock
