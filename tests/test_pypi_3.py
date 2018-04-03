@@ -14,7 +14,7 @@ class TestPypi:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=70)
+        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=10)
         release_bot.CONFIGURATION['debug'] = True
 
     def teardown_method(self, method):
@@ -84,7 +84,7 @@ class TestPypi:
         release_bot.pypi_build_wheel(package_setup, 3)
         assert glob.glob(os.path.join(package_setup, 'dist/rlsbot_test-1.0.0-py3*.whl'))
 
-    @pytest.mark.skipif(os.environ['TRAVIS_PYTHON_VERSION'], reason="travis doesn't allow installs")
+    @pytest.mark.skipif('TRAVIS_PYTHON_VERSION' in os.environ, reason="travis doesn't allow installs")
     def test_install_3(self, package_setup):
         release_bot.pypi_build_sdist(package_setup)
         release_bot.pypi_build_wheel(package_setup, 3)
@@ -94,7 +94,7 @@ class TestPypi:
         assert self.run_cmd(f'pip3 show rlsbot-test', package_setup).returncode == 0
         assert self.run_cmd(f'$HOME/.local/bin/rlsbot-test', package_setup).returncode == 0
 
-    @pytest.mark.skipif(os.environ['TRAVIS_PYTHON_VERSION'], reason="travis doesn't allow installs")
+    @pytest.mark.skipif('TRAVIS_PYTHON_VERSION' in os.environ, reason="travis doesn't allow installs")
     def test_release_3(self, minimal_conf_array, package_setup, no_upload):
         minimal_conf_array['fs_path'] = package_setup
         release_bot.release_on_pypi(minimal_conf_array)

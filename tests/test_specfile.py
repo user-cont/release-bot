@@ -22,7 +22,7 @@ class TestSpecFile:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=70)
+        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=10)
         release_bot.CONFIGURATION['debug'] = True
 
     def teardown_method(self, method):
