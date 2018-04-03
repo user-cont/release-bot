@@ -7,6 +7,9 @@ License: 		GPLv3+
 URL:			www.example.com
 Source0:        www.example.com
 
+%description
+Example description
+
 %changelog
 * Mon Dec 24 2018 John Doe <jdoe@example.com> 0.0.2-1
 - 0.0.2 release
