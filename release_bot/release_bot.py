@@ -300,6 +300,107 @@ def release_on_pypi(conf_array):
         sys.exit(1)
 
 
+def fedpkg_clone_repository(directory, name):
+    if os.path.isdir(directory):
+        shell_command(directory,
+                      f"fedpkg clone {name!r}",
+                      "Cloning fedora repository failed:")
+        return os.path.join(directory, name)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot clone fedpkg repository into non-existent directory:")
+        sys.exit(1)
+
+
+def fedpkg_switch_branch(directory, branch, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             f"fedpkg switch-branch {branch}",
+                             f"Switching to {branch} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_build(directory, branch, scratch=False, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             f"fedpkg build {'--scratch' if scratch else ''}",
+                             f"Building branch {branch!r} in Fedora failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_push(directory, branch, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             f"fedpkg push",
+                             f"Pushing branch {branch!r} to Fedora failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_merge(directory, branch, ff_only=True, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             f"git merge master {'--ff-only' if ff_only else ''}",
+                             f"Merging master to branch {branch!r} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_commit(directory, branch, message, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             f"fedpkg commit -m '{message}'",
+                             f"Committing on branch {branch} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_sources(directory, branch, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             "fedpkg sources",
+                             f"Retrieving sources for branch {branch} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_spectool(directory, branch, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             "spectool -g *spec",
+                             f"Retrieving new sources for branch {branch} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_lint(directory, branch, fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             "fedpkg lint",
+                             f"Spec lint on branch {branch} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
+def fedpkg_new_sources(directory, branch, sources="", fail=True):
+    if os.path.isdir(directory):
+        return shell_command(directory,
+                             f"fedpkg new-sources {sources}",
+                             f"Adding new sources on branch {branch} failed:", fail)
+    else:
+        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        sys.exit(1)
+
+
 def update_package(fedpkg_root, branch, new_release):
     """
     Pulls in new source, patches spec file, commits,
@@ -313,23 +414,21 @@ def update_package(fedpkg_root, branch, new_release):
     fail = True if branch.lower() == "master" else False
 
     # retrieve sources
-    if not shell_command(fedpkg_root,
-                         "fedpkg sources",
-                         "Retrieving sources failed:",
-                         fail):
+    if not fedpkg_sources(fedpkg_root, branch, fail):
         return False
 
     # update spec file
-    spec_path = f"{fedpkg_root}/{CONFIGURATION['repository_name']!r}.spec"
+    spec_path = os.path.join(fedpkg_root, f"{CONFIGURATION['repository_name']}.spec")
     update_spec(spec_path, new_release)
+
+    # check if spec file is valid
+    if not fedpkg_lint(fedpkg_root, branch, fail):
+        return False
 
     dir_listing = os.listdir(fedpkg_root)
 
     # get new source
-    if not shell_command(fedpkg_root,
-                         "spectool -g *spec",
-                         "Retrieving new sources failed:",
-                         fail):
+    if not fedpkg_spectool(fedpkg_root, branch, fail):
         return False
 
     # find new sources
@@ -347,27 +446,15 @@ def update_package(fedpkg_root, branch, new_release):
         return False
 
     # add new sources
-    if not shell_command(fedpkg_root,
-                         f"fedpkg new-sources {sources}",
-                         "Adding new sources failed:",
-                         fail):
+    if not fedpkg_new_sources(fedpkg_root, branch, sources, fail):
         return False
 
     # commit this change, push it and start a build
-    if not shell_command(fedpkg_root,
-                         f"fedpkg commit -m 'Update to {new_release['version']}'",
-                         "Committing on master branch failed:",
-                         fail):
+    if not fedpkg_commit(fedpkg_root, branch, f"Update to {new_release['version']}", fail):
         return False
-    if not shell_command(fedpkg_root,
-                         "fedpkg push",
-                         f"Pushing {branch!r} branch failed:",
-                         fail):
+    if not fedpkg_push(fedpkg_root, branch, fail):
         return False
-    if not shell_command(fedpkg_root,
-                         "fedpkg build",
-                         f"Building {branch!r} branch failed:",
-                         fail):
+    if not fedpkg_build(fedpkg_root, branch, False, fail):
         return False
     return True
 
@@ -381,17 +468,12 @@ def release_in_fedora(new_release):
     tmp = tempfile.TemporaryDirectory()
 
     # clone the repository from dist-git
-    shell_command(tmp.name,
-                  f"fedpkg clone {CONFIGURATION['repository_name']!r}",
-                  "Cloning fedora repository failed:")
+    fedpkg_root = fedpkg_clone_repository(tmp.name, CONFIGURATION['repository_name'])
 
-    # this is now source directory
-    fedpkg_root = f"{tmp.name}/{CONFIGURATION['repository_name']!r}"
     # make sure the current branch is master
-    shell_command(fedpkg_root,
-                  "fedpkg switch-branch master",
-                  "Switching to master failed:")
+    fedpkg_switch_branch(fedpkg_root, "master")
 
+    # update package
     result = update_package(fedpkg_root, "master", new_release)
     if not result:
         tmp.cleanup()
@@ -399,24 +481,16 @@ def release_in_fedora(new_release):
 
     # cycle through other branches and merge the changes there, or do them from scratch, push, build
     for branch in new_release['fedora_branches']:
-        if not shell_command(fedpkg_root,
-                             f"fedpkg switch-branch {branch!r}",
-                             f"Switching to branch {branch!r} failed:", fail=False):
+        if not fedpkg_switch_branch(fedpkg_root, branch, fail=False):
             continue
-        if not shell_command(fedpkg_root,
-                             f"git merge master --ff-only",
-                             f"Merging master to branch {branch!r} failed:", fail=False):
+        if not fedpkg_merge(fedpkg_root, branch, True, False):
             CONFIGURATION['logger'].debug(
                 f"Trying to make the changes on branch {branch!r} from scratch")
             update_package(fedpkg_root, branch, new_release)
             continue
-        if not shell_command(fedpkg_root,
-                             "fedpkg push",
-                             f"Pushing branch {branch!r} to Fedora failed:", fail=False):
+        if not fedpkg_push(fedpkg_root, branch, False):
             continue
-        shell_command(fedpkg_root,
-                      "fedpkg build",
-                      f"Building branch {branch!r} in Fedora failed:", fail=False)
+        fedpkg_build(fedpkg_root, branch, False, False)
 
         # TODO: bodhi updates submission
 
