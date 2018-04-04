@@ -15,3 +15,15 @@ if [ ! -f ./conf.yaml ]; then
     echo "ERROR: no bot configuration found"
     exit 1
 fi
+
+# check for bot ssh private key
+if [ -f ./id_rsa ]; then
+    echo "---> Setting up ssh key..."
+    mkdir ./.ssh
+    cp ./id_rsa ./.ssh/id_rsa
+    chmod 600 ./.ssh/id_rsa
+    echo "StrictHostKeyChecking no" >> ./.ssh/config
+    eval "$(ssh-agent -s)"
+    ssh-add ./.ssh/id_rsa
+fi
+

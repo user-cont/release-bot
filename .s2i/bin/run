@@ -1,3 +1,3 @@
 #!/bin/bash
 
-release-bot --debug --configuration=$HOME/conf.yaml
+release-bot --debug --configuration=$HOME/conf.yaml --keytab=$HOME/fedora.keytab

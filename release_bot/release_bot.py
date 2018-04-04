@@ -23,7 +23,9 @@ CONFIGURATION = {"repository_name": '',
                  "refresh_interval": 3 * 60,
                  "debug": False,
                  "configuration": '',
-                 "logger": None}
+                 "logger": None,
+                 "keytab": '',
+                 "fas_username": ''}
 # note that required items need to reference strings as their length is checked
 REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
                   "release-conf": ['python_versions']}
@@ -46,8 +48,7 @@ def parse_arguments():
                         default='')
     parser.add_argument("-v", "--version", help="display program version", action='version',
                         version=f"%(prog)s {VERSION}")
-    parser.add_argument("--fedora", help="enable releasing on Fedora",
-                        action="store_true", default=False)
+    parser.add_argument("-k", "--keytab", help="keytab file for fedora", default='')
 
     args = parser.parse_args()
     if 'configuration' in args:
@@ -401,6 +402,17 @@ def fedpkg_new_sources(directory, branch, sources="", fail=True):
         sys.exit(1)
 
 
+def fedora_init_ticket(keytab, fas_username):
+    if not fas_username:
+        return False
+    if keytab and os.path.isfile(keytab):
+        cmd = f"kinit {fas_username}@FEDORAPROJECT.ORG -k -t {keytab}"
+    else:
+        # there is no keytab, but user still migh have active ticket - try to renew it
+        cmd = f"kinit -R {fas_username}@FEDORAPROJECT.ORG"
+    return shell_command(os.getcwd(), cmd, "Failed to init kerberos ticket:", False)
+
+
 def update_package(fedpkg_root, branch, new_release):
     """
     Pulls in new source, patches spec file, commits,
@@ -464,7 +476,13 @@ def release_in_fedora(new_release):
     Release project in Fedora
 
     :param new_release: an array containing info about new release, see main() for definition
+    :return: True on successful release, False on unsuccessful
     """
+    status = fedora_init_ticket(CONFIGURATION['keytab'], CONFIGURATION['fas_username'])
+    if not status:
+        CONFIGURATION['logger'].warning(
+            f"Can't obtain a valid kerberos ticket, skipping fedora release")
+        return False
     tmp = tempfile.TemporaryDirectory()
 
     # clone the repository from dist-git
@@ -477,7 +495,7 @@ def release_in_fedora(new_release):
     result = update_package(fedpkg_root, "master", new_release)
     if not result:
         tmp.cleanup()
-        return
+        return False
 
     # cycle through other branches and merge the changes there, or do them from scratch, push, build
     for branch in new_release['fedora_branches']:
@@ -496,6 +514,7 @@ def release_in_fedora(new_release):
 
     # clean directory
     tmp.cleanup()
+    return True
 
 
 def get_latest_version_github():
@@ -605,6 +624,10 @@ def load_release_conf(conf_path, conf_array):
             if 'fedora_branches' in conf_array:
                 for index, branch in enumerate(conf_array['fedora_branches']):
                     conf_array['fedora_branches'][index] = str(branch)
+            if conf_array['fedora'] and not CONFIGURATION['fas_username']:
+                CONFIGURATION['logger'].warning(
+                    "Can't release to fedora if there is no FAS username, disabling")
+                conf_array['fedora'] = False
     else:
         CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
         if REQUIRED_ITEMS['release-conf']:

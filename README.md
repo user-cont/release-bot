@@ -23,6 +23,7 @@ Here are the configuration options:
 | `repository_name`     | Name of your Github repository  | Yes |
 | `repository_owner`    | Owner of the repository    	  | Yes |
 | `github_token`		| [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)   | Yes |
+| `fas_username`		| [FAS](https://fedoraproject.org/wiki/Account_System)	username. Only need for releasing on Fedora| No |
 | `refresh_interval`	| Time in seconds between checks on repository. Default is 180 | No |
 
 Sample config can be found in this repository.
@@ -41,21 +42,21 @@ Here are the possible options:
 | `fedora`      | Whether to release on fedora. False by default | No |
 | `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |  
 
-Sample config named `release-conf-example.yaml` can be found in this repository.
+Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
 
 # Requirements
 Releasing to PyPi requires to have `wheel` package both for python 2 and python 3, therefore please install `requirements.txt` with both versions of `pip`.
 You also have to setup your PyPi login details in `$HOME/.pypirc` as described in [PyPi documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account)
-If you are releasing to Fedora, you will need to have an active kerberos ticket while the bot runs.
+If you are releasing to Fedora, you will need to have an active kerberos ticket while the bot runs. Also, `fedpkg` requires that you have ssh key in your keyring, that you uploaded to FAS.
 
 # Docker image
-To make it easier to run this, release-bot is available as an [source-to-image](https://github.com/openshift/source-to-image) builder image. You need to setup a git repository, where you'll store the `conf.yaml` and `.pypirc` files. If this is not a local repository, make sure it it's private so you prevent any private info leaking out. You can then create the final image like this:
+To make it easier to run this, release-bot is available as an [source-to-image](https://github.com/openshift/source-to-image) builder image. You need to setup a git repository, where you'll store the `conf.yaml` and `.pypirc` files. If you are releasing on Fedora, you will also need to add `id_rsa` (a private ssh key that you configured in FAS) and `fedora.keytab` (kerberos keytab for fedora). If this is not a local repository, make sure it it's private so you prevent any private info leaking out. You can then create the final image like this:
 ```
 $ s2i build $SECRET_REPOSITORY_URL koscicz/release-bot app-name
 ``` 
 
 # OpenShift template
-You can also run this bot in OpenShift using `openshift-template.yml` in this repository. You must set two environment variables, the `$APP_NAME` is the name of your release-bot deployment, and `$SOURCE_REPOSITORY` which contains configuration for the release-bot. The contents of the repository are described [above](#docker-image). Note that if you use private repository (which you **absolutely** should), you will need to set up a new [OpenShift secret](https://docs.openshift.com/container-platform/3.7/dev_guide/secrets.html) named `release-bot-secret` to authenticate. It can be a ssh private key that you can use to access the repository (for GitHub see [deploy keys](https://developer.github.com/v3/guides/managing-deploy-keys/)). Here's an [guide](https://blog.openshift.com/deploy-private-git-repositories/) on how to do that in OpenShift GUI, or another [guide](https://blog.openshift.com/deploying-from-private-git-repositories/) that uses `oc` commandline tool.
+You can also run this bot in OpenShift using [openshift-template.yml](openshift-template.yml) in this repository. You must set two environment variables, the `$APP_NAME` is the name of your release-bot deployment, and `$SOURCE_REPOSITORY` which contains configuration for the release-bot. The contents of the repository are described [above](#docker-image). Note that if you use private repository (which you **absolutely** should), you will need to set up a new [OpenShift secret](https://docs.openshift.com/container-platform/3.7/dev_guide/secrets.html) named `release-bot-secret` to authenticate. It can be a ssh private key that you can use to access the repository (for GitHub see [deploy keys](https://developer.github.com/v3/guides/managing-deploy-keys/)). Here's an [guide](https://blog.openshift.com/deploy-private-git-repositories/) on how to do that in OpenShift GUI, or another [guide](https://blog.openshift.com/deploying-from-private-git-repositories/) that uses `oc` commandline tool.
 
 By default, the release-bot builder image won't update itself when a new version of this image is pushed to docker hub.
-You can change it by uncommenting lines with `#importPolicy:` and `#scheduled: true` in `openshift-template.yml`. Then the image will be pulled on a new release.
+You can change it by uncommenting lines with `#importPolicy:` and `#scheduled: true` in [openshift-template.yml](openshift-template.yml). Then the image will be pulled on a new release.
