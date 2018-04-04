@@ -5,6 +5,8 @@ into various downstream services
 import json
 import sys
 import re
+import shlex
+import glob
 import tempfile
 import datetime
 import time
@@ -219,11 +221,12 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     :param fail: If failure should cause termination of the bot
     :return: Boolean indicating success/failure
     """
+    cmd = shlex.split(cmd)
     shell = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True,
+        shell=False,
         cwd=work_directory,
         universal_newlines=True)
     CONFIGURATION['logger'].debug(f"{shell.args}\n{shell.stdout}")
@@ -278,7 +281,11 @@ def pypi_upload(project_root):
     :param project_root: directory with dist/ folder
     """
     if os.path.isdir(os.path.join(project_root, 'dist')):
-        shell_command(project_root, "twine upload dist/*", "Cannot upload python distribution:")
+        spec_files = glob.glob(os.path.join(project_root, "dist/*"))
+        files = ""
+        for file in spec_files:
+            files += f"{file} "
+        shell_command(project_root, f"twine upload {files}", "Cannot upload python distribution:")
     else:
         CONFIGURATION['logger'].error(f"dist/ folder cannot be found:")
         sys.exit(1)
@@ -374,8 +381,12 @@ def fedpkg_sources(directory, branch, fail=True):
 
 def fedpkg_spectool(directory, branch, fail=True):
     if os.path.isdir(directory):
+        spec_files = glob.glob(os.path.join(directory, "*spec"))
+        files = ""
+        for file in spec_files:
+            files += f"{file} "
         return shell_command(directory,
-                             "spectool -g *spec",
+                             f"spectool -g {files}",
                              f"Retrieving new sources for branch {branch} failed:", fail)
     else:
         CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
