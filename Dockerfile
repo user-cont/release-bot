@@ -15,12 +15,13 @@ LABEL summary="Automated releasing from GitHub repositories" \
       io.openshift.s2i.scripts-url="$STI_SCRIPTS_URL" \
       usage="s2i build <SOURCE-REPOSITORY> koscicz/release-bot <APP-NAME>"
 
-RUN dnf install -y python3 python2 python-pip fedpkg git
+RUN dnf install -y python3 python2 python-pip fedpkg git krb5-workstation
 
 RUN mkdir -p ${HOME} && \
 	useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
     -c "Default Application User" default && \
-  	chown -R 1001:0 /opt/app-root
+  	chown -R 1001:0 /opt/app-root && \
+  	sed 's/default_ccache_name/#default_ccache_name/g' /etc/krb5.conf > /etc/krb5.conf
 
 USER 1001
 
