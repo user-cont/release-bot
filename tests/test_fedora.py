@@ -102,6 +102,10 @@ class TestFedora:
         flexmock(release_bot, fedpkg_new_sources=True)
 
     @pytest.fixture()
+    def no_ticket_init(self):
+        flexmock(release_bot, fedora_init_ticket=True)
+
+    @pytest.fixture()
     def fake_spectool(self):
         (flexmock(release_bot)
          .should_receive("fedpkg_spectool")
@@ -281,7 +285,8 @@ class TestFedora:
                                               fake_repository).stdout.strip()
 
     def test_release_in_fedora(self, no_build, no_push, no_sources, no_new_sources, fake_spectool,
-                               no_lint, fake_repository_clone, new_release, fake_tmp_clean):
+                               no_lint, fake_repository_clone, new_release, fake_tmp_clean,
+                               no_ticket_init):
         release_bot.CONFIGURATION['repository_name'] = 'example'
         release_bot.release_in_fedora(new_release)
         commit_message = f"Update to {new_release['version']}"
@@ -291,7 +296,8 @@ class TestFedora:
                                               fake_repository_clone).stdout.strip()
 
     def test_release_in_fedora_non_ff(self, no_build, no_push, no_sources, no_new_sources, no_lint,
-                                      fake_spectool, fake_repository_clone_no_ff, new_release, fake_tmp_clean):
+                                      fake_spectool, fake_repository_clone_no_ff, new_release,
+                                      no_ticket_init, fake_tmp_clean):
         release_bot.CONFIGURATION['repository_name'] = 'example'
         release_bot.release_in_fedora(new_release)
         commit_message = f"Update to {new_release['version']}"

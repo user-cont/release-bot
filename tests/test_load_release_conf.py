@@ -93,7 +93,14 @@ class TestLoadReleaseConf:
         assert valid_new_release['author_name'] == author_name
         assert valid_new_release['author_email'] == author_email
 
+    def test_fedora_disabling(self, valid_conf, valid_new_release):
+        # fas_username is empty
+        release_bot.load_release_conf(valid_conf, valid_new_release)
+        assert valid_new_release['fedora'] is False
+
     def test_normal_use_case(self, valid_conf, valid_new_release):
+        # set fas_username because without it, fedora releasing will be disabled
+        release_bot.CONFIGURATION['fas_username'] = 'test'
         # test if all items in configuration are properly loaded
         release_bot.load_release_conf(valid_conf, valid_new_release)
         # this assertion also tests if versions are correct data type
