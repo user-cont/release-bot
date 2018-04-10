@@ -13,7 +13,7 @@ LABEL summary="Automated releasing from GitHub repositories" \
       io.k8s.display-name="Release Bot" \
       io.openshift.tags="builder" \
       io.openshift.s2i.scripts-url="$STI_SCRIPTS_URL" \
-      usage="s2i build <SOURCE-REPOSITORY> koscicz/release-bot <APP-NAME>"
+      usage="s2i build <SOURCE-REPOSITORY> usercont/release-bot <APP-NAME>"
 
 RUN dnf install -y python3 python2 python-pip fedpkg git krb5-workstation
 
@@ -26,7 +26,7 @@ RUN mkdir -p ${HOME} && \
 USER 1001
 
 RUN pip install --user wheel PyYaml && \
-    git clone https://github.com/kosciCZ/release-bot.git $HOME/release-bot && \
+    git clone https://github.com/user-cont/release-bot.git $HOME/release-bot && \
     pip3 install --user -r $HOME/release-bot/requirements.txt && \
     chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root

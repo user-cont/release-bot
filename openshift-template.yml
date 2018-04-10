@@ -27,7 +27,7 @@ objects:
         - name : latest
           from :
             kind : DockerImage
-            name : koscicz/release-bot:latest
+            name : usercont/release-bot:latest
          #importPolicy:
          #  scheduled: true
   - kind : BuildConfig

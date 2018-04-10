@@ -13,7 +13,7 @@ LABEL summary="Automated releasing from GitHub repositories" \
       io.k8s.display-name="Release Bot" \
       io.openshift.tags="builder" \
       io.openshift.s2i.scripts-url="$STI_SCRIPTS_URL" \
-      usage="s2i build <SOURCE-REPOSITORY> koscicz/release-bot <APP-NAME>"
+      usage="s2i build <SOURCE-REPOSITORY> usercont/release-bot <APP-NAME>"
 
 RUN dnf install -y python3 python2 python-pip fedpkg git krb5-workstation
 

@@ -18,7 +18,7 @@ setup(
     version=version["__version__"],
     packages=['release_bot'],
     python_requires='>=3.6',
-    url='https://github.com/kosciCZ/release-bot/',
+    url='https://github.com/user-cont/release-bot',
     license='GPLv3+',
     author='Red Hat',
     author_email='user-cont@redhat.com',
