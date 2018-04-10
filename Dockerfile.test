@@ -1,9 +1,9 @@
 FROM registry.fedoraproject.org/fedora:27
 
-RUN dnf install -y python3 python2 python-pip fedpkg git \
-    python3-pytest make
+RUN dnf install -y python2-pip fedpkg git make
 
-ENV HOME=/usr/src/app
+ENV HOME=/usr/src/app \
+    PYTHONDONTWRITEBYTECODE=1
 
 RUN mkdir -p ${HOME} && \
 	useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \

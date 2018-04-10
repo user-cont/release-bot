@@ -1,7 +1,7 @@
 .PHONY: test
 
 test:
-	PYTHONPATH=$(CURDIR) pytest-3 tests/
+	PYTHONPATH=$(CURDIR) pytest -v
 
 clean:
 	find . -name '*.pyc' -delete
