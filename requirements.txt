@@ -1,6 +1,4 @@
-pytest
 requests
 PyYAML
 wheel
 twine
-flexmock
