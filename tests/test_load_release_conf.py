@@ -1,5 +1,5 @@
-import os
 import release_bot.release_bot as release_bot
+from pathlib import Path
 import pytest
 
 
@@ -19,9 +19,9 @@ class TestLoadReleaseConf:
 
     @pytest.fixture
     def empty_conf(self, tmpdir):
-        conf = tmpdir.join("relase-conf.yaml")
-        conf.write("")
-        return conf
+        conf = Path(str(tmpdir))/"relase-conf.yaml"
+        conf.touch()
+        return str(conf)
 
     @pytest.fixture
     def non_existing_conf(self):
@@ -43,24 +43,24 @@ class TestLoadReleaseConf:
 
     @pytest.fixture
     def missing_items_conf(self, tmpdir):
-        conf = tmpdir.join("missing_items_conf.yaml")
-        with open(os.path.join(os.path.dirname(__file__), "src/missing_items_conf.yaml")) as file:
-            conf.write(file.read())
-        return conf
+        conf_content = (Path(__file__).parent/"src/missing_items_conf.yaml").read_text()
+        conf = Path(str(tmpdir))/"missing_items_conf.yaml"
+        conf.write_text(conf_content)
+        return str(conf)
 
     @pytest.fixture
     def valid_conf(self, tmpdir):
-        conf = tmpdir.join("release-conf.yaml")
-        with open(os.path.join(os.path.dirname(__file__), "src/release-conf.yaml")) as file:
-            conf.write(file.read())
-        return conf
+        conf_content = (Path(__file__).parent/"src/release-conf.yaml").read_text()
+        conf = Path(str(tmpdir))/"release-conf.yaml"
+        conf.write_text(conf_content)
+        return str(conf)
 
     @pytest.fixture
     def missing_author_conf(self, tmpdir):
-        conf = tmpdir.join("missing_author.yaml")
-        with open(os.path.join(os.path.dirname(__file__), "src/missing_author.yaml")) as file:
-            conf.write(file.read())
-        return conf
+        conf_content = (Path(__file__).parent/"src/missing_author.yaml").read_text()
+        conf = Path(str(tmpdir))/"missing_author.yaml"
+        conf.write_text(conf_content)
+        return str(conf)
 
     def test_empty_conf(self, empty_conf, valid_new_release):
         # if there are any required items, this test must fail

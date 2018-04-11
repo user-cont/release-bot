@@ -1,6 +1,6 @@
 import release_bot.release_bot as release_bot
 import pytest
-import os
+from pathlib import Path
 # import datetime from release_bot, because it needs to be patched
 from release_bot.release_bot import datetime
 
@@ -38,24 +38,24 @@ class TestSpecFile:
 
     @pytest.fixture
     def valid_spec(self, tmpdir):
-        spec = tmpdir.join("example.spec")
-        with open(os.path.join(os.path.dirname(__file__), "src/example.spec")) as file:
-            spec.write(file.read())
-        return spec
+        spec_content = (Path(__file__).parent/"src/example.spec").read_text()
+        spec = Path(str(tmpdir))/"example.spec"
+        spec.write_text(spec_content)
+        return str(spec)
 
     @pytest.fixture
     def spec_updated(self, tmpdir):
-        spec = tmpdir.join("example_updated.spec")
-        with open(os.path.join(os.path.dirname(__file__), "src/example_updated.spec")) as file:
-            spec.write(file.read())
-        return spec
+        spec_content = (Path(__file__).parent/"src/example_updated.spec").read_text()
+        spec = Path(str(tmpdir))/"example_updated.spec"
+        spec.write_text(spec_content)
+        return str(spec)
 
     @pytest.fixture
     def spec_updated_changelog(self, tmpdir):
-        spec = tmpdir.join("example_updated_changelog.spec")
-        with open(os.path.join(os.path.dirname(__file__), "src/example_updated_changelog.spec")) as file:
-            spec.write(file.read())
-        return spec
+        spec_content = (Path(__file__).parent/"src/example_updated_changelog.spec").read_text()
+        spec = Path(str(tmpdir))/"example_updated_changelog.spec"
+        spec.write_text(spec_content)
+        return str(spec)
 
     @pytest.fixture
     def valid_email(self):

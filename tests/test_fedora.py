@@ -1,10 +1,10 @@
 import os
 import sys
 import release_bot.release_bot as release_bot
-from release_bot.release_bot import tempfile
 import pytest
 import subprocess
 from flexmock import flexmock
+from pathlib import Path
 
 
 class TestFedora:
@@ -32,17 +32,17 @@ class TestFedora:
         """
 
     def fake_spectool_func(self, directory, branch, fail=True):
-        source_path = os.path.join(directory, f"{branch}_source.tar.gz")
-        with open(source_path, "w") as file:
-            file.write("Stuff")
+        source_path = Path(directory) / f"{branch}_source.tar.gz"
+        source_path.touch()
         return True
 
     def fake_clone_func(self, directory, name):
-        if os.path.isdir(directory):
+        directory = Path(directory)
+        if directory.is_dir():
             release_bot.shell_command(directory,
                                       f"fedpkg clone {name!r} -a",
                                       "Cloning fedora repository failed:")
-            return os.path.join(directory, name)
+            return str(directory / name)
         else:
             release_bot.CONFIGURATION['logger'].error(f"Cannot clone fedpkg repository into non-existent directory:")
             sys.exit(1)
@@ -54,17 +54,14 @@ class TestFedora:
     def create_fake_repository(self, directory, non_ff=False):
         self.run_cmd("git init .", directory)
         self.run_cmd("git checkout -b master", directory)
-        filename = os.path.join(directory, "example.spec")
-        with open(os.path.join(os.path.dirname(__file__), "src/example.spec")) as file:
-            with open(filename, "w") as new_file:
-                new_file.write(file.read())
+        spec_content = Path(__file__).parent.joinpath("src/example.spec").read_text()
+        Path(directory).joinpath("example.spec").write_text(spec_content)
         self.run_cmd("git add .", directory)
         self.run_cmd("git commit -m 'Initial commit'", directory)
         self.run_cmd("git checkout -b f28", directory)
         if non_ff:
-            with open(os.path.join(os.path.dirname(__file__), "src/example_updated.spec")) as file:
-                with open(filename, "w") as new_file:
-                    new_file.write(file.read())
+            spec_content = Path(__file__).parent.joinpath("src/example_updated.spec").read_text()
+            Path(directory).joinpath("example.spec").write_text(spec_content)
             self.run_cmd("git add .", directory)
             self.run_cmd("git commit -m 'Initial commit 2'", directory)
         else:
@@ -147,8 +144,8 @@ class TestFedora:
 
     @pytest.fixture
     def non_existent_path(self, tmpdir):
-        path = os.path.join(tmpdir, 'foo')
-        return path
+        path = Path(str(tmpdir))/'fooo'
+        return str(path)
 
     @pytest.fixture
     def tmp(self, tmpdir):
@@ -157,14 +154,14 @@ class TestFedora:
     @pytest.fixture
     def fake_repository(self, tmpdir):
         self.create_fake_repository(tmpdir)
-        return tmpdir
+        return Path(str(tmpdir))
 
     @pytest.fixture
     def example_spec(self, tmpdir):
-        spec = tmpdir.join("example.spec")
-        with open(os.path.join(os.path.dirname(__file__), "src/example.spec")) as file:
-            spec.write(file.read())
-        return spec
+        spec_content = (Path(__file__).parent/"src/example.spec").read_text()
+        spec = Path(str(tmpdir))/"example.spec"
+        spec.write_text(spec_content)
+        return str(spec)
 
     def test_wrong_dir_clone(self, non_existent_path, package, fake_clone):
         with pytest.raises(SystemExit) as error:
@@ -221,9 +218,9 @@ class TestFedora:
         assert error.value.code == 1
 
     def test_clone(self, tmp, package, fake_clone):
-        directory = release_bot.fedpkg_clone_repository(tmp, package)
-        assert os.path.isfile(os.path.join(directory, f"{package}.spec"))
-        assert os.path.isdir(os.path.join(directory, ".git"))
+        directory = Path(release_bot.fedpkg_clone_repository(tmp, package))
+        assert (directory/f"{package}.spec").is_file()
+        assert (directory/".git").is_dir()
 
     def test_switch_branch(self, fake_repository):
         release_bot.fedpkg_switch_branch(fake_repository, "f28", False)
@@ -232,10 +229,9 @@ class TestFedora:
         assert "master" == self.run_cmd("git rev-parse --abbrev-ref HEAD", fake_repository).stdout.strip()
 
     def test_commit(self, fake_repository):
-        spec_path = os.path.join(fake_repository, "example.spec")
-        with open(spec_path, "r+") as spec_file:
-            spec = spec_file.read() + "\n Test test"
-            spec_file.write(spec)
+        spec_path = fake_repository/"example.spec"
+        spec_content = spec_path.read_text() + "\n Test test"
+        spec_path.write_text(spec_content)
 
         branch = "master"
         commit_message = "Test commit"
@@ -244,13 +240,14 @@ class TestFedora:
                                               fake_repository).stdout.strip()
 
     def test_lint(self, tmp, package, fake_clone):
-        directory = release_bot.fedpkg_clone_repository(tmp, package)
-        spec_path = os.path.join(directory, f"{package}.spec")
-        assert release_bot.fedpkg_lint(directory, "master", False)
-        with open(spec_path, "r+") as spec_file:
+        directory = Path(release_bot.fedpkg_clone_repository(tmp, package))
+        spec_path = directory/f"{package}.spec"
+        assert release_bot.fedpkg_lint(str(directory), "master", False)
+
+        with spec_path.open('r+') as spec_file:
             spec = spec_file.read() + "\n Test test"
             spec_file.write(spec)
-            assert not release_bot.fedpkg_lint(directory, "master", False)
+            assert not release_bot.fedpkg_lint(str(directory), "master", False)
 
     def test_sources(self, tmp, package, fake_clone):
         directory = release_bot.fedpkg_clone_repository(tmp, package)
@@ -265,10 +262,10 @@ class TestFedora:
         assert file_number != len(os.listdir(directory))
 
     def test_workflow(self, fake_repository):
-        spec_path = os.path.join(fake_repository, "example.spec")
-        with open(spec_path, "r+") as spec_file:
-            spec = spec_file.read() + "\n Test test"
-            spec_file.write(spec)
+        spec_path = fake_repository/"example.spec"
+        spec_content = spec_path.read_text() + "\n Test test"
+        spec_path.write_text(spec_content)
+
         commit_message = "Update"
         assert release_bot.fedpkg_commit(fake_repository, "master", commit_message, False)
         assert release_bot.fedpkg_switch_branch(fake_repository, "f28", False)
