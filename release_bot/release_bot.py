@@ -258,7 +258,7 @@ def pypi_build_wheel(project_root, python_version):
     :param project_root: location of setup.py
     :param python_version: python version to build wheel for
     """
-    interpreter = "python"
+    interpreter = "python2"
     if python_version == 3:
         interpreter = "python3"
     elif python_version != 2:
