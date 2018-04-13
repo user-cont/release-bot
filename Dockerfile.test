@@ -6,16 +6,18 @@ ENV HOME=/usr/src/app \
     PYTHONDONTWRITEBYTECODE=1
 
 RUN mkdir -p ${HOME} && \
-	useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
+    useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
     -c "Default Application User" default
 
 WORKDIR ${HOME}
 
-COPY . ${HOME}
-
+COPY requirements.txt ${HOME}/
+COPY tests/requirements.txt ${HOME}/tests/
 RUN pip3 install -r requirements.txt -r tests/requirements.txt && \
-    pip2 install wheel && \
-    chown -R 1001:0 ${HOME}
+    pip2 install wheel
+
+COPY . ${HOME}
+RUN chown -R 1001:0 ${HOME}
 
 USER 1001
 
