@@ -18,6 +18,7 @@ import locale
 import logging
 import yaml
 import requests
+from semantic_version import Version
 
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
@@ -153,7 +154,8 @@ def parse_changelog(previous_version, version, path):
     :param str path: Path to CHANGELOG.md
     :return: Changelog entry or placeholder entry if no changelog is found
     """
-    if os.path.isfile(path + "/CHANGELOG.md") and version_tuple(previous_version) < version_tuple(version):
+    if os.path.isfile(path + "/CHANGELOG.md") and \
+            Version.coerce(previous_version) < Version.coerce(version):
         file = open(path + '/CHANGELOG.md', 'r').read()
         # detect position of this version header
         pos_start = file.find("# " + version)
@@ -596,16 +598,6 @@ def walk_through_closed_prs(start='', direction='after', which="last"):
         return response
 
 
-def version_tuple(version):
-    """
-    Converts version number to a tuple
-
-    :param str version: Version number
-    :return: Version number as a tuple
-    """
-    return tuple(map(int, (version.split("."))))
-
-
 def load_release_conf(conf_path, conf_array):
     """
     Load items from release-conf.yaml
@@ -755,7 +747,7 @@ def main():
 
         latest = get_latest_version_pypi()
         # check if a new release was made
-        if version_tuple(latest) < version_tuple(new_release['version']):
+        if Version.coerce(latest) < Version.coerce(new_release['version']):
             CONFIGURATION['logger'].info("Newer version on github, triggering PyPi release")
             release_on_pypi(new_release)
             if new_release['fedora']:
