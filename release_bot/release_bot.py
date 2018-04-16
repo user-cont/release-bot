@@ -715,9 +715,15 @@ def main():
                    f"{CONFIGURATION['repository_name']}/releases")
             response = requests.post(url=url, headers=headers, json=payload)
             if response.status_code != 201:
-                CONFIGURATION['logger'].error((f"Something went wrong with creating "
-                                               f"new release on github:\n{response.text}"))
-                sys.exit(1)
+                response_get = requests.get(url=url, headers=headers)
+                if (response_get.status_code == 200 and
+                        [r for r in response_get.json() if r.get('name') == new_release['version']]):
+                    CONFIGURATION['logger'].info(f"{new_release['version']} "
+                                                 f"has already been released on github")
+                else:
+                    CONFIGURATION['logger'].error((f"Something went wrong with creating "
+                                                   f"new release on github:\n{response.text}"))
+                    sys.exit(1)
             else:
                 # download the new release to a temporary directory
                 temp_directory = tempfile.TemporaryDirectory()
