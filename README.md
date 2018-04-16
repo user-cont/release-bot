@@ -53,7 +53,7 @@ If you are releasing to Fedora, you will need to have an active kerberos ticket 
 # Docker image
 To make it easier to run this, release-bot is available as an [source-to-image](https://github.com/openshift/source-to-image) builder image. You need to setup a git repository, where you'll store the `conf.yaml` and `.pypirc` files. If you are releasing on Fedora, you will also need to add `id_rsa` (a private ssh key that you configured in FAS) and `fedora.keytab` (kerberos keytab for fedora). If this is not a local repository, make sure it's private so you prevent any private info leaking out. You can then create the final image like this:
 ```
-$ s2i build $SECRET_REPOSITORY_URL usercont/release-bot app-name
+$ s2i build $SECRET_CONFIGURATION_REPOSITORY_URL usercont/release-bot app-name
 ``` 
 
 # OpenShift template
