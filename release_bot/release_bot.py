@@ -207,7 +207,7 @@ def update_spec(spec_path, new_release):
             spec_file.truncate()
             spec_file.close()
     else:
-        CONFIGURATION['logger'].error("Spec file is not found in  dist-git repository!\n")
+        CONFIGURATION['logger'].error("No spec file found in dist-git repository!\n")
         sys.exit(1)
 
 
@@ -640,7 +640,7 @@ def load_release_conf(conf_path, conf_array):
                     "Can't release to fedora if there is no FAS username, disabling")
                 conf_array['fedora'] = False
     else:
-        CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
+        CONFIGURATION['logger'].error("no release-conf.yaml found in repository root!\n")
         if REQUIRED_ITEMS['release-conf']:
             sys.exit(1)
 
@@ -704,8 +704,8 @@ def main():
         # if found, make a new release on github
         # this has to be done using older github api because v4 doesn't support this yet
         if found:
-            CONFIGURATION['logger'].error((f"found version: {new_release['version']}, "
-                                           f"commit id: {new_release['commitish']}"))
+            CONFIGURATION['logger'].info((f"found version: {new_release['version']}, "
+                                          f"commit id: {new_release['commitish']}"))
             payload = {"tag_name": new_release['version'],
                        "target_commitish": new_release['commitish'],
                        "name": new_release['version'],
@@ -739,8 +739,8 @@ def main():
                        f"{CONFIGURATION['repository_name']}/releases/{info['id']!s}")
                 response = requests.post(url=url, json={'body': changelog}, headers=headers)
                 if response.status_code != 200:
-                    print(2, (f"Something went wrong during changelog "
-                              f"update for a release:\n{response.text}"))
+                    CONFIGURATION['logger'].error((f"Something went wrong during changelog "
+                                                   f"update for a release:\n{response.text}"))
                     sys.exit(1)
 
                 # load release configuration from release-conf.yaml in repository
@@ -750,10 +750,10 @@ def main():
         latest = get_latest_version_pypi()
         # check if a new release was made
         if version_tuple(latest) < version_tuple(new_release['version']):
-            CONFIGURATION['logger'].debug("Newer version on github, triggering PyPi release")
+            CONFIGURATION['logger'].info("Newer version on github, triggering PyPi release")
             release_on_pypi(new_release)
             if new_release['fedora']:
-                CONFIGURATION['logger'].debug("Triggering Fedora release")
+                CONFIGURATION['logger'].info("Triggering Fedora release")
                 release_in_fedora(new_release)
             new_release['tempdir'].cleanup()
         else:
