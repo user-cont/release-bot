@@ -166,16 +166,6 @@ def parse_changelog(previous_version, version, path):
     return "No changelog provided"
 
 
-def get_latest_version_pypi():
-    """Get latest version of the package from PyPi"""
-    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']}/json")
-    if response.status_code == 200:
-        return response.json()['info']['version']
-    else:
-        CONFIGURATION['logger'].error(f"Pypi package doesn't exist:\n{response.text}")
-        sys.exit(1)
-
-
 def update_spec(spec_path, new_release):
     """
     Update spec with new version and changelog for that version, change release to 1
@@ -238,6 +228,16 @@ def shell_command(work_directory, cmd, error_message, fail=True):
             sys.exit(1)
         return False
     return True
+
+
+def pypi_get_latest_version():
+    """Get latest version of the package from PyPi"""
+    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']}/json")
+    if response.status_code == 200:
+        return response.json()['info']['version']
+    else:
+        CONFIGURATION['logger'].error(f"Pypi package doesn't exist:\n{response.text}")
+        sys.exit(1)
 
 
 def pypi_build_sdist(project_root):
@@ -648,7 +648,7 @@ def main():
     CONFIGURATION['logger'].info(f"release-bot v{VERSION} reporting for duty!")
 
     # check for closed merge requests
-    latest = get_latest_version_pypi()
+    latest_pypi = pypi_get_latest_version()
     cursor = ''
     found = False
     # try to find the latest release closed merge request
@@ -658,12 +658,12 @@ def main():
             break
         for edge in reversed(response['data']['repository']['pullRequests']['edges']):
             cursor = edge['cursor']
-            if latest + ' release' == edge['node']['title'].lower():
+            if latest_pypi + ' release' == edge['node']['title'].lower():
                 CONFIGURATION['logger'].debug(
-                    f'Found closed PR with PyPi release: "{latest} release"')
+                    f'Found closed PR with PyPi release: "{latest_pypi} release"')
                 found = True
                 break
-    # now walk through PRs since the latest version and check for a new one
+    # now walk through PRs since the latest_pypi version and check for a new one
     while True:
         found = False
         new_release = {'version': '0.0.0',
@@ -732,7 +732,7 @@ def main():
                 new_release['fs_path'] = path + "/" + dirs[0]
 
                 # parse changelog and update the release with it
-                changelog = parse_changelog(latest, new_release['version'], new_release['fs_path'])
+                changelog = parse_changelog(latest_pypi, new_release['version'], new_release['fs_path'])
                 url = (f"{API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
                        f"{CONFIGURATION['repository_name']}/releases/{info['id']!s}")
                 response = requests.post(url=url, json={'body': changelog}, headers=headers)
@@ -745,9 +745,8 @@ def main():
                 load_release_conf(os.path.join(new_release['fs_path'], 'release-conf.yaml'),
                                   new_release)
 
-        latest = get_latest_version_pypi()
         # check if a new release was made
-        if Version.coerce(latest) < Version.coerce(new_release['version']):
+        if Version.coerce(latest_pypi) < Version.coerce(new_release['version']):
             CONFIGURATION['logger'].info("Newer version on github, triggering PyPi release")
             release_on_pypi(new_release)
             if new_release['fedora']:
@@ -755,7 +754,7 @@ def main():
                 release_in_fedora(new_release)
             new_release['tempdir'].cleanup()
         else:
-            CONFIGURATION['logger'].debug((f"PyPi version {latest} | "
+            CONFIGURATION['logger'].debug((f"PyPi version {latest_pypi} | "
                                            f"Github version {get_latest_version_github()} "
                                            "-> nothing to do"))
         time.sleep(CONFIGURATION['refresh_interval'])
