@@ -546,8 +546,7 @@ def get_latest_version_github():
               }
             }
         '''
-    response = send_query(query).text
-    response = json.loads(response)
+    response = send_query(query).json()
 
     detect_api_errors(response)
 
@@ -592,8 +591,7 @@ def walk_through_closed_prs(start='', direction='after', which="last"):
                 }
               }
             }''')
-        response = send_query(query).text
-        response = json.loads(response)
+        response = send_query(query).json()
         detect_api_errors(response)
         return response
 
@@ -720,7 +718,7 @@ def main():
                 # download the new release to a temporary directory
                 temp_directory = tempfile.TemporaryDirectory()
                 new_release['tempdir'] = temp_directory
-                info = json.loads(response.text)
+                info = response.json()
                 response = requests.get(url=info['zipball_url'])
                 path = temp_directory.name + '/' + new_release['version']
 
