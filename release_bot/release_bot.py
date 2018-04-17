@@ -34,7 +34,7 @@ REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'
                   "release-conf": ['python_versions']}
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
-PYPI_URL = "https://pypi.python.org/pypi/"
+PYPI_URL = "https://pypi.org/pypi/"
 
 VERSION = {}
 with open(os.path.join(os.path.dirname(__file__), "version.py")) as fp:
