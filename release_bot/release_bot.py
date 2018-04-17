@@ -18,7 +18,7 @@ import locale
 import logging
 import yaml
 import requests
-from semantic_version import Version
+from semantic_version import Version, validate
 
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
@@ -681,9 +681,9 @@ def main():
                 break
             for edge in response['data']['repository']['pullRequests']['edges']:
                 cursor = edge['cursor']
-                if re.match(r'\d\.\d\.\d release', edge['node']['title'].lower()):
-                    version = edge['node']['title'].split()
-                    new_release['version'] = version[0]
+                match = re.match(r'(.+) release', edge['node']['title'].lower())
+                if match and validate(match[1]):
+                    new_release['version'] = match[1]
                     merge_commit = edge['node']['mergeCommit']
                     new_release['commitish'] = merge_commit['oid']
                     new_release['author_name'] = merge_commit['author']['name']
