@@ -24,7 +24,7 @@ from semantic_version import Version, validate
 class Configuration:
     # note that required items need to reference strings as their length is checked
     REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
-                        "release-conf": ['python_versions']}
+                      "release-conf": ['python_versions']}
     GITHUB_API_ENDPOINT = "https://api.github.com/graphql"
     GITHUB_API3_ENDPOINT = "https://api.github.com/"
     PYPI_URL = "https://pypi.org/pypi/"
@@ -75,43 +75,35 @@ class Configuration:
         str(self.repository_name)
         str(self.repository_owner)
 
-    def load_release_conf(self, conf_path, conf_array):
+    def load_release_conf(self, conf_path):
         """
         Load items from release-conf.yaml
 
         :param conf_path: path to release-conf.yaml
-        :param conf_array: structure to load configuration into
+        :return dict with configuration
         """
-
-        if os.path.isfile(conf_path):
-            with open(conf_path) as conf_file:
-                conf = yaml.load(conf_file)
-                parsed_items = []
-                if conf:
-                    for item in conf:
-                        if item in conf_array:
-                            # if item isn't empty, copy it into the configuration
-                            if conf[item]:
-                                conf_array[item] = conf[item]
-                                parsed_items.append(item)
-                for item in self.REQUIRED_ITEMS['release-conf']:
-                    if item not in parsed_items:
-                        self.logger.error(f"Item {item!r} is required in release-conf!")
-                        sys.exit(1)
-                if 'python_versions' in conf_array:
-                    for index, version in enumerate(conf_array['python_versions']):
-                        conf_array['python_versions'][index] = int(version)
-                if 'fedora_branches' in conf_array:
-                    for index, branch in enumerate(conf_array['fedora_branches']):
-                        conf_array['fedora_branches'][index] = str(branch)
-                if conf_array['fedora'] and not self.fas_username:
-                    self.logger.warning(
-                        "Can't release to fedora if there is no FAS username, disabling")
-                    conf_array['fedora'] = False
-        else:
+        if not os.path.isfile(conf_path):
             self.logger.error("no release-conf.yaml found in repository root!\n")
             if self.REQUIRED_ITEMS['release-conf']:
                 sys.exit(1)
+
+        with open(conf_path) as conf_file:
+            parsed_conf = yaml.load(conf_file) or {}
+            parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
+            for item in self.REQUIRED_ITEMS['release-conf']:
+                if item not in parsed_conf:
+                    self.logger.error(f"Item {item!r} is required in release-conf!")
+                    sys.exit(1)
+            if 'python_versions' in parsed_conf:
+                for index, version in enumerate(parsed_conf['python_versions']):
+                    parsed_conf['python_versions'][index] = int(version)
+            if 'fedora_branches' in parsed_conf:
+                for index, branch in enumerate(parsed_conf['fedora_branches']):
+                    parsed_conf['fedora_branches'][index] = str(branch)
+            if parsed_conf['fedora'] and not self.fas_username:
+                self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
+                parsed_conf['fedora'] = False
+        return parsed_conf
 
 
 configuration = Configuration()
@@ -750,8 +742,9 @@ def main():
                     sys.exit(1)
 
                 # load release configuration from release-conf.yaml in repository
-                configuration.load_release_conf(os.path.join(new_release['fs_path'], 'release-conf.yaml'),
-                                    new_release)
+                release_conf = configuration.load_release_conf(os.path.join(new_release['fs_path'],
+                                                                            'release-conf.yaml'))
+                new_release.update(release_conf)
 
         # check if a new release was made
         if Version.coerce(latest_pypi) < Version.coerce(new_release['version']):

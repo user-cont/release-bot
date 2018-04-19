@@ -63,25 +63,25 @@ class TestLoadReleaseConf:
         conf.write_text(conf_content)
         return str(conf)
 
-    def test_empty_conf(self, empty_conf, valid_new_release):
+    def test_empty_conf(self, empty_conf):
         # if there are any required items, this test must fail
         if configuration.REQUIRED_ITEMS['release-conf']:
             with pytest.raises(SystemExit) as error:
-                configuration.load_release_conf(empty_conf, valid_new_release)
+                configuration.load_release_conf(empty_conf)
             assert error.type == SystemExit
             assert error.value.code == 1
 
-    def test_non_exiting_conf(self, non_existing_conf, valid_new_release):
+    def test_non_exiting_conf(self, non_existing_conf):
         with pytest.raises(SystemExit) as error:
-            configuration.load_release_conf(non_existing_conf, valid_new_release)
+            configuration.load_release_conf(non_existing_conf)
         assert error.type == SystemExit
         assert error.value.code == 1
 
-    def test_missing_required_items(self, missing_items_conf, valid_new_release):
+    def test_missing_required_items(self, missing_items_conf):
         # set python_versions as required
         configuration.REQUIRED_ITEMS['release_conf'] = ['python_versions']
         with pytest.raises(SystemExit) as error:
-            configuration.load_release_conf(missing_items_conf, valid_new_release)
+            configuration.load_release_conf(missing_items_conf)
         assert error.type == SystemExit
         assert error.value.code == 1
 
@@ -89,21 +89,24 @@ class TestLoadReleaseConf:
         author_name = valid_new_release['author_name']
         author_email = valid_new_release['author_email']
 
-        configuration.load_release_conf(missing_author_conf, valid_new_release)
+        release_conf = configuration.load_release_conf(missing_author_conf)
+        valid_new_release.update(release_conf)
 
         assert valid_new_release['author_name'] == author_name
         assert valid_new_release['author_email'] == author_email
 
     def test_fedora_disabling(self, valid_conf, valid_new_release):
         # fas_username is empty
-        configuration.load_release_conf(valid_conf, valid_new_release)
+        release_conf = configuration.load_release_conf(valid_conf)
+        valid_new_release.update(release_conf)
         assert valid_new_release['fedora'] is False
 
     def test_normal_use_case(self, valid_conf, valid_new_release):
         # set fas_username because without it, fedora releasing will be disabled
         configuration.fas_username = 'test'
         # test if all items in configuration are properly loaded
-        configuration.load_release_conf(valid_conf, valid_new_release)
+        release_conf = configuration.load_release_conf(valid_conf)
+        valid_new_release.update(release_conf)
         # this assertion also tests if versions are correct data type
         assert valid_new_release['python_versions'] == [2, 3]
         assert valid_new_release['changelog'] == ['Example changelog entry',
