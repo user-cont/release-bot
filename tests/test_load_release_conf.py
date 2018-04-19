@@ -10,7 +10,7 @@ class TestLoadReleaseConf:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        configuration.logger = release_bot.set_logging(level=10)
+        configuration.set_logging(level=10)
         configuration.debug = True
 
     def teardown_method(self, method):

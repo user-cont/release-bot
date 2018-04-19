@@ -37,9 +37,10 @@ class Configuration:
         self.refresh_interval = 3 * 60
         self.debug = False
         self.configuration = ''
-        self.logger = self.set_logging()
         self.keytab = ''
         self.fas_username = ''
+        self.logger = ''
+        self.set_logging()
 
     @property
     def version(self):
@@ -49,8 +50,7 @@ class Configuration:
             self._release_bot_version = globals_['__version__']
         return self._release_bot_version
 
-    @staticmethod
-    def set_logging(
+    def set_logging(self,
             logger_name="release-bot",
             level=logging.INFO,
             handler_class=logging.StreamHandler,
@@ -79,7 +79,7 @@ class Configuration:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-        return logger
+        self.logger = logger
 
     def load_configuration(self):
         """Load bot configuration from .yaml file"""
