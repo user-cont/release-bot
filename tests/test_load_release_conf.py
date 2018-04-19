@@ -1,4 +1,5 @@
 import release_bot.release_bot as release_bot
+from release_bot.release_bot import configuration
 from pathlib import Path
 import pytest
 
@@ -9,8 +10,8 @@ class TestLoadReleaseConf:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=10)
-        release_bot.CONFIGURATION['debug'] = True
+        configuration.logger = release_bot.set_logging(level=10)
+        configuration.debug = True
 
     def teardown_method(self, method):
         """ teardown any state that was previously setup with a setup_method
@@ -64,23 +65,23 @@ class TestLoadReleaseConf:
 
     def test_empty_conf(self, empty_conf, valid_new_release):
         # if there are any required items, this test must fail
-        if release_bot.REQUIRED_ITEMS['release-conf']:
+        if configuration.REQUIRED_ITEMS['release-conf']:
             with pytest.raises(SystemExit) as error:
-                release_bot.load_release_conf(empty_conf, valid_new_release)
+                configuration.load_release_conf(empty_conf, valid_new_release)
             assert error.type == SystemExit
             assert error.value.code == 1
 
     def test_non_exiting_conf(self, non_existing_conf, valid_new_release):
         with pytest.raises(SystemExit) as error:
-            release_bot.load_release_conf(non_existing_conf, valid_new_release)
+            configuration.load_release_conf(non_existing_conf, valid_new_release)
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_missing_required_items(self, missing_items_conf, valid_new_release):
         # set python_versions as required
-        release_bot.REQUIRED_ITEMS['release_conf'] = ['python_versions']
+        configuration.REQUIRED_ITEMS['release_conf'] = ['python_versions']
         with pytest.raises(SystemExit) as error:
-            release_bot.load_release_conf(missing_items_conf, valid_new_release)
+            configuration.load_release_conf(missing_items_conf, valid_new_release)
         assert error.type == SystemExit
         assert error.value.code == 1
 
@@ -88,21 +89,21 @@ class TestLoadReleaseConf:
         author_name = valid_new_release['author_name']
         author_email = valid_new_release['author_email']
 
-        release_bot.load_release_conf(missing_author_conf, valid_new_release)
+        configuration.load_release_conf(missing_author_conf, valid_new_release)
 
         assert valid_new_release['author_name'] == author_name
         assert valid_new_release['author_email'] == author_email
 
     def test_fedora_disabling(self, valid_conf, valid_new_release):
         # fas_username is empty
-        release_bot.load_release_conf(valid_conf, valid_new_release)
+        configuration.load_release_conf(valid_conf, valid_new_release)
         assert valid_new_release['fedora'] is False
 
     def test_normal_use_case(self, valid_conf, valid_new_release):
         # set fas_username because without it, fedora releasing will be disabled
-        release_bot.CONFIGURATION['fas_username'] = 'test'
+        configuration.fas_username = 'test'
         # test if all items in configuration are properly loaded
-        release_bot.load_release_conf(valid_conf, valid_new_release)
+        configuration.load_release_conf(valid_conf, valid_new_release)
         # this assertion also tests if versions are correct data type
         assert valid_new_release['python_versions'] == [2, 3]
         assert valid_new_release['changelog'] == ['Example changelog entry',

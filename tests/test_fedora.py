@@ -1,6 +1,7 @@
 import os
 import sys
 import release_bot.release_bot as release_bot
+from release_bot.release_bot import configuration
 import pytest
 import subprocess
 from flexmock import flexmock
@@ -23,8 +24,8 @@ class TestFedora:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=10)
-        release_bot.CONFIGURATION['debug'] = True
+        configuration.logger = release_bot.set_logging(level=10)
+        configuration.debug = True
 
     def teardown_method(self, method):
         """ teardown any state that was previously setup with a setup_method
@@ -44,7 +45,7 @@ class TestFedora:
                                       "Cloning fedora repository failed:")
             return str(directory / name)
         else:
-            release_bot.CONFIGURATION['logger'].error(f"Cannot clone fedpkg repository into non-existent directory:")
+            configuration.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
             sys.exit(1)
 
     def fake_repository_clone_func(self, directory, name, non_ff=False):
@@ -275,7 +276,7 @@ class TestFedora:
 
     def test_update_package(self, no_build, no_push, no_sources, no_new_sources, fake_spectool,
                             no_lint, new_release, fake_repository):
-        release_bot.CONFIGURATION['repository_name'] = 'example'
+        configuration.repository_name = 'example'
         commit_message = f"Update to {new_release['version']}"
         assert release_bot.update_package(fake_repository, "f28", new_release)
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B | cat | head -n 1",
@@ -284,7 +285,7 @@ class TestFedora:
     def test_release_in_fedora(self, no_build, no_push, no_sources, no_new_sources, fake_spectool,
                                no_lint, fake_repository_clone, new_release, fake_tmp_clean,
                                no_ticket_init):
-        release_bot.CONFIGURATION['repository_name'] = 'example'
+        configuration.repository_name = 'example'
         release_bot.release_in_fedora(new_release)
         commit_message = f"Update to {new_release['version']}"
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B master| cat | head -n 1",
@@ -295,7 +296,7 @@ class TestFedora:
     def test_release_in_fedora_non_ff(self, no_build, no_push, no_sources, no_new_sources, no_lint,
                                       fake_spectool, fake_repository_clone_no_ff, new_release,
                                       no_ticket_init, fake_tmp_clean):
-        release_bot.CONFIGURATION['repository_name'] = 'example'
+        configuration.repository_name = 'example'
         release_bot.release_in_fedora(new_release)
         commit_message = f"Update to {new_release['version']}"
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B master| cat | head -n 1",

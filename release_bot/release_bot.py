@@ -20,26 +20,101 @@ import requests
 from pathlib import Path
 from semantic_version import Version, validate
 
-CONFIGURATION = {"repository_name": '',
-                 "repository_owner": '',
-                 "github_token": '',
-                 "refresh_interval": 3 * 60,
-                 "debug": False,
-                 "configuration": '',
-                 "logger": None,
-                 "keytab": '',
-                 "fas_username": ''}
-# note that required items need to reference strings as their length is checked
-REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
-                  "release-conf": ['python_versions']}
-GITHUB_API_ENDPOINT = "https://api.github.com/graphql"
-GITHUB_API3_ENDPOINT = "https://api.github.com/"
-PYPI_URL = "https://pypi.org/pypi/"
+
+class Configuration:
+    # note that required items need to reference strings as their length is checked
+    REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
+                        "release-conf": ['python_versions']}
+    GITHUB_API_ENDPOINT = "https://api.github.com/graphql"
+    GITHUB_API3_ENDPOINT = "https://api.github.com/"
+    PYPI_URL = "https://pypi.org/pypi/"
+
+    def __init__(self):
+        self.release_bot_version = ''
+        self.repository_name = ''
+        self.repository_owner = ''
+        self.github_token = ''
+        self.refresh_interval = 3 * 60
+        self.debug = False
+        self.configuration = ''
+        self.logger = None
+        self.keytab = ''
+        self.fas_username = ''
+
+    @property
+    def version(self):
+        if not self.release_bot_version:
+            globals_ = {}
+            exec((Path(__file__).parent / "version.py").read_text(), globals_)
+            self.release_bot_version = globals_['__version__']
+        return self.release_bot_version
+
+    def load_configuration(self):
+        """Load bot configuration from .yaml file"""
+        if len(self.configuration) <= 0:
+            # configuration not supplied, look for conf.yaml in cwd
+            path = os.path.join(os.getcwd(), 'conf.yaml')
+            if os.path.isfile(path):
+                self.configuration = path
+            else:
+                self.logger.error("Cannot find valid configuration")
+                sys.exit(1)
+        with open(self.configuration, 'r') as ymlfile:
+            file = yaml.load(ymlfile)
+        for item in file:
+            if hasattr(configuration, item):
+                setattr(configuration, item, file[item])
+        # check if required items are present
+        parts_required = ["conf"]
+        for part in parts_required:
+            for item in self.REQUIRED_ITEMS[part]:
+                if item not in file:
+                    self.logger.error(f"Item {item!r} is required in configuration!")
+                    sys.exit(1)
+        # make sure the types are right where it matters
+        str(self.repository_name)
+        str(self.repository_owner)
+
+    def load_release_conf(self, conf_path, conf_array):
+        """
+        Load items from release-conf.yaml
+
+        :param conf_path: path to release-conf.yaml
+        :param conf_array: structure to load configuration into
+        """
+
+        if os.path.isfile(conf_path):
+            with open(conf_path) as conf_file:
+                conf = yaml.load(conf_file)
+                parsed_items = []
+                if conf:
+                    for item in conf:
+                        if item in conf_array:
+                            # if item isn't empty, copy it into the configuration
+                            if conf[item]:
+                                conf_array[item] = conf[item]
+                                parsed_items.append(item)
+                for item in self.REQUIRED_ITEMS['release-conf']:
+                    if item not in parsed_items:
+                        self.logger.error(f"Item {item!r} is required in release-conf!")
+                        sys.exit(1)
+                if 'python_versions' in conf_array:
+                    for index, version in enumerate(conf_array['python_versions']):
+                        conf_array['python_versions'][index] = int(version)
+                if 'fedora_branches' in conf_array:
+                    for index, branch in enumerate(conf_array['fedora_branches']):
+                        conf_array['fedora_branches'][index] = str(branch)
+                if conf_array['fedora'] and not self.fas_username:
+                    self.logger.warning(
+                        "Can't release to fedora if there is no FAS username, disabling")
+                    conf_array['fedora'] = False
+        else:
+            self.logger.error("no release-conf.yaml found in repository root!\n")
+            if self.REQUIRED_ITEMS['release-conf']:
+                sys.exit(1)
 
 
-globals_ = {}
-exec((Path(__file__).parent/"version.py").read_text(), globals_)
-VERSION = globals_['__version__']
+configuration = Configuration()
 
 
 def parse_arguments():
@@ -50,7 +125,7 @@ def parse_arguments():
     parser.add_argument("-c", "--configuration", help="use custom YAML configuration",
                         default='')
     parser.add_argument("-v", "--version", help="display program version", action='version',
-                        version=f"%(prog)s {VERSION}")
+                        version=f"%(prog)s {configuration.version}")
     parser.add_argument("-k", "--keytab", help="keytab file for fedora", default='')
 
     args = parser.parse_args()
@@ -59,13 +134,13 @@ def parse_arguments():
         if not os.path.isabs(path):
             args.configuration = os.path.join(os.getcwd(), path)
         if not os.path.isfile(path):
-            CONFIGURATION['logger'].error(
+            configuration.logger.error(
                 f"Supplied configuration file is not found: {args.configuration}")
             sys.exit(1)
     if args.debug:
-        CONFIGURATION['logger'].setLevel(logging.DEBUG)
+        configuration.logger.setLevel(logging.DEBUG)
     for key, value in vars(args).items():
-        CONFIGURATION[key] = value
+        setattr(configuration, key, value)
 
 
 def set_logging(
@@ -100,39 +175,12 @@ def set_logging(
     return logger
 
 
-def load_configuration():
-    """Load bot configuration from .yaml file"""
-    if len(CONFIGURATION['configuration']) <= 0:
-        # configuration not supplied, look for conf.yaml in cwd
-        path = os.path.join(os.getcwd(), 'conf.yaml')
-        if os.path.isfile(path):
-            CONFIGURATION['configuration'] = path
-        else:
-            CONFIGURATION['logger'].error("Cannot find valid configuration")
-            sys.exit(1)
-    with open(CONFIGURATION['configuration'], 'r') as ymlfile:
-        file = yaml.load(ymlfile)
-    for item in file:
-        if item in CONFIGURATION:
-            CONFIGURATION[item] = file[item]
-    # check if required items are present
-    parts_required = ["conf"]
-    for part in parts_required:
-        for item in REQUIRED_ITEMS[part]:
-            if item not in file:
-                CONFIGURATION['logger'].error(f"Item {item!r} is required in configuration!")
-                sys.exit(1)
-    # make sure the types are right where it matters
-    str(CONFIGURATION['repository_name'])
-    str(CONFIGURATION['repository_owner'])
-
-
 def send_query(query):
     """Send query to Github v4 API and return the response"""
-    query = {"query": (f'query {{repository(owner: "{CONFIGURATION["repository_owner"]}", '
-                       f'name: "{CONFIGURATION["repository_name"]}") {{{query}}}}}')}
-    headers = {'Authorization': 'token %s' % CONFIGURATION['github_token']}
-    return requests.post(url=GITHUB_API_ENDPOINT, json=query, headers=headers)
+    query = {"query": (f'query {{repository(owner: "{configuration.repository_owner}", '
+                       f'name: "{configuration.repository_name}") {{{query}}}}}')}
+    headers = {'Authorization': 'token %s' % configuration.github_token}
+    return requests.post(url=configuration.GITHUB_API_ENDPOINT, json=query, headers=headers)
 
 
 def detect_api_errors(response):
@@ -141,7 +189,7 @@ def detect_api_errors(response):
         msg = ""
         for err in response['errors']:
             msg += "\t" + err['message'] + "\n"
-        CONFIGURATION['logger'].error("There are errors in github response:\n" + msg)
+        configuration.logger.error("There are errors in github response:\n" + msg)
         sys.exit(1)
 
 
@@ -199,7 +247,7 @@ def update_spec(spec_path, new_release):
             spec_file.truncate()
             spec_file.close()
     else:
-        CONFIGURATION['logger'].error("No spec file found in dist-git repository!\n")
+        configuration.logger.error("No spec file found in dist-git repository!\n")
         sys.exit(1)
 
 
@@ -221,9 +269,9 @@ def shell_command(work_directory, cmd, error_message, fail=True):
         shell=False,
         cwd=work_directory,
         universal_newlines=True)
-    CONFIGURATION['logger'].debug(f"{shell.args}\n{shell.stdout}")
+    configuration.logger.debug(f"{shell.args}\n{shell.stdout}")
     if shell.returncode != 0:
-        CONFIGURATION['logger'].error(f"{error_message}\n{shell.stderr}")
+        configuration.logger.error(f"{error_message}\n{shell.stderr}")
         if fail:
             sys.exit(1)
         return False
@@ -232,11 +280,11 @@ def shell_command(work_directory, cmd, error_message, fail=True):
 
 def pypi_get_latest_version():
     """Get latest version of the package from PyPi"""
-    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']}/json")
+    response = requests.get(url=f"{configuration.PYPI_URL}{configuration.repository_name}/json")
     if response.status_code == 200:
         return response.json()['info']['version']
     else:
-        CONFIGURATION['logger'].error(f"Pypi package doesn't exist:\n{response.text}")
+        configuration.logger.error(f"Pypi package doesn't exist:\n{response.text}")
         sys.exit(1)
 
 
@@ -249,7 +297,7 @@ def pypi_build_sdist(project_root):
     if os.path.isfile(os.path.join(project_root, 'setup.py')):
         shell_command(project_root, "python setup.py sdist", "Cannot build sdist:")
     else:
-        CONFIGURATION['logger'].error(f"Cannot find setup.py:")
+        configuration.logger.error(f"Cannot find setup.py:")
         sys.exit(1)
 
 
@@ -265,11 +313,11 @@ def pypi_build_wheel(project_root, python_version):
         interpreter = "python3"
     elif python_version != 2:
         # no other versions of python other than 2 and three are supported
-        CONFIGURATION['logger'].error(f"Unsupported python version: {python_version}")
+        configuration.logger.error(f"Unsupported python version: {python_version}")
         sys.exit(1)
 
     if not os.path.isfile(os.path.join(project_root, 'setup.py')):
-        CONFIGURATION['logger'].error(f"Cannot find setup.py:")
+        configuration.logger.error(f"Cannot find setup.py:")
         sys.exit(1)
 
     shell_command(project_root, f"{interpreter} setup.py bdist_wheel",
@@ -289,7 +337,7 @@ def pypi_upload(project_root):
             files += f"{file} "
         shell_command(project_root, f"twine upload {files}", "Cannot upload python distribution:")
     else:
-        CONFIGURATION['logger'].error(f"dist/ folder cannot be found:")
+        configuration.logger.error(f"dist/ folder cannot be found:")
         sys.exit(1)
 
 
@@ -306,7 +354,7 @@ def release_on_pypi(conf_array):
             pypi_build_wheel(project_root, version)
         pypi_upload(project_root)
     else:
-        CONFIGURATION['logger'].error("Cannot find project root for PyPi release:")
+        configuration.logger.error("Cannot find project root for PyPi release:")
         sys.exit(1)
 
 
@@ -317,7 +365,7 @@ def fedpkg_clone_repository(directory, name):
                       "Cloning fedora repository failed:")
         return os.path.join(directory, name)
     else:
-        CONFIGURATION['logger'].error(f"Cannot clone fedpkg repository into non-existent directory:")
+        configuration.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
         sys.exit(1)
 
 
@@ -327,7 +375,7 @@ def fedpkg_switch_branch(directory, branch, fail=True):
                              f"fedpkg switch-branch {branch}",
                              f"Switching to {branch} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -337,7 +385,7 @@ def fedpkg_build(directory, branch, scratch=False, fail=True):
                              f"fedpkg build {'--scratch' if scratch else ''}",
                              f"Building branch {branch!r} in Fedora failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -347,7 +395,7 @@ def fedpkg_push(directory, branch, fail=True):
                              f"fedpkg push",
                              f"Pushing branch {branch!r} to Fedora failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -357,7 +405,7 @@ def fedpkg_merge(directory, branch, ff_only=True, fail=True):
                              f"git merge master {'--ff-only' if ff_only else ''}",
                              f"Merging master to branch {branch!r} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -367,7 +415,7 @@ def fedpkg_commit(directory, branch, message, fail=True):
                              f"fedpkg commit -m '{message}'",
                              f"Committing on branch {branch} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -377,7 +425,7 @@ def fedpkg_sources(directory, branch, fail=True):
                              "fedpkg sources",
                              f"Retrieving sources for branch {branch} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -391,7 +439,7 @@ def fedpkg_spectool(directory, branch, fail=True):
                              f"spectool -g {files}",
                              f"Retrieving new sources for branch {branch} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -401,7 +449,7 @@ def fedpkg_lint(directory, branch, fail=True):
                              "fedpkg lint",
                              f"Spec lint on branch {branch} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -411,7 +459,7 @@ def fedpkg_new_sources(directory, branch, sources="", fail=True):
                              f"fedpkg new-sources {sources}",
                              f"Adding new sources on branch {branch} failed:", fail)
     else:
-        CONFIGURATION['logger'].error(f"Cannot access fedpkg repository:")
+        configuration.logger.error(f"Cannot access fedpkg repository:")
         sys.exit(1)
 
 
@@ -443,7 +491,7 @@ def update_package(fedpkg_root, branch, new_release):
         return False
 
     # update spec file
-    spec_path = os.path.join(fedpkg_root, f"{CONFIGURATION['repository_name']}.spec")
+    spec_path = os.path.join(fedpkg_root, f"{configuration.repository_name}.spec")
     update_spec(spec_path, new_release)
 
     # check if spec file is valid
@@ -466,7 +514,7 @@ def update_package(fedpkg_root, branch, new_release):
 
     # if there are no new sources, abort update
     if len(sources.strip()) <= 0:
-        CONFIGURATION['logger'].warning(
+        configuration.logger.warning(
             "There are no new sources, won't continue releasing to fedora")
         return False
 
@@ -491,15 +539,15 @@ def release_in_fedora(new_release):
     :param new_release: an array containing info about new release, see main() for definition
     :return: True on successful release, False on unsuccessful
     """
-    status = fedora_init_ticket(CONFIGURATION['keytab'], CONFIGURATION['fas_username'])
+    status = fedora_init_ticket(configuration.keytab, configuration.fas_username)
     if not status:
-        CONFIGURATION['logger'].warning(
+        configuration.logger.warning(
             f"Can't obtain a valid kerberos ticket, skipping fedora release")
         return False
     tmp = tempfile.TemporaryDirectory()
 
     # clone the repository from dist-git
-    fedpkg_root = fedpkg_clone_repository(tmp.name, CONFIGURATION['repository_name'])
+    fedpkg_root = fedpkg_clone_repository(tmp.name, configuration.repository_name)
 
     # make sure the current branch is master
     fedpkg_switch_branch(fedpkg_root, "master")
@@ -515,7 +563,7 @@ def release_in_fedora(new_release):
         if not fedpkg_switch_branch(fedpkg_root, branch, fail=False):
             continue
         if not fedpkg_merge(fedpkg_root, branch, True, False):
-            CONFIGURATION['logger'].debug(
+            configuration.logger.debug(
                 f"Trying to make the changes on branch {branch!r} from scratch")
             update_package(fedpkg_root, branch, new_release)
             continue
@@ -555,9 +603,9 @@ def get_latest_version_github():
         release = response['data']['repository']['releases']['nodes'][0]
         if not release['isPrerelease'] and not release['isDraft']:
             return release['name']
-        CONFIGURATION['logger'].debug("Latest github release is a Prerelease")
+        configuration.logger.debug("Latest github release is a Prerelease")
     else:
-        CONFIGURATION['logger'].debug("There is no latest github release")
+        configuration.logger.debug("There is no latest github release")
         return '0.0.0'
     return None
 
@@ -596,58 +644,19 @@ def walk_through_closed_prs(start='', direction='after', which="last"):
         return response
 
 
-def load_release_conf(conf_path, conf_array):
-    """
-    Load items from release-conf.yaml
-
-    :param conf_path: path to release-conf.yaml
-    :param conf_array: structure to load configuration into
-    """
-
-    if os.path.isfile(conf_path):
-        with open(conf_path) as conf_file:
-            conf = yaml.load(conf_file)
-            parsed_items = []
-            if conf:
-                for item in conf:
-                    if item in conf_array:
-                        # if item isn't empty, copy it into the configuration
-                        if conf[item]:
-                            conf_array[item] = conf[item]
-                            parsed_items.append(item)
-            for item in REQUIRED_ITEMS['release-conf']:
-                if item not in parsed_items:
-                    CONFIGURATION['logger'].error(f"Item {item!r} is required in release-conf!")
-                    sys.exit(1)
-            if 'python_versions' in conf_array:
-                for index, version in enumerate(conf_array['python_versions']):
-                    conf_array['python_versions'][index] = int(version)
-            if 'fedora_branches' in conf_array:
-                for index, branch in enumerate(conf_array['fedora_branches']):
-                    conf_array['fedora_branches'][index] = str(branch)
-            if conf_array['fedora'] and not CONFIGURATION['fas_username']:
-                CONFIGURATION['logger'].warning(
-                    "Can't release to fedora if there is no FAS username, disabling")
-                conf_array['fedora'] = False
-    else:
-        CONFIGURATION['logger'].error("no release-conf.yaml found in repository root!\n")
-        if REQUIRED_ITEMS['release-conf']:
-            sys.exit(1)
-
-
 def main():
     """Provides bot logic"""
-    CONFIGURATION['logger'] = set_logging()
+    configuration.logger = set_logging()
 
     parse_arguments()
-    load_configuration()
-    headers = {'Authorization': f"token {CONFIGURATION['github_token']}"}
+    configuration.load_configuration()
+    headers = {'Authorization': f"token {configuration.github_token}"}
 
-    CONFIGURATION['logger'].info(f"release-bot v{VERSION} reporting for duty!")
+    configuration.logger.info(f"release-bot v{configuration.version} reporting for duty!")
 
     # check for closed merge requests
     latest_pypi = pypi_get_latest_version()
-    CONFIGURATION['logger'].debug(f"Latest PyPi release: {latest_pypi}")
+    configuration.logger.debug(f"Latest PyPi release: {latest_pypi}")
     cursor = ''
     found = False
     # try to find the latest release closed merge request
@@ -658,7 +667,7 @@ def main():
         for edge in reversed(response['data']['repository']['pullRequests']['edges']):
             cursor = edge['cursor']
             if latest_pypi + ' release' == edge['node']['title'].lower():
-                CONFIGURATION['logger'].debug(
+                configuration.logger.debug(
                     f'Found closed PR with the latest {latest_pypi} PyPi release')
                 found = True
                 break
@@ -695,25 +704,25 @@ def main():
         # if found, make a new release on github
         # this has to be done using older github api because v4 doesn't support this yet
         if found:
-            CONFIGURATION['logger'].info((f"found version: {new_release['version']}, "
-                                          f"commit id: {new_release['commitish']}"))
+            configuration.logger.info((f"found version: {new_release['version']}, "
+                           f"commit id: {new_release['commitish']}"))
             payload = {"tag_name": new_release['version'],
                        "target_commitish": new_release['commitish'],
                        "name": new_release['version'],
                        "prerelease": False,
                        "draft": False}
-            url = (f"{GITHUB_API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
-                   f"{CONFIGURATION['repository_name']}/releases")
+            url = (f"{configuration.GITHUB_API3_ENDPOINT}repos/{configuration.repository_owner}/"
+                   f"{configuration.repository_name}/releases")
             response = requests.post(url=url, headers=headers, json=payload)
             if response.status_code != 201:
                 response_get = requests.get(url=url, headers=headers)
                 if (response_get.status_code == 200 and
                         [r for r in response_get.json() if r.get('name') == new_release['version']]):
-                    CONFIGURATION['logger'].info(f"{new_release['version']} "
-                                                 f"has already been released on github")
+                    configuration.logger.info(f"{new_release['version']} "
+                                  f"has already been released on github")
                 else:
-                    CONFIGURATION['logger'].error((f"Something went wrong with creating "
-                                                   f"new release on github:\n{response.text}"))
+                    configuration.logger.error((f"Something went wrong with creating "
+                                    f"new release on github:\n{response.text}"))
                     sys.exit(1)
             else:
                 # download the new release to a temporary directory
@@ -732,31 +741,30 @@ def main():
 
                 # parse changelog and update the release with it
                 changelog = parse_changelog(latest_pypi, new_release['version'], new_release['fs_path'])
-                url = (f"{GITHUB_API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
-                       f"{CONFIGURATION['repository_name']}/releases/{info['id']!s}")
+                url = (f"{configuration.GITHUB_API3_ENDPOINT}repos/{configuration.repository_owner}/"
+                       f"{configuration.repository_name}/releases/{info['id']!s}")
                 response = requests.post(url=url, json={'body': changelog}, headers=headers)
                 if response.status_code != 200:
-                    CONFIGURATION['logger'].error((f"Something went wrong during changelog "
-                                                   f"update for a release:\n{response.text}"))
+                    configuration.logger.error((f"Something went wrong during changelog "
+                                    f"update for a release:\n{response.text}"))
                     sys.exit(1)
 
                 # load release configuration from release-conf.yaml in repository
-                load_release_conf(os.path.join(new_release['fs_path'], 'release-conf.yaml'),
-                                  new_release)
+                configuration.load_release_conf(os.path.join(new_release['fs_path'], 'release-conf.yaml'),
+                                    new_release)
 
         # check if a new release was made
         if Version.coerce(latest_pypi) < Version.coerce(new_release['version']):
-            CONFIGURATION['logger'].info("Newer version on github, triggering PyPi release")
+            configuration.logger.info("Newer version on github, triggering PyPi release")
             release_on_pypi(new_release)
             if new_release['fedora']:
-                CONFIGURATION['logger'].info("Triggering Fedora release")
+                configuration.logger.info("Triggering Fedora release")
                 release_in_fedora(new_release)
             new_release['tempdir'].cleanup()
         else:
-            CONFIGURATION['logger'].debug((f"PyPi version {latest_pypi} | "
-                                           f"Github version {get_latest_version_github()} "
-                                           "-> nothing to do"))
-        time.sleep(CONFIGURATION['refresh_interval'])
+            configuration.logger.debug((f"PyPi version {latest_pypi} | "
+                            f"Github version {get_latest_version_github()} -> nothing to do"))
+        time.sleep(configuration.refresh_interval)
 
 
 if __name__ == '__main__':

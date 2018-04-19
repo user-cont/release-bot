@@ -3,6 +3,7 @@ import subprocess
 import re
 import shutil
 import release_bot.release_bot as release_bot
+from release_bot.release_bot import configuration
 import pytest
 from flexmock import flexmock
 from pathlib import Path
@@ -14,8 +15,8 @@ class TestPypi3:
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=10)
-        release_bot.CONFIGURATION['debug'] = True
+        configuration.logger = release_bot.set_logging(level=10)
+        configuration.debug = True
 
     def teardown_method(self, method):
         """ teardown any state that was previously setup with a setup_method
