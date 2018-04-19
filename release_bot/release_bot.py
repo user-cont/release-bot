@@ -253,6 +253,89 @@ class Github:
             return response
 
 
+class PyPi:
+
+    def __init__(self, configuration):
+        self.conf = configuration
+        self.logger = configuration.logger
+
+    def latest_version(self):
+        """Get latest version of the package from PyPi"""
+        response = requests.get(url=f"{self.conf.PYPI_URL}{self.conf.repository_name}/json")
+        if response.status_code == 200:
+            return response.json()['info']['version']
+        else:
+            self.logger.error(f"Pypi package doesn't exist:\n{response.text}")
+            sys.exit(1)
+
+    def build_sdist(self, project_root):
+        """
+        Builds source distribution out of setup.py
+
+        :param project_root: location of setup.py
+        """
+        if os.path.isfile(os.path.join(project_root, 'setup.py')):
+            shell_command(project_root, "python setup.py sdist", "Cannot build sdist:")
+        else:
+            self.logger.error(f"Cannot find setup.py:")
+            sys.exit(1)
+
+
+    def build_wheel(self, project_root, python_version):
+        """
+        Builds wheel for specified version of python
+
+        :param project_root: location of setup.py
+        :param python_version: python version to build wheel for
+        """
+        interpreter = "python2"
+        if python_version == 3:
+            interpreter = "python3"
+        elif python_version != 2:
+            # no other versions of python other than 2 and three are supported
+            self.logger.error(f"Unsupported python version: {python_version}")
+            sys.exit(1)
+
+        if not os.path.isfile(os.path.join(project_root, 'setup.py')):
+            self.logger.error(f"Cannot find setup.py:")
+            sys.exit(1)
+
+        shell_command(project_root, f"{interpreter} setup.py bdist_wheel",
+                      f"Cannot build wheel for python {python_version}")
+
+    def upload(self, project_root):
+        """
+        Uploads the package distribution to PyPi
+
+        :param project_root: directory with dist/ folder
+        """
+        if os.path.isdir(os.path.join(project_root, 'dist')):
+            spec_files = glob.glob(os.path.join(project_root, "dist/*"))
+            files = ""
+            for file in spec_files:
+                files += f"{file} "
+            shell_command(project_root, f"twine upload {files}", "Cannot upload python distribution:")
+        else:
+            self.logger.error(f"dist/ folder cannot be found:")
+            sys.exit(1)
+
+    def release(self, conf_array):
+        """
+        Release project on PyPi
+
+        :param conf_array: structure with information about the new release
+        """
+        project_root = conf_array['fs_path']
+        if os.path.isdir(project_root):
+            self.build_sdist(project_root)
+            for version in conf_array['python_versions']:
+                self.build_wheel(project_root, version)
+            self.upload(project_root)
+        else:
+            self.logger.error("Cannot find project root for PyPi release:")
+            sys.exit(1)
+
+
 def parse_changelog(previous_version, version, path):
     """
     Get changelog for selected version
@@ -337,85 +420,6 @@ def shell_command(work_directory, cmd, error_message, fail=True):
         return False
     return True
 
-
-def pypi_get_latest_version():
-    """Get latest version of the package from PyPi"""
-    response = requests.get(url=f"{configuration.PYPI_URL}{configuration.repository_name}/json")
-    if response.status_code == 200:
-        return response.json()['info']['version']
-    else:
-        configuration.logger.error(f"Pypi package doesn't exist:\n{response.text}")
-        sys.exit(1)
-
-
-def pypi_build_sdist(project_root):
-    """
-    Builds source distribution out of setup.py
-
-    :param project_root: location of setup.py
-    """
-    if os.path.isfile(os.path.join(project_root, 'setup.py')):
-        shell_command(project_root, "python setup.py sdist", "Cannot build sdist:")
-    else:
-        configuration.logger.error(f"Cannot find setup.py:")
-        sys.exit(1)
-
-
-def pypi_build_wheel(project_root, python_version):
-    """
-    Builds wheel for specified version of python
-
-    :param project_root: location of setup.py
-    :param python_version: python version to build wheel for
-    """
-    interpreter = "python2"
-    if python_version == 3:
-        interpreter = "python3"
-    elif python_version != 2:
-        # no other versions of python other than 2 and three are supported
-        configuration.logger.error(f"Unsupported python version: {python_version}")
-        sys.exit(1)
-
-    if not os.path.isfile(os.path.join(project_root, 'setup.py')):
-        configuration.logger.error(f"Cannot find setup.py:")
-        sys.exit(1)
-
-    shell_command(project_root, f"{interpreter} setup.py bdist_wheel",
-                  f"Cannot build wheel for python {python_version}")
-
-
-def pypi_upload(project_root):
-    """
-    Uploads the package distribution to PyPi
-
-    :param project_root: directory with dist/ folder
-    """
-    if os.path.isdir(os.path.join(project_root, 'dist')):
-        spec_files = glob.glob(os.path.join(project_root, "dist/*"))
-        files = ""
-        for file in spec_files:
-            files += f"{file} "
-        shell_command(project_root, f"twine upload {files}", "Cannot upload python distribution:")
-    else:
-        configuration.logger.error(f"dist/ folder cannot be found:")
-        sys.exit(1)
-
-
-def release_on_pypi(conf_array):
-    """
-    Release project on PyPi
-
-    :param conf_array: structure with information about the new release
-    """
-    project_root = conf_array['fs_path']
-    if os.path.isdir(project_root):
-        pypi_build_sdist(project_root)
-        for version in conf_array['python_versions']:
-            pypi_build_wheel(project_root, version)
-        pypi_upload(project_root)
-    else:
-        configuration.logger.error("Cannot find project root for PyPi release:")
-        sys.exit(1)
 
 
 def fedpkg_clone_repository(directory, name):
@@ -646,8 +650,9 @@ def main():
 
     configuration.logger.info(f"release-bot v{configuration.version} reporting for duty!")
     github = Github(configuration)
+    pypi = PyPi(configuration)
     # check for closed merge requests
-    latest_pypi = pypi_get_latest_version()
+    latest_pypi = pypi.latest_version()
     configuration.logger.debug(f"Latest PyPi release: {latest_pypi}")
     cursor = ''
     found = False
@@ -749,7 +754,7 @@ def main():
         # check if a new release was made
         if Version.coerce(latest_pypi) < Version.coerce(new_release['version']):
             configuration.logger.info("Newer version on github, triggering PyPi release")
-            release_on_pypi(new_release)
+            pypi.release(new_release)
             if new_release['fedora']:
                 configuration.logger.info("Triggering Fedora release")
                 release_in_fedora(new_release)
