@@ -30,24 +30,56 @@ class Configuration:
     PYPI_URL = "https://pypi.org/pypi/"
 
     def __init__(self):
-        self.release_bot_version = ''
+        self._release_bot_version = ''
         self.repository_name = ''
         self.repository_owner = ''
         self.github_token = ''
         self.refresh_interval = 3 * 60
         self.debug = False
         self.configuration = ''
-        self.logger = None
+        self.logger = self.set_logging()
         self.keytab = ''
         self.fas_username = ''
 
     @property
     def version(self):
-        if not self.release_bot_version:
+        if not self._release_bot_version:
             globals_ = {}
             exec((Path(__file__).parent / "version.py").read_text(), globals_)
-            self.release_bot_version = globals_['__version__']
-        return self.release_bot_version
+            self._release_bot_version = globals_['__version__']
+        return self._release_bot_version
+
+    @staticmethod
+    def set_logging(
+            logger_name="release-bot",
+            level=logging.INFO,
+            handler_class=logging.StreamHandler,
+            handler_kwargs=None,
+            msg_format='%(asctime)s.%(msecs).03d %(filename)-17s %(levelname)-6s %(message)s',
+            date_format='%H:%M:%S'):
+        """
+        Set personal logger for this library.
+        :param logger_name: str, name of the logger
+        :param level: int, see logging.{DEBUG,INFO,ERROR,...}: level of logger and handler
+        :param handler_class: logging.Handler instance, default is StreamHandler (/dev/stderr)
+        :param handler_kwargs: dict, keyword arguments to handler's constructor
+        :param msg_format: str, formatting style
+        :param date_format: str, date style in the logs
+        :return: logger instance
+        """
+        logger = logging.getLogger(logger_name)
+        # do we want to propagate to root logger?
+        # logger.propagate = False
+        logger.setLevel(level)
+
+        handler_kwargs = handler_kwargs or {}
+        handler = handler_class(**handler_kwargs)
+
+        formatter = logging.Formatter(msg_format, date_format)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        return logger
 
     def load_configuration(self):
         """Load bot configuration from .yaml file"""
@@ -135,54 +167,90 @@ def parse_arguments():
         setattr(configuration, key, value)
 
 
-def set_logging(
-        logger_name="release-bot",
-        level=logging.INFO,
-        handler_class=logging.StreamHandler,
-        handler_kwargs=None,
-        msg_format='%(asctime)s.%(msecs).03d %(filename)-17s %(levelname)-6s %(message)s',
-        date_format='%H:%M:%S'):
-    """
-    Set personal logger for this library.
-    :param logger_name: str, name of the logger
-    :param level: int, see logging.{DEBUG,INFO,ERROR,...}: level of logger and handler
-    :param handler_class: logging.Handler instance, default is StreamHandler (/dev/stderr)
-    :param handler_kwargs: dict, keyword arguments to handler's constructor
-    :param msg_format: str, formatting style
-    :param date_format: str, date style in the logs
-    :return: logger instance
-    """
-    logger = logging.getLogger(logger_name)
-    # do we want to propagate to root logger?
-    # logger.propagate = False
-    logger.setLevel(level)
+class Github:
 
-    handler_kwargs = handler_kwargs or {}
-    handler = handler_class(**handler_kwargs)
+    def __init__(self, configuration):
+        self.conf = configuration
+        self.logger = configuration.logger
 
-    formatter = logging.Formatter(msg_format, date_format)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    def send_query(self, query):
+        """Send query to Github v4 API and return the response"""
+        query = {"query": (f'query {{repository(owner: "{self.conf.repository_owner}", '
+                           f'name: "{self.conf.repository_name}") {{{query}}}}}')}
+        headers = {'Authorization': f'token {self.conf.github_token}'}
+        return requests.post(url=self.conf.GITHUB_API_ENDPOINT, json=query, headers=headers)
 
-    return logger
+    def detect_api_errors(self, response):
+        """This function looks for errors in API response"""
+        if 'errors' in response:
+            msg = ""
+            for err in response['errors']:
+                msg += "\t" + err['message'] + "\n"
+            self.logger.error("There are errors in github response:\n" + msg)
+            sys.exit(1)
 
+    def latest_version(self):
+        """
+        Get the latest project release number on Github
 
-def send_query(query):
-    """Send query to Github v4 API and return the response"""
-    query = {"query": (f'query {{repository(owner: "{configuration.repository_owner}", '
-                       f'name: "{configuration.repository_name}") {{{query}}}}}')}
-    headers = {'Authorization': 'token %s' % configuration.github_token}
-    return requests.post(url=configuration.GITHUB_API_ENDPOINT, json=query, headers=headers)
+        :return: Version number or None
+        """
+        query = '''url
+                releases(last: 1) {
+                    nodes {
+                      id
+                      isPrerelease
+                      isDraft
+                      name
+                  }
+                }
+            '''
+        response = self.send_query(query).json()
+        self.detect_api_errors(response)
 
+        # check for empty response
+        if response['data']['repository']['releases']['nodes']:
+            release = response['data']['repository']['releases']['nodes'][0]
+            if not release['isPrerelease'] and not release['isDraft']:
+                return release['name']
+            self.logger.debug("Latest github release is a Prerelease")
+        else:
+            self.logger.debug("There is no latest github release")
+            return '0.0.0'
+        return None
 
-def detect_api_errors(response):
-    """This function looks for errors in API response"""
-    if 'errors' in response:
-        msg = ""
-        for err in response['errors']:
-            msg += "\t" + err['message'] + "\n"
-        configuration.logger.error("There are errors in github response:\n" + msg)
-        sys.exit(1)
+    def walk_through_closed_prs(self, start='', direction='after', which="last"):
+        """
+        Searches merged pull requests
+
+        :param start: A cursor to start at
+        :param direction: Direction to go from cursor
+        :param which: Indicates which part of the result list
+                      should be returned, can be 'first' or 'last'
+        :return: API query response as an array
+        """
+        while True:
+            query = (f"pullRequests(states: MERGED {which}: 5 " +
+                     (f'{direction}: "{start}"' if start else '') +
+                     '''){
+                  edges {
+                    cursor
+                    node {
+                      id
+                      title
+                      mergeCommit {
+                        oid
+                        author {
+                            name
+                            email
+                        }
+                      }
+                    }
+                  }
+                }''')
+            response = self.send_query(query).json()
+            self.detect_api_errors(response)
+            return response
 
 
 def parse_changelog(previous_version, version, path):
@@ -570,82 +638,14 @@ def release_in_fedora(new_release):
     return True
 
 
-def get_latest_version_github():
-    """
-    Get the latest project release number on Github
-
-    :return: Version number or None
-    """
-    query = '''url
-            releases(last: 1) {
-                nodes {
-                  id
-                  isPrerelease
-                  isDraft
-                  name
-              }
-            }
-        '''
-    response = send_query(query).json()
-
-    detect_api_errors(response)
-
-    # check for empty response
-    if response['data']['repository']['releases']['nodes']:
-        release = response['data']['repository']['releases']['nodes'][0]
-        if not release['isPrerelease'] and not release['isDraft']:
-            return release['name']
-        configuration.logger.debug("Latest github release is a Prerelease")
-    else:
-        configuration.logger.debug("There is no latest github release")
-        return '0.0.0'
-    return None
-
-
-def walk_through_closed_prs(start='', direction='after', which="last"):
-    """
-    Searches merged pull requests
-
-    :param start: A cursor to start at
-    :param direction: Direction to go from cursor
-    :param which: Indicates which part of the result list
-                  should be returned, can be 'first' or 'last'
-    :return: API query response as an array
-    """
-    while True:
-        query = (f"pullRequests(states: MERGED {which}: 5 " +
-                 (f'{direction}: "{start}"' if start else '') +
-                 '''){
-              edges {
-                cursor
-                node {
-                  id
-                  title
-                  mergeCommit {
-                    oid
-                    author {
-                        name
-                        email
-                    }
-                  }
-                }
-              }
-            }''')
-        response = send_query(query).json()
-        detect_api_errors(response)
-        return response
-
-
 def main():
     """Provides bot logic"""
-    configuration.logger = set_logging()
-
     parse_arguments()
     configuration.load_configuration()
     headers = {'Authorization': f"token {configuration.github_token}"}
 
     configuration.logger.info(f"release-bot v{configuration.version} reporting for duty!")
-
+    github = Github(configuration)
     # check for closed merge requests
     latest_pypi = pypi_get_latest_version()
     configuration.logger.debug(f"Latest PyPi release: {latest_pypi}")
@@ -653,7 +653,7 @@ def main():
     found = False
     # try to find the latest release closed merge request
     while not found:
-        response = walk_through_closed_prs(cursor, 'before')
+        response = github.walk_through_closed_prs(cursor, 'before')
         if not response['data']['repository']['pullRequests']['edges']:
             break
         for edge in reversed(response['data']['repository']['pullRequests']['edges']):
@@ -678,7 +678,7 @@ def main():
                        'tempdir': None}
 
         while True:
-            response = walk_through_closed_prs(cursor, which="first")
+            response = github.walk_through_closed_prs(cursor, which="first")
             if len(response['data']['repository']['pullRequests']['edges']) <= 0:
                 break
             for edge in response['data']['repository']['pullRequests']['edges']:
@@ -756,7 +756,7 @@ def main():
             new_release['tempdir'].cleanup()
         else:
             configuration.logger.debug((f"PyPi version {latest_pypi} | "
-                            f"Github version {get_latest_version_github()} -> nothing to do"))
+                            f"Github version {github.latest_version()} -> nothing to do"))
         time.sleep(configuration.refresh_interval)
 
 
