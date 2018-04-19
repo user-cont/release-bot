@@ -647,6 +647,7 @@ def main():
 
     # check for closed merge requests
     latest_pypi = pypi_get_latest_version()
+    CONFIGURATION['logger'].debug(f"Latest PyPi release: {latest_pypi}")
     cursor = ''
     found = False
     # try to find the latest release closed merge request
@@ -658,7 +659,7 @@ def main():
             cursor = edge['cursor']
             if latest_pypi + ' release' == edge['node']['title'].lower():
                 CONFIGURATION['logger'].debug(
-                    f'Found closed PR with PyPi release: "{latest_pypi} release"')
+                    f'Found closed PR with the latest {latest_pypi} PyPi release')
                 found = True
                 break
     # now walk through PRs since the latest_pypi version and check for a new one
