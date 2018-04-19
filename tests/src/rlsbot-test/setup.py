@@ -9,7 +9,7 @@ setup(
     version='1.0.0',
     py_modules=['rlsbot_test'],
     python_requires='>=2',
-    url='https://github.com/kosciCZ/release-bot/',
+    url='https://github.com/user-cont/release-bot/',
     license='GPLv3+',
     author='Red Hat',
     author_email='user-cont@redhat.com',

@@ -18,6 +18,7 @@ import locale
 import logging
 import yaml
 import requests
+from semantic_version import Version, validate
 
 CONFIGURATION = {"repository_name": '',
                  "repository_owner": '',
@@ -33,7 +34,7 @@ REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'
                   "release-conf": ['python_versions']}
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
-PYPI_URL = "https://pypi.python.org/pypi/"
+PYPI_URL = "https://pypi.org/pypi/"
 
 VERSION = {}
 with open(os.path.join(os.path.dirname(__file__), "version.py")) as fp:
@@ -153,7 +154,8 @@ def parse_changelog(previous_version, version, path):
     :param str path: Path to CHANGELOG.md
     :return: Changelog entry or placeholder entry if no changelog is found
     """
-    if os.path.isfile(path + "/CHANGELOG.md") and version_tuple(previous_version) < version_tuple(version):
+    if os.path.isfile(path + "/CHANGELOG.md") and \
+            Version.coerce(previous_version) < Version.coerce(version):
         file = open(path + '/CHANGELOG.md', 'r').read()
         # detect position of this version header
         pos_start = file.find("# " + version)
@@ -162,16 +164,6 @@ def parse_changelog(previous_version, version, path):
         if changelog:
             return changelog
     return "No changelog provided"
-
-
-def get_latest_version_pypi():
-    """Get latest version of the package from PyPi"""
-    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']}/json")
-    if response.status_code == 200:
-        return response.json()['info']['version']
-    else:
-        CONFIGURATION['logger'].error(f"Pypi package doesn't exist:\n{response.text}")
-        sys.exit(1)
 
 
 def update_spec(spec_path, new_release):
@@ -207,7 +199,7 @@ def update_spec(spec_path, new_release):
             spec_file.truncate()
             spec_file.close()
     else:
-        CONFIGURATION['logger'].error("Spec file is not found in  dist-git repository!\n")
+        CONFIGURATION['logger'].error("No spec file found in dist-git repository!\n")
         sys.exit(1)
 
 
@@ -238,6 +230,16 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     return True
 
 
+def pypi_get_latest_version():
+    """Get latest version of the package from PyPi"""
+    response = requests.get(url=f"{PYPI_URL}{CONFIGURATION['repository_name']}/json")
+    if response.status_code == 200:
+        return response.json()['info']['version']
+    else:
+        CONFIGURATION['logger'].error(f"Pypi package doesn't exist:\n{response.text}")
+        sys.exit(1)
+
+
 def pypi_build_sdist(project_root):
     """
     Builds source distribution out of setup.py
@@ -258,7 +260,7 @@ def pypi_build_wheel(project_root, python_version):
     :param project_root: location of setup.py
     :param python_version: python version to build wheel for
     """
-    interpreter = "python"
+    interpreter = "python2"
     if python_version == 3:
         interpreter = "python3"
     elif python_version != 2:
@@ -544,8 +546,7 @@ def get_latest_version_github():
               }
             }
         '''
-    response = send_query(query).text
-    response = json.loads(response)
+    response = send_query(query).json()
 
     detect_api_errors(response)
 
@@ -590,20 +591,9 @@ def walk_through_closed_prs(start='', direction='after', which="last"):
                 }
               }
             }''')
-        response = send_query(query).text
-        response = json.loads(response)
+        response = send_query(query).json()
         detect_api_errors(response)
         return response
-
-
-def version_tuple(version):
-    """
-    Converts version number to a tuple
-
-    :param str version: Version number
-    :return: Version number as a tuple
-    """
-    return tuple(map(int, (version.split("."))))
 
 
 def load_release_conf(conf_path, conf_array):
@@ -640,7 +630,7 @@ def load_release_conf(conf_path, conf_array):
                     "Can't release to fedora if there is no FAS username, disabling")
                 conf_array['fedora'] = False
     else:
-        CONFIGURATION['logger'].error("release-conf.yaml is not found in repository root!\n")
+        CONFIGURATION['logger'].error("no release-conf.yaml found in repository root!\n")
         if REQUIRED_ITEMS['release-conf']:
             sys.exit(1)
 
@@ -656,7 +646,7 @@ def main():
     CONFIGURATION['logger'].info(f"release-bot v{VERSION} reporting for duty!")
 
     # check for closed merge requests
-    latest = get_latest_version_pypi()
+    latest_pypi = pypi_get_latest_version()
     cursor = ''
     found = False
     # try to find the latest release closed merge request
@@ -666,12 +656,12 @@ def main():
             break
         for edge in reversed(response['data']['repository']['pullRequests']['edges']):
             cursor = edge['cursor']
-            if latest + ' release' == edge['node']['title'].lower():
+            if latest_pypi + ' release' == edge['node']['title'].lower():
                 CONFIGURATION['logger'].debug(
-                    f'Found closed PR with PyPi release: "{latest} release"')
+                    f'Found closed PR with PyPi release: "{latest_pypi} release"')
                 found = True
                 break
-    # now walk through PRs since the latest version and check for a new one
+    # now walk through PRs since the latest_pypi version and check for a new one
     while True:
         found = False
         new_release = {'version': '0.0.0',
@@ -691,9 +681,9 @@ def main():
                 break
             for edge in response['data']['repository']['pullRequests']['edges']:
                 cursor = edge['cursor']
-                if re.match(r'\d\.\d\.\d release', edge['node']['title'].lower()):
-                    version = edge['node']['title'].split()
-                    new_release['version'] = version[0]
+                match = re.match(r'(.+) release', edge['node']['title'].lower())
+                if match and validate(match[1]):
+                    new_release['version'] = match[1]
                     merge_commit = edge['node']['mergeCommit']
                     new_release['commitish'] = merge_commit['oid']
                     new_release['author_name'] = merge_commit['author']['name']
@@ -704,8 +694,8 @@ def main():
         # if found, make a new release on github
         # this has to be done using older github api because v4 doesn't support this yet
         if found:
-            CONFIGURATION['logger'].error((f"found version: {new_release['version']}, "
-                                           f"commit id: {new_release['commitish']}"))
+            CONFIGURATION['logger'].info((f"found version: {new_release['version']}, "
+                                          f"commit id: {new_release['commitish']}"))
             payload = {"tag_name": new_release['version'],
                        "target_commitish": new_release['commitish'],
                        "name": new_release['version'],
@@ -715,14 +705,20 @@ def main():
                    f"{CONFIGURATION['repository_name']}/releases")
             response = requests.post(url=url, headers=headers, json=payload)
             if response.status_code != 201:
-                CONFIGURATION['logger'].error((f"Something went wrong with creating "
-                                               f"new release on github:\n{response.text}"))
-                sys.exit(1)
+                response_get = requests.get(url=url, headers=headers)
+                if (response_get.status_code == 200 and
+                        [r for r in response_get.json() if r.get('name') == new_release['version']]):
+                    CONFIGURATION['logger'].info(f"{new_release['version']} "
+                                                 f"has already been released on github")
+                else:
+                    CONFIGURATION['logger'].error((f"Something went wrong with creating "
+                                                   f"new release on github:\n{response.text}"))
+                    sys.exit(1)
             else:
                 # download the new release to a temporary directory
                 temp_directory = tempfile.TemporaryDirectory()
                 new_release['tempdir'] = temp_directory
-                info = json.loads(response.text)
+                info = response.json()
                 response = requests.get(url=info['zipball_url'])
                 path = temp_directory.name + '/' + new_release['version']
 
@@ -734,30 +730,29 @@ def main():
                 new_release['fs_path'] = path + "/" + dirs[0]
 
                 # parse changelog and update the release with it
-                changelog = parse_changelog(latest, new_release['version'], new_release['fs_path'])
+                changelog = parse_changelog(latest_pypi, new_release['version'], new_release['fs_path'])
                 url = (f"{API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
                        f"{CONFIGURATION['repository_name']}/releases/{info['id']!s}")
                 response = requests.post(url=url, json={'body': changelog}, headers=headers)
                 if response.status_code != 200:
-                    print(2, (f"Something went wrong during changelog "
-                              f"update for a release:\n{response.text}"))
+                    CONFIGURATION['logger'].error((f"Something went wrong during changelog "
+                                                   f"update for a release:\n{response.text}"))
                     sys.exit(1)
 
                 # load release configuration from release-conf.yaml in repository
                 load_release_conf(os.path.join(new_release['fs_path'], 'release-conf.yaml'),
                                   new_release)
 
-        latest = get_latest_version_pypi()
         # check if a new release was made
-        if version_tuple(latest) < version_tuple(new_release['version']):
-            CONFIGURATION['logger'].debug("Newer version on github, triggering PyPi release")
+        if Version.coerce(latest_pypi) < Version.coerce(new_release['version']):
+            CONFIGURATION['logger'].info("Newer version on github, triggering PyPi release")
             release_on_pypi(new_release)
             if new_release['fedora']:
-                CONFIGURATION['logger'].debug("Triggering Fedora release")
+                CONFIGURATION['logger'].info("Triggering Fedora release")
                 release_in_fedora(new_release)
             new_release['tempdir'].cleanup()
         else:
-            CONFIGURATION['logger'].debug((f"PyPi version {latest} | "
+            CONFIGURATION['logger'].debug((f"PyPi version {latest_pypi} | "
                                            f"Github version {get_latest_version_github()} "
                                            "-> nothing to do"))
         time.sleep(CONFIGURATION['refresh_interval'])

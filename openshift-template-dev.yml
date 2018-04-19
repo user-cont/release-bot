@@ -27,7 +27,7 @@ objects:
         - name : latest
           from :
             kind : DockerImage
-            name : koscicz/release-bot:dev
+            name : usercont/release-bot:dev
           importPolicy:
             scheduled: true
   - kind : BuildConfig
@@ -43,8 +43,8 @@ objects:
       source :
         type : Git
         git :
-          uri : ${SOURCE_REPOSITORY}
-          contextDir : ${SOURCE_REPOSITORY}
+          uri : ${CONFIGURATION_REPOSITORY}
+          contextDir : ${CONFIGURATION_REPOSITORY}
         sourceSecret :
           name : release-bot-secret
       strategy :
@@ -93,7 +93,7 @@ parameters :
     description : Name of application
     value :
     required : true
-  - name : SOURCE_REPOSITORY
-    description : Git source repository
+  - name : CONFIGURATION_REPOSITORY
+    description : Git repository with configuration
     value :
     required : true

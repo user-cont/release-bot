@@ -1,6 +1,5 @@
-pytest
-requests
 PyYAML
-wheel
+requests
+semantic_version
 twine
-flexmock
+wheel
