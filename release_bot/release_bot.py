@@ -280,7 +280,6 @@ class PyPi:
             self.logger.error(f"Cannot find setup.py:")
             sys.exit(1)
 
-
     def build_wheel(self, project_root, python_version):
         """
         Builds wheel for specified version of python
@@ -421,225 +420,218 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     return True
 
 
+class Fedora:
+    def __init__(self, configuration):
+        self.conf = configuration
+        self.logger = configuration.logger
 
-def fedpkg_clone_repository(directory, name):
-    if os.path.isdir(directory):
-        shell_command(directory,
-                      f"fedpkg clone {name!r}",
-                      "Cloning fedora repository failed:")
-        return os.path.join(directory, name)
-    else:
-        configuration.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
-        sys.exit(1)
+    def fedpkg_clone_repository(self, directory, name):
+        if os.path.isdir(directory):
+            shell_command(directory,
+                          f"fedpkg clone {name!r}",
+                          "Cloning fedora repository failed:")
+            return os.path.join(directory, name)
+        else:
+            self.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
+            sys.exit(1)
 
+    def fedpkg_switch_branch(self, directory, branch, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 f"fedpkg switch-branch {branch}",
+                                 f"Switching to {branch} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
-def fedpkg_switch_branch(directory, branch, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             f"fedpkg switch-branch {branch}",
-                             f"Switching to {branch} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+    def fedpkg_build(self, directory, branch, scratch=False, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 f"fedpkg build {'--scratch' if scratch else ''}",
+                                 f"Building branch {branch!r} in Fedora failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
+    def fedpkg_push(self, directory, branch, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 f"fedpkg push",
+                                 f"Pushing branch {branch!r} to Fedora failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
-def fedpkg_build(directory, branch, scratch=False, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             f"fedpkg build {'--scratch' if scratch else ''}",
-                             f"Building branch {branch!r} in Fedora failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+    def fedpkg_merge(self, directory, branch, ff_only=True, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 f"git merge master {'--ff-only' if ff_only else ''}",
+                                 f"Merging master to branch {branch!r} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
+    def fedpkg_commit(self, directory, branch, message, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 f"fedpkg commit -m '{message}'",
+                                 f"Committing on branch {branch} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
-def fedpkg_push(directory, branch, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             f"fedpkg push",
-                             f"Pushing branch {branch!r} to Fedora failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+    def fedpkg_sources(self, directory, branch, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 "fedpkg sources",
+                                 f"Retrieving sources for branch {branch} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
+    def fedpkg_spectool(self, directory, branch, fail=True):
+        if os.path.isdir(directory):
+            spec_files = glob.glob(os.path.join(directory, "*spec"))
+            files = ""
+            for file in spec_files:
+                files += f"{file} "
+            return shell_command(directory,
+                                 f"spectool -g {files}",
+                                 f"Retrieving new sources for branch {branch} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
-def fedpkg_merge(directory, branch, ff_only=True, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             f"git merge master {'--ff-only' if ff_only else ''}",
-                             f"Merging master to branch {branch!r} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+    def fedpkg_lint(self, directory, branch, fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 "fedpkg lint",
+                                 f"Spec lint on branch {branch} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
+    def fedpkg_new_sources(self, directory, branch, sources="", fail=True):
+        if os.path.isdir(directory):
+            return shell_command(directory,
+                                 f"fedpkg new-sources {sources}",
+                                 f"Adding new sources on branch {branch} failed:", fail)
+        else:
+            self.logger.error(f"Cannot access fedpkg repository:")
+            sys.exit(1)
 
-def fedpkg_commit(directory, branch, message, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             f"fedpkg commit -m '{message}'",
-                             f"Committing on branch {branch} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+    @staticmethod
+    def init_ticket(keytab, fas_username):
+        if not fas_username:
+            return False
+        if keytab and os.path.isfile(keytab):
+            cmd = f"kinit {fas_username}@FEDORAPROJECT.ORG -k -t {keytab}"
+        else:
+            # there is no keytab, but user still migh have active ticket - try to renew it
+            cmd = f"kinit -R {fas_username}@FEDORAPROJECT.ORG"
+        return shell_command(os.getcwd(), cmd, "Failed to init kerberos ticket:", False)
 
+    def update_package(self, fedpkg_root, branch, new_release):
+        """
+        Pulls in new source, patches spec file, commits,
+        pushes and builds new version on specified branch
 
-def fedpkg_sources(directory, branch, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             "fedpkg sources",
-                             f"Retrieving sources for branch {branch} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+        :param fedpkg_root: The root of dist-git repository
+        :param branch: What Fedora branch is this
+        :param new_release: an array containing info about new release, see main() for definition
+        :return: True on success, False on failure
+        """
+        fail = True if branch.lower() == "master" else False
 
+        # retrieve sources
+        if not self.fedpkg_sources(fedpkg_root, branch, fail):
+            return False
 
-def fedpkg_spectool(directory, branch, fail=True):
-    if os.path.isdir(directory):
-        spec_files = glob.glob(os.path.join(directory, "*spec"))
-        files = ""
-        for file in spec_files:
-            files += f"{file} "
-        return shell_command(directory,
-                             f"spectool -g {files}",
-                             f"Retrieving new sources for branch {branch} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+        # update spec file
+        spec_path = os.path.join(fedpkg_root, f"{configuration.repository_name}.spec")
+        update_spec(spec_path, new_release)
 
+        # check if spec file is valid
+        if not self.fedpkg_lint(fedpkg_root, branch, fail):
+            return False
 
-def fedpkg_lint(directory, branch, fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             "fedpkg lint",
-                             f"Spec lint on branch {branch} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+        dir_listing = os.listdir(fedpkg_root)
 
+        # get new source
+        if not self.fedpkg_spectool(fedpkg_root, branch, fail):
+            return False
 
-def fedpkg_new_sources(directory, branch, sources="", fail=True):
-    if os.path.isdir(directory):
-        return shell_command(directory,
-                             f"fedpkg new-sources {sources}",
-                             f"Adding new sources on branch {branch} failed:", fail)
-    else:
-        configuration.logger.error(f"Cannot access fedpkg repository:")
-        sys.exit(1)
+        # find new sources
+        dir_new_listing = os.listdir(fedpkg_root)
+        sources = ""
+        for item in dir_new_listing:
+            if item not in dir_listing:
+                # this is a new file therefore it should be added to sources
+                sources += f"{item!r} "
 
+        # if there are no new sources, abort update
+        if len(sources.strip()) <= 0:
+            self.logger.warning(
+                "There are no new sources, won't continue releasing to fedora")
+            return False
 
-def fedora_init_ticket(keytab, fas_username):
-    if not fas_username:
-        return False
-    if keytab and os.path.isfile(keytab):
-        cmd = f"kinit {fas_username}@FEDORAPROJECT.ORG -k -t {keytab}"
-    else:
-        # there is no keytab, but user still migh have active ticket - try to renew it
-        cmd = f"kinit -R {fas_username}@FEDORAPROJECT.ORG"
-    return shell_command(os.getcwd(), cmd, "Failed to init kerberos ticket:", False)
+        # add new sources
+        if not self.fedpkg_new_sources(fedpkg_root, branch, sources, fail):
+            return False
 
+        # commit this change, push it and start a build
+        if not self.fedpkg_commit(fedpkg_root, branch, f"Update to {new_release['version']}", fail):
+            return False
+        if not self.fedpkg_push(fedpkg_root, branch, fail):
+            return False
+        if not self.fedpkg_build(fedpkg_root, branch, False, fail):
+            return False
+        return True
 
-def update_package(fedpkg_root, branch, new_release):
-    """
-    Pulls in new source, patches spec file, commits,
-    pushes and builds new version on specified branch
+    def release(self, new_release):
+        """
+        Release project in Fedora
 
-    :param fedpkg_root: The root of dist-git repository
-    :param branch: What Fedora branch is this
-    :param new_release: an array containing info about new release, see main() for definition
-    :return: True on success, False on failure
-    """
-    fail = True if branch.lower() == "master" else False
+        :param new_release: an array containing info about new release, see main() for definition
+        :return: True on successful release, False on unsuccessful
+        """
+        status = self.init_ticket(configuration.keytab, configuration.fas_username)
+        if not status:
+            self.logger.warning(
+                f"Can't obtain a valid kerberos ticket, skipping fedora release")
+            return False
+        tmp = tempfile.TemporaryDirectory()
 
-    # retrieve sources
-    if not fedpkg_sources(fedpkg_root, branch, fail):
-        return False
+        # clone the repository from dist-git
+        fedpkg_root = self.fedpkg_clone_repository(tmp.name, configuration.repository_name)
 
-    # update spec file
-    spec_path = os.path.join(fedpkg_root, f"{configuration.repository_name}.spec")
-    update_spec(spec_path, new_release)
+        # make sure the current branch is master
+        self.fedpkg_switch_branch(fedpkg_root, "master")
 
-    # check if spec file is valid
-    if not fedpkg_lint(fedpkg_root, branch, fail):
-        return False
+        # update package
+        result = self.update_package(fedpkg_root, "master", new_release)
+        if not result:
+            tmp.cleanup()
+            return False
 
-    dir_listing = os.listdir(fedpkg_root)
+        # cycle through other branches and merge the changes there, or do them from scratch, push, build
+        for branch in new_release['fedora_branches']:
+            if not self.fedpkg_switch_branch(fedpkg_root, branch, fail=False):
+                continue
+            if not self.fedpkg_merge(fedpkg_root, branch, True, False):
+                self.logger.debug(
+                    f"Trying to make the changes on branch {branch!r} from scratch")
+                self.update_package(fedpkg_root, branch, new_release)
+                continue
+            if not self.fedpkg_push(fedpkg_root, branch, False):
+                continue
+                self.fedpkg_build(fedpkg_root, branch, False, False)
 
-    # get new source
-    if not fedpkg_spectool(fedpkg_root, branch, fail):
-        return False
+            # TODO: bodhi updates submission
 
-    # find new sources
-    dir_new_listing = os.listdir(fedpkg_root)
-    sources = ""
-    for item in dir_new_listing:
-        if item not in dir_listing:
-            # this is a new file therefore it should be added to sources
-            sources += f"{item!r} "
-
-    # if there are no new sources, abort update
-    if len(sources.strip()) <= 0:
-        configuration.logger.warning(
-            "There are no new sources, won't continue releasing to fedora")
-        return False
-
-    # add new sources
-    if not fedpkg_new_sources(fedpkg_root, branch, sources, fail):
-        return False
-
-    # commit this change, push it and start a build
-    if not fedpkg_commit(fedpkg_root, branch, f"Update to {new_release['version']}", fail):
-        return False
-    if not fedpkg_push(fedpkg_root, branch, fail):
-        return False
-    if not fedpkg_build(fedpkg_root, branch, False, fail):
-        return False
-    return True
-
-
-def release_in_fedora(new_release):
-    """
-    Release project in Fedora
-
-    :param new_release: an array containing info about new release, see main() for definition
-    :return: True on successful release, False on unsuccessful
-    """
-    status = fedora_init_ticket(configuration.keytab, configuration.fas_username)
-    if not status:
-        configuration.logger.warning(
-            f"Can't obtain a valid kerberos ticket, skipping fedora release")
-        return False
-    tmp = tempfile.TemporaryDirectory()
-
-    # clone the repository from dist-git
-    fedpkg_root = fedpkg_clone_repository(tmp.name, configuration.repository_name)
-
-    # make sure the current branch is master
-    fedpkg_switch_branch(fedpkg_root, "master")
-
-    # update package
-    result = update_package(fedpkg_root, "master", new_release)
-    if not result:
+        # clean directory
         tmp.cleanup()
-        return False
-
-    # cycle through other branches and merge the changes there, or do them from scratch, push, build
-    for branch in new_release['fedora_branches']:
-        if not fedpkg_switch_branch(fedpkg_root, branch, fail=False):
-            continue
-        if not fedpkg_merge(fedpkg_root, branch, True, False):
-            configuration.logger.debug(
-                f"Trying to make the changes on branch {branch!r} from scratch")
-            update_package(fedpkg_root, branch, new_release)
-            continue
-        if not fedpkg_push(fedpkg_root, branch, False):
-            continue
-        fedpkg_build(fedpkg_root, branch, False, False)
-
-        # TODO: bodhi updates submission
-
-    # clean directory
-    tmp.cleanup()
-    return True
+        return True
 
 
 def main():
@@ -651,12 +643,14 @@ def main():
     configuration.logger.info(f"release-bot v{configuration.version} reporting for duty!")
     github = Github(configuration)
     pypi = PyPi(configuration)
-    # check for closed merge requests
+    fedora = Fedora(configuration)
+
     latest_pypi = pypi.latest_version()
     configuration.logger.debug(f"Latest PyPi release: {latest_pypi}")
+
     cursor = ''
     found = False
-    # try to find the latest release closed merge request
+    # try to find closed PR with latest_pypi version
     while not found:
         response = github.walk_through_closed_prs(cursor, 'before')
         if not response['data']['repository']['pullRequests']['edges']:
@@ -757,7 +751,7 @@ def main():
             pypi.release(new_release)
             if new_release['fedora']:
                 configuration.logger.info("Triggering Fedora release")
-                release_in_fedora(new_release)
+                fedora.release(new_release)
             new_release['tempdir'].cleanup()
         else:
             configuration.logger.debug((f"PyPi version {latest_pypi} | "

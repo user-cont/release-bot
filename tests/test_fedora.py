@@ -1,9 +1,10 @@
 import os
 import sys
 import release_bot.release_bot as release_bot
-from release_bot.release_bot import configuration
+from release_bot.release_bot import configuration, Fedora
 import pytest
 import subprocess
+from tempfile import TemporaryDirectory
 from flexmock import flexmock
 from pathlib import Path
 
@@ -26,6 +27,7 @@ class TestFedora:
         """
         configuration.set_logging(level=10)
         configuration.debug = True
+        self.fedora = Fedora(configuration)
 
     def teardown_method(self, method):
         """ teardown any state that was previously setup with a setup_method
@@ -85,57 +87,57 @@ class TestFedora:
 
     @pytest.fixture()
     def no_sources(self):
-        flexmock(release_bot, fedpkg_sources=True)
+        flexmock(self.fedora, fedpkg_sources=True)
 
     @pytest.fixture()
     def no_build(self):
-        flexmock(release_bot, fedpkg_build=True)
+        flexmock(self.fedora, fedpkg_build=True)
 
     @pytest.fixture()
     def no_push(self):
-        flexmock(release_bot, fedpkg_push=True)
+        flexmock(self.fedora, fedpkg_push=True)
 
     @pytest.fixture()
     def no_new_sources(self):
-        flexmock(release_bot, fedpkg_new_sources=True)
+        flexmock(self.fedora, fedpkg_new_sources=True)
 
     @pytest.fixture()
     def no_ticket_init(self):
-        flexmock(release_bot, fedora_init_ticket=True)
+        flexmock(self.fedora, init_ticket=True)
 
     @pytest.fixture()
     def fake_spectool(self):
-        (flexmock(release_bot)
+        (flexmock(self.fedora)
          .should_receive("fedpkg_spectool")
          .replace_with(lambda directory, branch, fail: self.fake_spectool_func(directory, branch, fail)))
 
     @pytest.fixture
     def fake_repository_clone(self, tmpdir):
-        (flexmock(release_bot)
+        (flexmock(self.fedora)
          .should_receive("fedpkg_clone_repository")
          .replace_with(lambda directory, name: self.fake_repository_clone_func(tmpdir, name)))
         return tmpdir
 
     @pytest.fixture
     def fake_repository_clone_no_ff(self, tmpdir):
-        (flexmock(release_bot)
+        (flexmock(self.fedora)
          .should_receive("fedpkg_clone_repository")
          .replace_with(lambda directory, name: self.fake_repository_clone_func(tmpdir, name, True)))
         return tmpdir
 
     @pytest.fixture
     def fake_clone(self):
-        (flexmock(release_bot)
+        (flexmock(self.fedora)
          .should_receive("fedpkg_clone_repository")
          .replace_with(lambda directory, name: self.fake_clone_func(directory, name)))
 
     @pytest.fixture
     def no_lint(self):
-        flexmock(release_bot, fedpkg_lint=True)
+        flexmock(self.fedora, fedpkg_lint=True)
 
     @pytest.fixture
     def fake_tmp_clean(self):
-        (flexmock(release_bot.tempfile.TemporaryDirectory)
+        (flexmock(TemporaryDirectory)
          .should_receive("cleanup")
          .replace_with(lambda: None))
 
@@ -166,67 +168,67 @@ class TestFedora:
 
     def test_wrong_dir_clone(self, non_existent_path, package, fake_clone):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_clone_repository(non_existent_path, package)
+            self.fedora.fedpkg_clone_repository(non_existent_path, package)
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_switch(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_switch_branch(non_existent_path, 'master')
+            self.fedora.fedpkg_switch_branch(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_build(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_build(non_existent_path, 'master')
+            self.fedora.fedpkg_build(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_push(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_push(non_existent_path, 'master')
+            self.fedora.fedpkg_push(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_merge(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_merge(non_existent_path, 'master')
+            self.fedora.fedpkg_merge(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_commit(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_commit(non_existent_path, 'master', "Some message")
+            self.fedora.fedpkg_commit(non_existent_path, 'master', "Some message")
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_sources(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_sources(non_existent_path, 'master')
+            self.fedora.fedpkg_sources(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_spectool(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_spectool(non_existent_path, 'master')
+            self.fedora.fedpkg_spectool(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_wrong_dir_lint(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.fedpkg_lint(non_existent_path, 'master')
+            self.fedora.fedpkg_lint(non_existent_path, 'master')
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_clone(self, tmp, package, fake_clone):
-        directory = Path(release_bot.fedpkg_clone_repository(tmp, package))
+        directory = Path(self.fedora.fedpkg_clone_repository(tmp, package))
         assert (directory/f"{package}.spec").is_file()
         assert (directory/".git").is_dir()
 
     def test_switch_branch(self, fake_repository):
-        release_bot.fedpkg_switch_branch(fake_repository, "f28", False)
+        self.fedora.fedpkg_switch_branch(fake_repository, "f28", False)
         assert "f28" == self.run_cmd("git rev-parse --abbrev-ref HEAD", fake_repository).stdout.strip()
-        release_bot.fedpkg_switch_branch(fake_repository, "master", False)
+        self.fedora.fedpkg_switch_branch(fake_repository, "master", False)
         assert "master" == self.run_cmd("git rev-parse --abbrev-ref HEAD", fake_repository).stdout.strip()
 
     def test_commit(self, fake_repository):
@@ -236,30 +238,30 @@ class TestFedora:
 
         branch = "master"
         commit_message = "Test commit"
-        assert release_bot.fedpkg_commit(fake_repository, "master", commit_message, False)
+        assert self.fedora.fedpkg_commit(fake_repository, "master", commit_message, False)
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B {branch}| cat | head -n 1",
                                               fake_repository).stdout.strip()
 
     def test_lint(self, tmp, package, fake_clone):
-        directory = Path(release_bot.fedpkg_clone_repository(tmp, package))
+        directory = Path(self.fedora.fedpkg_clone_repository(tmp, package))
         spec_path = directory/f"{package}.spec"
-        assert release_bot.fedpkg_lint(str(directory), "master", False)
+        assert self.fedora.fedpkg_lint(str(directory), "master", False)
 
         with spec_path.open('r+') as spec_file:
             spec = spec_file.read() + "\n Test test"
             spec_file.write(spec)
-            assert not release_bot.fedpkg_lint(str(directory), "master", False)
+            assert not self.fedora.fedpkg_lint(str(directory), "master", False)
 
     def test_sources(self, tmp, package, fake_clone):
-        directory = release_bot.fedpkg_clone_repository(tmp, package)
+        directory = self.fedora.fedpkg_clone_repository(tmp, package)
         file_number = len(os.listdir(directory))
-        assert release_bot.fedpkg_sources(directory, "master", False)
+        assert self.fedora.fedpkg_sources(directory, "master", False)
         assert file_number != len(os.listdir(directory))
 
     def test_spectool(self, tmp, package, fake_clone):
-        directory = release_bot.fedpkg_clone_repository(tmp, package)
+        directory = self.fedora.fedpkg_clone_repository(tmp, package)
         file_number = len(os.listdir(directory))
-        assert release_bot.fedpkg_spectool(directory, "master", False)
+        assert self.fedora.fedpkg_spectool(directory, "master", False)
         assert file_number != len(os.listdir(directory))
 
     def test_workflow(self, fake_repository):
@@ -268,9 +270,9 @@ class TestFedora:
         spec_path.write_text(spec_content)
 
         commit_message = "Update"
-        assert release_bot.fedpkg_commit(fake_repository, "master", commit_message, False)
-        assert release_bot.fedpkg_switch_branch(fake_repository, "f28", False)
-        assert release_bot.fedpkg_merge(fake_repository, "f28", True, False)
+        assert self.fedora.fedpkg_commit(fake_repository, "master", commit_message, False)
+        assert self.fedora.fedpkg_switch_branch(fake_repository, "f28", False)
+        assert self.fedora.fedpkg_merge(fake_repository, "f28", True, False)
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B f28 | cat | head -n 1",
                                               fake_repository).stdout.strip()
 
@@ -278,7 +280,7 @@ class TestFedora:
                             no_lint, new_release, fake_repository):
         configuration.repository_name = 'example'
         commit_message = f"Update to {new_release['version']}"
-        assert release_bot.update_package(fake_repository, "f28", new_release)
+        assert self.fedora.update_package(fake_repository, "f28", new_release)
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B | cat | head -n 1",
                                               fake_repository).stdout.strip()
 
@@ -286,7 +288,7 @@ class TestFedora:
                                no_lint, fake_repository_clone, new_release, fake_tmp_clean,
                                no_ticket_init):
         configuration.repository_name = 'example'
-        release_bot.release_in_fedora(new_release)
+        self.fedora.release(new_release)
         commit_message = f"Update to {new_release['version']}"
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B master| cat | head -n 1",
                                               fake_repository_clone).stdout.strip()
@@ -297,7 +299,7 @@ class TestFedora:
                                       fake_spectool, fake_repository_clone_no_ff, new_release,
                                       no_ticket_init, fake_tmp_clean):
         configuration.repository_name = 'example'
-        release_bot.release_in_fedora(new_release)
+        self.fedora.release(new_release)
         commit_message = f"Update to {new_release['version']}"
         assert commit_message == self.run_cmd(f"git log -1 --pretty=%B master| cat | head -n 1",
                                               fake_repository_clone_no_ff).stdout.strip()
