@@ -17,6 +17,7 @@ import locale
 import logging
 import yaml
 import requests
+from pathlib import Path
 from semantic_version import Version, validate
 
 CONFIGURATION = {"repository_name": '',
@@ -35,10 +36,10 @@ GITHUB_API_ENDPOINT = "https://api.github.com/graphql"
 GITHUB_API3_ENDPOINT = "https://api.github.com/"
 PYPI_URL = "https://pypi.org/pypi/"
 
-VERSION = {}
-with open(os.path.join(os.path.dirname(__file__), "version.py")) as fp:
-    exec(fp.read(), VERSION)
-    VERSION = VERSION['__version__']
+
+globals_ = {}
+exec((Path(__file__).parent/"version.py").read_text(), globals_)
+VERSION = globals_['__version__']
 
 
 def parse_arguments():
