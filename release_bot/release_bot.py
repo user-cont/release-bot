@@ -2,7 +2,6 @@
 This module provides functionality for automation of releasing projects
 into various downstream services
 """
-import json
 import sys
 import re
 import shlex
@@ -32,8 +31,8 @@ CONFIGURATION = {"repository_name": '',
 # note that required items need to reference strings as their length is checked
 REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
                   "release-conf": ['python_versions']}
-API_ENDPOINT = "https://api.github.com/graphql"
-API3_ENDPOINT = "https://api.github.com/"
+GITHUB_API_ENDPOINT = "https://api.github.com/graphql"
+GITHUB_API3_ENDPOINT = "https://api.github.com/"
 PYPI_URL = "https://pypi.org/pypi/"
 
 VERSION = {}
@@ -132,7 +131,7 @@ def send_query(query):
     query = {"query": (f'query {{repository(owner: "{CONFIGURATION["repository_owner"]}", '
                        f'name: "{CONFIGURATION["repository_name"]}") {{{query}}}}}')}
     headers = {'Authorization': 'token %s' % CONFIGURATION['github_token']}
-    return requests.post(url=API_ENDPOINT, json=query, headers=headers)
+    return requests.post(url=GITHUB_API_ENDPOINT, json=query, headers=headers)
 
 
 def detect_api_errors(response):
@@ -702,7 +701,7 @@ def main():
                        "name": new_release['version'],
                        "prerelease": False,
                        "draft": False}
-            url = (f"{API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
+            url = (f"{GITHUB_API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
                    f"{CONFIGURATION['repository_name']}/releases")
             response = requests.post(url=url, headers=headers, json=payload)
             if response.status_code != 201:
@@ -732,7 +731,7 @@ def main():
 
                 # parse changelog and update the release with it
                 changelog = parse_changelog(latest_pypi, new_release['version'], new_release['fs_path'])
-                url = (f"{API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
+                url = (f"{GITHUB_API3_ENDPOINT}repos/{CONFIGURATION['repository_owner']}/"
                        f"{CONFIGURATION['repository_name']}/releases/{info['id']!s}")
                 response = requests.post(url=url, json={'body': changelog}, headers=headers)
                 if response.status_code != 200:
