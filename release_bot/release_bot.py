@@ -355,38 +355,47 @@ class Github:
                     [r for r in response_get.json() if r.get('name') == new_release['version']]):
                 self.logger.warning(f"{new_release['version']} "
                                     f"has already been released on github")
-                return {}
+                # to fill in new_release['fs_path'] so that we can continue with PyPi upload
+                new_release = self.download_extract_zip(new_release)
             else:
                 self.logger.error((f"Something went wrong with creating "
                                    f"new release on github:\n{response.text}"))
                 sys.exit(1)
         else:
-            # download the new release to a temporary directory
-            temp_directory = tempfile.TemporaryDirectory()
-            new_release['tempdir'] = temp_directory
-            info = response.json()
-            response = requests.get(url=info['zipball_url'])
-            path = temp_directory.name + '/' + new_release['version']
+            new_release = self.download_extract_zip(new_release)
+            self.update_changelog(previous_pypi_release,
+                                  new_release['version'], new_release['fs_path'],
+                                  response.json()['id'])
+        return new_release
 
-            # extract it
-            open(path + '.zip', 'wb').write(response.content)
-            archive = zipfile.ZipFile(path + '.zip')
-            archive.extractall(path=path)
-            dirs = os.listdir(path)
-            new_release['fs_path'] = path + "/" + dirs[0]
+    def download_extract_zip(self, new_release):
+        url = f"https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}/" \
+              f"archive/{new_release['version']}.zip"
 
-            # parse changelog and update the release with it
-            changelog = parse_changelog(previous_pypi_release,
-                                        new_release['version'], new_release['fs_path'])
-            url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-                   f"{self.conf.repository_name}/releases/{info['id']!s}")
-            response = requests.post(url=url, json={'body': changelog}, headers=self.headers)
-            if response.status_code != 200:
-                self.logger.error((f"Something went wrong during changelog "
-                                   f"update for a release:\n{response.text}"))
-                sys.exit(1)
+        # download the new release to a temporary directory
+        temp_directory = tempfile.TemporaryDirectory()
+        new_release['tempdir'] = temp_directory
+        response = requests.get(url=url)
+        path = temp_directory.name + '/' + new_release['version']
 
-            return new_release
+        # extract it
+        open(path + '.zip', 'wb').write(response.content)
+        archive = zipfile.ZipFile(path + '.zip')
+        archive.extractall(path=path)
+        dirs = os.listdir(path)
+        new_release['fs_path'] = path + "/" + dirs[0]
+
+        return new_release
+
+    def update_changelog(self, previous_pypi_release, new_version, fs_path, id_):
+        # parse changelog and update the release with it
+        changelog = parse_changelog(previous_pypi_release, new_version, fs_path)
+        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
+               f"{self.conf.repository_name}/releases/{id_!s}")
+        response = requests.post(url=url, json={'body': changelog}, headers=self.headers)
+        if response.status_code != 200:
+            self.logger.error((f"Something went wrong during changelog "
+                               f"update for {new_version}:\n{response.text}"))
 
 
 class PyPi:
@@ -740,19 +749,13 @@ class ReleaseBot:
                     self.new_release = {'version': match[1],
                                         'commitish': merge_commit['oid'],
                                         'author_name': merge_commit['author']['name'],
-                                        'author_email': merge_commit['author']['email'],
-                                        'python_versions': [],
-                                        'fedora': False,
-                                        'fedora_branches': [],
-                                        'changelog': [],
-                                        'fs_path': '',
-                                        'tempdir': None}
+                                        'author_email': merge_commit['author']['email']}
                     return True
 
     def make_new_pypi_release(self):
         # check if a new release was made
-        if Version.coerce(self.pypi.latest_version()) < \
-                Version.coerce(self.new_release['version']):
+        latest_pypi = self.pypi.latest_version()
+        if Version.coerce(latest_pypi) < Version.coerce(self.new_release['version']):
             self.logger.info("Newer version on github, triggering PyPi release")
             # load release configuration from release-conf.yaml in repository
             release_conf = self.conf.load_release_conf(os.path.join(self.new_release['fs_path'],
@@ -765,7 +768,7 @@ class ReleaseBot:
             self.new_release['tempdir'].cleanup()
         else:
             self.logger.debug((f"PyPi version {latest_pypi} | "
-                               f"Github version {github.latest_version()} -> nothing to do"))
+                               f"Github version {self.github.latest_version()} -> nothing to do"))
 
     def make_new_github_release(self):
         self.new_release = self.github.make_new_release(self.new_release,
