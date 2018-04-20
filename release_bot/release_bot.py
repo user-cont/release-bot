@@ -36,7 +36,7 @@ class Configuration:
         self.configuration = ''
         self.keytab = ''
         self.fas_username = ''
-        self.logger = ''
+        self.logger = None
         self.set_logging()
 
     @property
@@ -110,7 +110,9 @@ class Configuration:
         :return dict with configuration
         """
         if not os.path.isfile(conf_path):
-            self.logger.error("no release-conf.yaml found in repository root!\n")
+            self.logger.error("No release-conf.yaml found in "
+                              f"{self.repository_owner}/{self.repository_name} repository root!\n"
+                              "You have to add one for releasing to PyPi/Fedora")
             if self.REQUIRED_ITEMS['release-conf']:
                 sys.exit(1)
 
@@ -255,13 +257,13 @@ class Github:
     def __init__(self, configuration):
         self.conf = configuration
         self.logger = configuration.logger
+        self.headers = {'Authorization': f'token {configuration.github_token}'}
 
     def send_query(self, query):
         """Send query to Github v4 API and return the response"""
         query = {"query": (f'query {{repository(owner: "{self.conf.repository_owner}", '
                            f'name: "{self.conf.repository_name}") {{{query}}}}}')}
-        headers = {'Authorization': f'token {self.conf.github_token}'}
-        return requests.post(url=self.API_ENDPOINT, json=query, headers=headers)
+        return requests.post(url=self.API_ENDPOINT, json=query, headers=self.headers)
 
     def detect_api_errors(self, response):
         """This function looks for errors in API response"""
@@ -335,7 +337,7 @@ class Github:
             self.detect_api_errors(response)
             return response
 
-    def make_new_release(self, new_release):
+    def make_new_release(self, new_release, previous_pypi_release):
         self.logger.info((f"found version: {new_release['version']}, "
                           f"commit id: {new_release['commitish']}"))
         payload = {"tag_name": new_release['version'],
@@ -345,13 +347,14 @@ class Github:
                    "draft": False}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases")
+        self.logger.info(f"Releasing {new_release['version']} on Github")
         response = requests.post(url=url, headers=self.headers, json=payload)
         if response.status_code != 201:
             response_get = requests.get(url=url, headers=self.headers)
             if (response_get.status_code == 200 and
                     [r for r in response_get.json() if r.get('name') == new_release['version']]):
-                self.logger.info(f"{new_release['version']} "
-                                 f"has already been released on github")
+                self.logger.warning(f"{new_release['version']} "
+                                    f"has already been released on github")
                 return {}
             else:
                 self.logger.error((f"Something went wrong with creating "
@@ -373,7 +376,7 @@ class Github:
             new_release['fs_path'] = path + "/" + dirs[0]
 
             # parse changelog and update the release with it
-            changelog = parse_changelog(self.pypi.latest_version(),
+            changelog = parse_changelog(previous_pypi_release,
                                         new_release['version'], new_release['fs_path'])
             url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                    f"{self.conf.repository_name}/releases/{info['id']!s}")
@@ -449,7 +452,9 @@ class PyPi:
             files = ""
             for file in spec_files:
                 files += f"{file} "
-            shell_command(project_root, f"twine upload {files}", "Cannot upload python distribution:")
+            self.logger.debug(f"Uploading {files} to PyPi")
+            shell_command(project_root, f"twine upload {files}",
+                          "Cannot upload python distribution:")
         else:
             self.logger.error(f"dist/ folder cannot be found:")
             sys.exit(1)
@@ -462,6 +467,7 @@ class PyPi:
         """
         project_root = conf_array['fs_path']
         if os.path.isdir(project_root):
+            self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)
             for version in conf_array['python_versions']:
                 self.build_wheel(project_root, version)
@@ -689,7 +695,6 @@ class ReleaseBot:
 
     def __init__(self, configuration):
         self.conf = configuration
-        self.headers = {'Authorization': f"token {configuration.github_token}"}
         self.github = Github(configuration)
         self.pypi = PyPi(configuration)
         self.fedora = Fedora(configuration)
@@ -707,6 +712,8 @@ class ReleaseBot:
         while not found:
             response = self.github.walk_through_closed_prs(cursor, 'before')
             if not response['data']['repository']['pullRequests']['edges']:
+                self.logger.debug(f'No closed PR with the latest {latest_pypi} PyPI release found')
+                cursor = ''
                 break
             for edge in reversed(response['data']['repository']['pullRequests']['edges']):
                 cursor = edge['cursor']
@@ -761,17 +768,19 @@ class ReleaseBot:
                                f"Github version {github.latest_version()} -> nothing to do"))
 
     def make_new_github_release(self):
-        self.new_release = self.github.make_new_release(self.new_release)
+        self.new_release = self.github.make_new_release(self.new_release,
+                                                        self.pypi.latest_version())
+        return self.new_release
 
     def run(self):
         while True:
             cursor = self.find_pull_request_with_latest_pypi_release()
             # now walk through PRs since the latest_pypi version and check for a new one
-            if self.check_for_new_pull_request_since_latest_pypi(cursor):
+            if cursor and self.check_for_new_pull_request_since_latest_pypi(cursor):
                 # if found, make a new release on github
                 # this has to be done using older github api because v4 doesn't support this yet
-                self.make_new_github_release()
-                self.make_new_pypi_release()
+                if self.make_new_github_release():
+                    self.make_new_pypi_release()
             time.sleep(self.conf.refresh_interval)
 
 
