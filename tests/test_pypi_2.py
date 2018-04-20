@@ -1,21 +1,21 @@
-import os
-import glob
 import subprocess
 import re
 import shutil
-import release_bot.release_bot as release_bot
+from release_bot.release_bot import configuration, PyPi
 import pytest
 from flexmock import flexmock
+from pathlib import Path
 
 
-class TestPypi:
+class TestPypi2:
 
     def setup_method(self, method):
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        release_bot.CONFIGURATION['logger'] = release_bot.set_logging(level=10)
-        release_bot.CONFIGURATION['debug'] = True
+        configuration.set_logging(level=10)
+        configuration.debug = True
+        self.pypi = PyPi(configuration)
 
     def teardown_method(self, method):
         """ teardown any state that was previously setup with a setup_method
@@ -37,69 +37,68 @@ class TestPypi:
 
     @pytest.fixture
     def minimal_conf_array(self, tmpdir):
-        return {'python_versions': [2,3],
+        return {'python_versions': [2, 3],
                 'fs_path': tmpdir}
 
     @pytest.fixture
     def package_setup(self, tmpdir):
-        path = os.path.join(tmpdir, 'rlsbot-test')
-        shutil.copytree(os.path.join(os.path.dirname(__file__), "src/rlsbot-test"), path)
+        path = Path(str(tmpdir))/"rlsbot-test"
+        src = Path(__file__).parent/"src/rlsbot-test"
+        shutil.copytree(str(src), str(path))
         return path
 
     @pytest.fixture()
     def no_upload(self):
-        (flexmock(release_bot)
-         .should_receive("pypi_upload")
+        (flexmock(self.pypi)
+         .should_receive("upload")
          .replace_with(lambda x: None))
 
     @pytest.fixture
     def non_existent_path(self, tmpdir):
-        path = os.path.join(tmpdir, 'fooo')
-        return path
+        path = Path(str(tmpdir))/'fooo'
+        return str(path)
 
     def test_missing_setup_sdist(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.pypi_build_sdist(non_existent_path)
+            self.pypi.build_sdist(non_existent_path)
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_missing_setup_wheel(self, non_existent_path):
         with pytest.raises(SystemExit) as error:
-            release_bot.pypi_build_wheel(non_existent_path, 2)
+            self.pypi.build_wheel(non_existent_path, 2)
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_missing_project_wrapper(self, minimal_conf_array, non_existent_path):
         minimal_conf_array['fs_path'] = non_existent_path
         with pytest.raises(SystemExit) as error:
-            release_bot.release_on_pypi(minimal_conf_array)
+            self.pypi.release(minimal_conf_array)
         assert error.type == SystemExit
         assert error.value.code == 1
 
     def test_sdist(self, package_setup):
-        release_bot.pypi_build_sdist(package_setup)
-        assert os.path.isfile(os.path.join(package_setup, 'dist/rlsbot-test-1.0.0.tar.gz'))
+        self.pypi.build_sdist(package_setup)
+        assert (package_setup/'dist/rlsbot-test-1.0.0.tar.gz').is_file()
 
     def test_wheel_2(self, package_setup):
-        release_bot.pypi_build_wheel(package_setup, 2)
-        assert glob.glob(os.path.join(package_setup, 'dist/rlsbot_test-1.0.0-py2*.whl'))
+        self.pypi.build_wheel(package_setup, 2)
+        assert list(package_setup.glob('dist/rlsbot_test-1.0.0-py2*.whl'))
 
     def test_install_2(self, package_setup):
-        release_bot.pypi_build_sdist(package_setup)
-        release_bot.pypi_build_wheel(package_setup, 2)
-
-        wheel2 = glob.glob(os.path.join(package_setup, 'dist/rlsbot_test-1.0.0-py2*.whl'))
+        self.pypi.build_sdist(package_setup)
+        self.pypi.build_wheel(package_setup, 2)
+        wheel2 = list(package_setup.glob('dist/rlsbot_test-1.0.0-py2*.whl'))
         assert self.run_cmd(f'pip2 install --user {wheel2[0]}', package_setup).returncode == 0
         assert self.run_cmd(f'pip2 show rlsbot-test', package_setup).returncode == 0
         assert self.run_cmd(f'$HOME/.local/bin/rlsbot-test', package_setup).returncode == 0
 
     def test_release_2(self, minimal_conf_array, package_setup, no_upload):
         minimal_conf_array['fs_path'] = package_setup
-        release_bot.release_on_pypi(minimal_conf_array)
-        assert os.path.isfile(os.path.join(package_setup, 'dist/rlsbot-test-1.0.0.tar.gz'))
-        assert glob.glob(os.path.join(package_setup, 'dist/rlsbot_test-1.0.0-py2*.whl'))
-
-        wheel2 = glob.glob(os.path.join(package_setup, 'dist/rlsbot_test-1.0.0-py2*.whl'))
+        self.pypi.release(minimal_conf_array)
+        assert (package_setup/'dist/rlsbot-test-1.0.0.tar.gz').is_file()
+        wheel2 = list(package_setup.glob('dist/rlsbot_test-1.0.0-py2*.whl'))
+        assert wheel2
         assert self.run_cmd(f'pip2 install --user {wheel2[0]}', package_setup).returncode == 0
         assert self.run_cmd(f'pip2 show rlsbot-test', package_setup).returncode == 0
         assert self.run_cmd(f'$HOME/.local/bin/rlsbot-test', package_setup).returncode == 0
