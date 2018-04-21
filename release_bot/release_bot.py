@@ -493,10 +493,12 @@ class Fedora:
 
     def fedpkg_clone_repository(self, directory, name):
         if os.path.isdir(directory):
-            shell_command(directory,
-                          f"fedpkg clone {name!r}",
-                          "Cloning fedora repository failed:")
-            return os.path.join(directory, name)
+            if shell_command(directory,
+                             f"fedpkg clone {name!r}",
+                             "Cloning fedora repository failed:"):
+                return os.path.join(directory, name)
+            else:
+                return ''
         else:
             self.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
             sys.exit(1)
@@ -558,11 +560,9 @@ class Fedora:
     def fedpkg_spectool(self, directory, branch, fail=True):
         if os.path.isdir(directory):
             spec_files = glob.glob(os.path.join(directory, "*spec"))
-            files = ""
-            for file in spec_files:
-                files += f"{file} "
+            spec_files = " ".join(spec_files)
             return shell_command(directory,
-                                 f"spectool -g {files}",
+                                 f"spectool -g {spec_files}",
                                  f"Retrieving new sources for branch {branch} failed:", fail)
         else:
             self.logger.error(f"Cannot access fedpkg repository:")
@@ -607,7 +607,7 @@ class Fedora:
         :param new_release: an array containing info about new release, see main() for definition
         :return: True on success, False on failure
         """
-        fail = True if branch.lower() == "master" else False
+        fail = branch.lower() == "master"
 
         # retrieve sources
         if not self.fedpkg_sources(fedpkg_root, branch, fail):
@@ -636,7 +636,7 @@ class Fedora:
                 sources += f"{item!r} "
 
         # if there are no new sources, abort update
-        if len(sources.strip()) <= 0:
+        if not sources.strip():
             self.logger.warning(
                 "There are no new sources, won't continue releasing to fedora")
             return False
@@ -670,13 +670,15 @@ class Fedora:
 
         # clone the repository from dist-git
         fedpkg_root = self.fedpkg_clone_repository(tmp.name, self.conf.repository_name)
+        if not fedpkg_root:
+            return False
 
         # make sure the current branch is master
-        self.fedpkg_switch_branch(fedpkg_root, "master")
+        if not self.fedpkg_switch_branch(fedpkg_root, "master"):
+            return False
 
         # update package
-        result = self.update_package(fedpkg_root, "master", new_release)
-        if not result:
+        if not self.update_package(fedpkg_root, "master", new_release):
             tmp.cleanup()
             return False
 
@@ -691,7 +693,7 @@ class Fedora:
                 continue
             if not self.fedpkg_push(fedpkg_root, branch, False):
                 continue
-                self.fedpkg_build(fedpkg_root, branch, False, False)
+            self.fedpkg_build(fedpkg_root, branch, False, False)
 
             # TODO: bodhi updates submission
 
@@ -762,13 +764,15 @@ class ReleaseBot:
                                                                     'release-conf.yaml'))
             self.new_release.update(release_conf)
             self.pypi.release(self.new_release)
-            if self.new_release['fedora']:
-                self.logger.info("Triggering Fedora release")
-                self.fedora.release(self.new_release)
-            self.new_release['tempdir'].cleanup()
         else:
             self.logger.debug((f"PyPi version {latest_pypi} | "
                                f"Github version {self.github.latest_version()} -> nothing to do"))
+
+    def make_new_fedora_release(self):
+        if self.new_release['fedora']:
+            self.logger.info("Triggering Fedora release")
+            self.fedora.release(self.new_release)
+            self.new_release['tempdir'].cleanup()
 
     def make_new_github_release(self):
         self.new_release = self.github.make_new_release(self.new_release,
@@ -784,6 +788,7 @@ class ReleaseBot:
                 # this has to be done using older github api because v4 doesn't support this yet
                 if self.make_new_github_release():
                     self.make_new_pypi_release()
+                    self.make_new_fedora_release()
             time.sleep(self.conf.refresh_interval)
 
 
