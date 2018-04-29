@@ -1,3 +1,5 @@
 #!/bin/bash
 
+export PYTHONPATH=$HOME/release-bot/
+
 python3 $HOME/release-bot/release_bot --debug --configuration=$HOME/conf.yaml

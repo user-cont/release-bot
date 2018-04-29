@@ -32,6 +32,6 @@ setup(
         'Programming Language :: Python :: 3'
     ],
     entry_points={'console_scripts': [
-        'release-bot=release_bot.release_bot:main',
+        'release-bot=release_bot.releasebot:main',
     ]}
 )

@@ -1,13 +1,14 @@
 import os
 import sys
-import release_bot.release_bot as release_bot
-from release_bot.release_bot import configuration, Fedora
 import pytest
 import subprocess
 from tempfile import TemporaryDirectory
 from flexmock import flexmock
 from pathlib import Path
 
+from release_bot.configuration import configuration
+from release_bot.fedora import Fedora
+from release_bot.utils import shell_command
 
 class TestFedora:
 
@@ -42,7 +43,7 @@ class TestFedora:
     def fake_clone_func(self, directory, name):
         directory = Path(directory)
         if directory.is_dir():
-            release_bot.shell_command(directory,
+            shell_command(directory,
                                       f"fedpkg clone {name!r} -a",
                                       "Cloning fedora repository failed:")
             return str(directory / name)
