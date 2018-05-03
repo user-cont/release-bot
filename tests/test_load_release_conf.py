@@ -1,5 +1,4 @@
-import release_bot.release_bot as release_bot
-from release_bot.release_bot import configuration
+from release_bot.configuration import configuration
 from pathlib import Path
 import pytest
 

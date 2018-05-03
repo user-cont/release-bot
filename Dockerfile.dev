@@ -27,7 +27,7 @@ USER 1001
 
 RUN pip install --user wheel PyYaml && \
     git clone https://github.com/user-cont/release-bot.git $HOME/release-bot && \
-    pip3 install --user -r $HOME/release-bot/requirements.txt && \
+    pip3 install --user $HOME/release-bot/ && \
     chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
 

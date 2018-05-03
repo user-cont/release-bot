@@ -2,10 +2,12 @@ import os
 import subprocess
 import re
 import shutil
-from release_bot.release_bot import configuration, PyPi
 import pytest
 from flexmock import flexmock
 from pathlib import Path
+
+from release_bot.configuration import configuration
+from release_bot.pypi import PyPi
 
 
 class TestPypi3:

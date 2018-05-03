@@ -1,4 +1,4 @@
-import release_bot
+from release_bot.releasebot import main
 
 if __name__ == '__main__':
-    release_bot.main()
+    main()
