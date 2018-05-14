@@ -6,6 +6,7 @@ from zipfile import ZipFile
 
 from .utils import parse_changelog
 
+
 class Github:
 
     API_ENDPOINT = "https://api.github.com/graphql"
@@ -31,11 +32,11 @@ class Github:
             self.logger.error("There are errors in github response:\n" + msg)
             exit(1)
 
-    def latest_version(self):
+    def latest_release(self):
         """
         Get the latest project release number on Github
 
-        :return: Version number or None
+        :return: Release number or None
         """
         query = '''url
                 releases(last: 1) {
@@ -51,15 +52,18 @@ class Github:
         self.detect_api_errors(response)
 
         # check for empty response
-        if response['data']['repository']['releases']['nodes']:
-            release = response['data']['repository']['releases']['nodes'][0]
-            if not release['isPrerelease'] and not release['isDraft']:
-                return release['name']
-            self.logger.debug("Latest github release is a Prerelease")
-        else:
-            self.logger.debug("There is no latest github release")
-            return '0.0.0'
-        return None
+        nodes = response['data']['repository']['releases']['nodes']
+        if not nodes:
+            self.logger.debug("There is no github release")
+            return None
+
+        release = nodes[0]
+        # check for pre-release / draft
+        if release['isPrerelease'] or release['isDraft']:
+            self.logger.debug("Latest github release is a Prerelease/Draft")
+            return None
+
+        return release['name']
 
     def walk_through_closed_prs(self, start='', direction='after', which="last"):
         """

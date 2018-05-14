@@ -36,7 +36,7 @@ class ReleaseBot:
         while not found:
             response = self.github.walk_through_closed_prs(cursor, 'before')
             if not response['data']['repository']['pullRequests']['edges']:
-                self.logger.debug(f'No closed PR with the latest {latest_pypi} PyPI release found')
+                self.logger.debug(f'No closed PR found')
                 cursor = ''
                 break
             for edge in reversed(response['data']['repository']['pullRequests']['edges']):
@@ -79,7 +79,7 @@ class ReleaseBot:
             self.pypi.release(self.new_release)
         else:
             self.logger.debug((f"PyPi version {latest_pypi} | "
-                               f"Github version {self.github.latest_version()} -> nothing to do"))
+                               f"Github version {self.github.latest_release()} -> nothing to do"))
 
     def make_new_fedora_release(self):
         if self.new_release['fedora']:
