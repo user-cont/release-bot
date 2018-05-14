@@ -26,60 +26,49 @@ class ReleaseBot:
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
         self.new_release = {}
 
-    def find_pull_request_with_latest_pypi_release(self):
-        latest_pypi = self.pypi.latest_version()
-        self.logger.debug(f"Latest PyPi release: {latest_pypi}")
+    def find_newest_release_pull_request(self):
+        """
+        Find newest merged release PR
 
+        :return: bool, whether PR was found
+        """
         cursor = ''
-        found = False
-        # try to find closed PR with latest_pypi version
-        while not found:
-            response = self.github.walk_through_closed_prs(cursor, 'before')
-            if not response['data']['repository']['pullRequests']['edges']:
-                self.logger.debug(f'No closed PR found')
-                cursor = ''
-                break
-            for edge in reversed(response['data']['repository']['pullRequests']['edges']):
-                cursor = edge['cursor']
-                if latest_pypi + ' release' == edge['node']['title'].lower():
-                    self.logger.debug(
-                        f'Found closed PR with the latest {latest_pypi} PyPi release')
-                    found = True
-                    break
-        return cursor
-
-    def check_for_new_pull_request_since_latest_pypi(self, cursor):
         while True:
-            response = self.github.walk_through_closed_prs(cursor, which="first")
-            if not response['data']['repository']['pullRequests']['edges']:
-                self.logger.debug('No newer release PR found')
-                self.new_release = {}
+            edges = self.github.walk_through_closed_prs(start=cursor, direction='before')
+            if not edges:
+                self.logger.debug(f'No merged release PR found')
                 return False
-            for edge in response['data']['repository']['pullRequests']['edges']:
+
+            for edge in reversed(edges):
                 cursor = edge['cursor']
                 match = re.match(r'(.+) release', edge['node']['title'].lower())
                 if match and validate(match[1]):
                     merge_commit = edge['node']['mergeCommit']
-                    self.logger.debug(f'Found newer PR with version {match[1]}')
+                    self.logger.info(f"Found merged release PR with version {match[1]}, "
+                                      f"commit id: {merge_commit['oid']}")
                     self.new_release = {'version': match[1],
                                         'commitish': merge_commit['oid'],
                                         'author_name': merge_commit['author']['name'],
                                         'author_email': merge_commit['author']['email']}
                     return True
 
+    def make_new_github_release(self):
+        self.new_release = self.github.make_new_release(self.new_release,
+                                                        self.pypi.latest_version())
+        return self.new_release
+
     def make_new_pypi_release(self):
-        # check if a new release was made
         latest_pypi = self.pypi.latest_version()
-        if Version.coerce(latest_pypi) < Version.coerce(self.new_release['version']):
-            self.logger.info("Newer version on github, triggering PyPi release")
-            # load release configuration from release-conf.yaml in repository
-            release_conf = self.conf.load_release_conf(os.path.join(self.new_release['fs_path'],
-                                                                    'release-conf.yaml'))
-            self.new_release.update(release_conf)
-            self.pypi.release(self.new_release)
-        else:
-            self.logger.debug((f"PyPi version {latest_pypi} | "
-                               f"Github version {self.github.latest_release()} -> nothing to do"))
+        if Version.coerce(latest_pypi) >= Version.coerce(self.new_release['version']):
+            self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
+            return False
+
+        # load release configuration from release-conf.yaml in repository
+        release_conf = self.conf.load_release_conf(os.path.join(self.new_release['fs_path'],
+                                                                'release-conf.yaml'))
+        self.new_release.update(release_conf)
+        self.pypi.release(self.new_release)
+        return True
 
     def make_new_fedora_release(self):
         if self.new_release['fedora']:
@@ -87,20 +76,16 @@ class ReleaseBot:
             self.fedora.release(self.new_release)
             self.new_release['tempdir'].cleanup()
 
-    def make_new_github_release(self):
-        self.new_release = self.github.make_new_release(self.new_release,
-                                                        self.pypi.latest_version())
-        return self.new_release
-
     def run(self):
         while True:
-            cursor = self.find_pull_request_with_latest_pypi_release()
-            # now walk through PRs since the latest_pypi version and check for a new one
-            if cursor and self.check_for_new_pull_request_since_latest_pypi(cursor):
-                # if found, make a new release on github
-                # this has to be done using older github api because v4 doesn't support this yet
-                if self.make_new_github_release():
-                    self.make_new_pypi_release()
+            if self.find_newest_release_pull_request():
+                self.make_new_github_release()
+                # Try to do PyPi release regardless whether we just did github release
+                # for case that in previous iteration (of the 'while True' loop)
+                # we succeeded with github release, but failed with PyPi release
+                if self.make_new_pypi_release():
+                    # There's no way how to tell whether there's already such a fedora 'release'
+                    # so try to do it only when we just did PyPi release
                     self.make_new_fedora_release()
             time.sleep(self.conf.refresh_interval)
 
