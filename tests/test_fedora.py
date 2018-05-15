@@ -10,6 +10,7 @@ from release_bot.configuration import configuration
 from release_bot.fedora import Fedora
 from release_bot.utils import shell_command
 
+
 class TestFedora:
 
     def run_cmd(self, cmd, work_directory):
@@ -44,11 +45,11 @@ class TestFedora:
         directory = Path(directory)
         if directory.is_dir():
             shell_command(directory,
-                                      f"fedpkg clone {name!r} -a",
-                                      "Cloning fedora repository failed:")
+                          f"fedpkg clone {name!r} --anonymous",
+                          "Cloning fedora repository failed:")
             return str(directory / name)
         else:
-            configuration.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
+            configuration.logger.error(f"Cannot clone into non-existent directory {directory}:")
             sys.exit(1)
 
     def fake_repository_clone_func(self, directory, name, non_ff=False):
@@ -144,7 +145,7 @@ class TestFedora:
 
     @pytest.fixture
     def package(self):
-        return 'fedpkg'
+        return 'zip'
 
     @pytest.fixture
     def non_existent_path(self, tmpdir):
@@ -245,9 +246,9 @@ class TestFedora:
 
     def test_lint(self, tmp, package, fake_clone):
         directory = Path(self.fedora.fedpkg_clone_repository(tmp, package))
-        spec_path = directory/f"{package}.spec"
         assert self.fedora.fedpkg_lint(str(directory), "master", False)
 
+        spec_path = directory/f"{package}.spec"
         with spec_path.open('r+') as spec_file:
             spec = spec_file.read() + "\n Test test"
             spec_file.write(spec)
