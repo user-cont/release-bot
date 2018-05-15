@@ -11,4 +11,10 @@ if [ -f ./id_rsa ]; then
     ssh-add ./.ssh/id_rsa
 fi
 
+# https://docs.openshift.com/enterprise/3.1/creating_images/guidelines.html#openshift-enterprise-specific-guidelines
+sed -e "s|:1001:|:$(id -u):|g" /etc/passwd > "${HOME}/passwd"
+export LD_PRELOAD=libnss_wrapper.so
+export NSS_WRAPPER_PASSWD="${HOME}/passwd"
+export NSS_WRAPPER_GROUP=/etc/group
+
 release-bot --debug --configuration=$HOME/conf.yaml --keytab=$HOME/fedora.keytab

@@ -15,7 +15,7 @@ LABEL summary="Automated releasing from GitHub repositories" \
       io.openshift.s2i.scripts-url="$STI_SCRIPTS_URL" \
       usage="s2i build <CONFIGURATION-REPOSITORY> usercont/release-bot <APP-NAME>"
 
-RUN dnf install -y python2-pip fedpkg git krb5-workstation
+RUN dnf install -y python2-pip fedpkg git krb5-workstation nss_wrapper
 
 RUN mkdir -p ${HOME} && \
     useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
