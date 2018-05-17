@@ -21,11 +21,11 @@ class TestLoadReleaseConf:
     def empty_conf(self, tmpdir):
         conf = Path(str(tmpdir))/"relase-conf.yaml"
         conf.touch()
-        return str(conf)
+        return str(tmpdir)
 
     @pytest.fixture
-    def non_existing_conf(self):
-        return ''
+    def non_existing_conf(self, tmpdir):
+        return str(tmpdir)
 
     @pytest.fixture
     def valid_new_release(self):
@@ -44,23 +44,23 @@ class TestLoadReleaseConf:
     @pytest.fixture
     def missing_items_conf(self, tmpdir):
         conf_content = (Path(__file__).parent/"src/missing_items_conf.yaml").read_text()
-        conf = Path(str(tmpdir))/"missing_items_conf.yaml"
+        conf = Path(str(tmpdir))/"release-conf.yaml"
         conf.write_text(conf_content)
-        return str(conf)
+        return str(tmpdir)
+
+    @pytest.fixture
+    def missing_author_conf(self, tmpdir):
+        conf_content = (Path(__file__).parent/"src/missing_author.yaml").read_text()
+        conf = Path(str(tmpdir))/"release-conf.yaml"
+        conf.write_text(conf_content)
+        return str(tmpdir)
 
     @pytest.fixture
     def valid_conf(self, tmpdir):
         conf_content = (Path(__file__).parent/"src/release-conf.yaml").read_text()
         conf = Path(str(tmpdir))/"release-conf.yaml"
         conf.write_text(conf_content)
-        return str(conf)
-
-    @pytest.fixture
-    def missing_author_conf(self, tmpdir):
-        conf_content = (Path(__file__).parent/"src/missing_author.yaml").read_text()
-        conf = Path(str(tmpdir))/"missing_author.yaml"
-        conf.write_text(conf_content)
-        return str(conf)
+        return str(tmpdir)
 
     def test_empty_conf(self, empty_conf):
         # if there are any required items, this test must fail

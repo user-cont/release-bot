@@ -80,21 +80,22 @@ class Configuration:
                     sys.exit(1)
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
-    def load_release_conf(self, conf_path):
+    def load_release_conf(self, conf_dir):
         """
         Load items from release-conf.yaml
 
-        :param conf_path: path to release-conf.yaml
+        :param conf_dir: path to directory containing release-conf.yaml
         :return dict with configuration
         """
-        if not os.path.isfile(conf_path):
+        conf_file_path = Path(conf_dir) / 'release-conf.yaml'
+        if not conf_file_path.is_file():
             self.logger.error("No release-conf.yaml found in "
                               f"{self.repository_owner}/{self.repository_name} repository root!\n"
                               "You have to add one for releasing to PyPi/Fedora")
             if self.REQUIRED_ITEMS['release-conf']:
                 sys.exit(1)
 
-        with open(conf_path) as conf_file:
+        with conf_file_path.open() as conf_file:
             parsed_conf = yaml.safe_load(conf_file) or {}
             parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
             for item in self.REQUIRED_ITEMS['release-conf']:
