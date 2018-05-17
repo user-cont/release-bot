@@ -67,7 +67,7 @@ class Configuration:
                 self.logger.error("Cannot find valid configuration")
                 sys.exit(1)
         with open(self.configuration, 'r') as ymlfile:
-            file = yaml.load(ymlfile)
+            file = yaml.safe_load(ymlfile)
         for item in file:
             if hasattr(self, item):
                 setattr(self, item, file[item])
@@ -95,7 +95,7 @@ class Configuration:
                 sys.exit(1)
 
         with open(conf_path) as conf_file:
-            parsed_conf = yaml.load(conf_file) or {}
+            parsed_conf = yaml.safe_load(conf_file) or {}
             parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
             for item in self.REQUIRED_ITEMS['release-conf']:
                 if item not in parsed_conf:
