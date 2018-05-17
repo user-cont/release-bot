@@ -63,8 +63,7 @@ class ReleaseBot:
             return False
 
         # load release configuration from release-conf.yaml in repository
-        release_conf = self.conf.load_release_conf(os.path.join(self.new_release['fs_path'],
-                                                                'release-conf.yaml'))
+        release_conf = self.conf.load_release_conf(self.new_release['fs_path'])
         self.new_release.update(release_conf)
         self.pypi.release(self.new_release)
         return True

@@ -60,41 +60,40 @@ class Configuration:
         """Load bot configuration from .yaml file"""
         if not self.configuration:
             # configuration not supplied, look for conf.yaml in cwd
-            path = os.path.join(os.getcwd(), 'conf.yaml')
-            if os.path.isfile(path):
+            path = Path.cwd() / 'conf.yaml'
+            if path.is_file():
                 self.configuration = path
             else:
                 self.logger.error("Cannot find valid configuration")
                 sys.exit(1)
-        with open(self.configuration, 'r') as ymlfile:
+        with self.configuration.open() as ymlfile:
             file = yaml.safe_load(ymlfile)
-        for item in file:
-            if hasattr(self, item):
-                setattr(self, item, file[item])
+        for key, value in file.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
         # check if required items are present
-        parts_required = ["conf"]
-        for part in parts_required:
-            for item in self.REQUIRED_ITEMS[part]:
-                if item not in file:
-                    self.logger.error(f"Item {item!r} is required in configuration!")
-                    sys.exit(1)
+        for item in self.REQUIRED_ITEMS['conf']:
+            if item not in file:
+                self.logger.error(f"Item {item!r} is required in configuration!")
+                sys.exit(1)
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
-    def load_release_conf(self, conf_path):
+    def load_release_conf(self, conf_dir):
         """
         Load items from release-conf.yaml
 
-        :param conf_path: path to release-conf.yaml
+        :param conf_dir: path to directory containing release-conf.yaml
         :return dict with configuration
         """
-        if not os.path.isfile(conf_path):
+        conf_file_path = Path(conf_dir) / 'release-conf.yaml'
+        if not conf_file_path.is_file():
             self.logger.error("No release-conf.yaml found in "
                               f"{self.repository_owner}/{self.repository_name} repository root!\n"
                               "You have to add one for releasing to PyPi/Fedora")
             if self.REQUIRED_ITEMS['release-conf']:
                 sys.exit(1)
 
-        with open(conf_path) as conf_file:
+        with conf_file_path.open() as conf_file:
             parsed_conf = yaml.safe_load(conf_file) or {}
             parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
             for item in self.REQUIRED_ITEMS['release-conf']:
