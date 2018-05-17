@@ -68,16 +68,14 @@ class Configuration:
                 sys.exit(1)
         with self.configuration.open() as ymlfile:
             file = yaml.safe_load(ymlfile)
-        for item in file:
-            if hasattr(self, item):
-                setattr(self, item, file[item])
+        for key, value in file.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
         # check if required items are present
-        parts_required = ["conf"]
-        for part in parts_required:
-            for item in self.REQUIRED_ITEMS[part]:
-                if item not in file:
-                    self.logger.error(f"Item {item!r} is required in configuration!")
-                    sys.exit(1)
+        for item in self.REQUIRED_ITEMS['conf']:
+            if item not in file:
+                self.logger.error(f"Item {item!r} is required in configuration!")
+                sys.exit(1)
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
     def load_release_conf(self, conf_dir):
