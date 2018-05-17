@@ -16,12 +16,35 @@ class Github:
         self.conf = configuration
         self.logger = configuration.logger
         self.headers = {'Authorization': f'token {configuration.github_token}'}
+        self.comment = []
 
     def send_query(self, query):
         """Send query to Github v4 API and return the response"""
-        query = {"query": (f'query {{repository(owner: "{self.conf.repository_owner}", '
-                           f'name: "{self.conf.repository_name}") {{{query}}}}}')}
-        return requests.post(url=self.API_ENDPOINT, json=query, headers=self.headers)
+        return requests.post(url=self.API_ENDPOINT, json={'query': query}, headers=self.headers)
+
+    def query_repository(self, query):
+        """Query Github repository"""
+        repo_query = (f'query {{repository(owner: "{self.conf.repository_owner}", '
+                      f'name: "{self.conf.repository_name}") {{{query}}}}}')
+        return self.send_query(repo_query)
+
+    def add_comment(self, subject_id):
+        """Add self.comment to subject_id issue/PR"""
+        if not self.comment:
+            return
+        comment = '\n'.join(self.comment)
+        mutation = (f'mutation {{addComment(input:'
+                    f'{{subjectId: "{subject_id}", body: "{comment}"}})' +
+                    '''{
+                         subject {
+                           id
+                         }
+                       }}''')
+        response = self.send_query(mutation).json()
+        self.detect_api_errors(response)
+        self.logger.debug(f'Comment added to PR: {comment}')
+        self.comment = []  # clean up
+        return response
 
     def detect_api_errors(self, response):
         """This function looks for errors in API response"""
@@ -48,7 +71,7 @@ class Github:
                   }
                 }
             '''
-        response = self.send_query(query).json()
+        response = self.query_repository(query).json()
         self.detect_api_errors(response)
 
         # check for empty response
@@ -82,6 +105,7 @@ class Github:
                   edges {
                     cursor
                     node {
+                      id
                       title
                       mergeCommit {
                         oid
@@ -93,7 +117,7 @@ class Github:
                     }
                   }
                 }''')
-            response = self.send_query(query).json()
+            response = self.query_repository(query).json()
             self.detect_api_errors(response)
             return response['data']['repository']['pullRequests']['edges']
 
@@ -126,7 +150,9 @@ class Github:
                                    f"new release on github:\n{response.text}"))
                 exit(1)
         else:
-            self.logger.info(f"Released {new_release['version']} on Github")
+            msg = f"Released {new_release['version']} on Github"
+            self.logger.info(msg)
+            self.comment.append(msg)
             new_release = self.download_extract_zip(new_release)
             self.update_changelog(previous_pypi_release,
                                   new_release['version'], new_release['fs_path'],

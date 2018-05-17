@@ -44,9 +44,10 @@ class ReleaseBot:
                 if match and validate(match[1]):
                     merge_commit = edge['node']['mergeCommit']
                     self.logger.info(f"Found merged release PR with version {match[1]}, "
-                                      f"commit id: {merge_commit['oid']}")
+                                     f"commit id: {merge_commit['oid']}")
                     self.new_release = {'version': match[1],
                                         'commitish': merge_commit['oid'],
+                                        'pr_id': edge['node']['id'],
                                         'author_name': merge_commit['author']['name'],
                                         'author_email': merge_commit['author']['email']}
                     return True
@@ -66,6 +67,9 @@ class ReleaseBot:
         release_conf = self.conf.load_release_conf(self.new_release['fs_path'])
         self.new_release.update(release_conf)
         self.pypi.release(self.new_release)
+        msg = f"Released {self.new_release['version']} on PyPI"
+        self.logger.info(msg)
+        self.github.comment.append(msg)
         return True
 
     def make_new_fedora_release(self):
@@ -73,6 +77,9 @@ class ReleaseBot:
             self.logger.info("Triggering Fedora release")
             self.fedora.release(self.new_release)
             self.new_release['tempdir'].cleanup()
+            msg = "Finished Fedora release"
+            self.logger.info(msg)
+            self.github.comment.append(msg)
 
     def run(self):
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
@@ -86,6 +93,8 @@ class ReleaseBot:
                     # There's no way how to tell whether there's already such a fedora 'release'
                     # so try to do it only when we just did PyPi release
                     self.make_new_fedora_release()
+            self.github.add_comment(self.new_release['pr_id'])
+            self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
             time.sleep(self.conf.refresh_interval)
 
 
