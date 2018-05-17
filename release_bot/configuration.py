@@ -1,8 +1,10 @@
 import logging
-from pathlib import Path
 import os
+from pathlib import Path
 import yaml
 import sys
+
+from .version import __version__
 
 
 class Configuration:
@@ -11,7 +13,7 @@ class Configuration:
                       "release-conf": ['python_versions']}
 
     def __init__(self):
-        self._release_bot_version = ''
+        self.version = __version__
         self.repository_name = ''
         self.repository_owner = ''
         self.github_token = ''
@@ -22,14 +24,6 @@ class Configuration:
         self.fas_username = ''
         self.logger = None
         self.set_logging()
-
-    @property
-    def version(self):
-        if not self._release_bot_version:
-            globals_ = {}
-            exec((Path(__file__).parent / "version.py").read_text(), globals_)
-            self._release_bot_version = globals_['__version__']
-        return self._release_bot_version
 
     def set_logging(self,
                     logger_name="release-bot",

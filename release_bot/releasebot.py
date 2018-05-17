@@ -23,7 +23,6 @@ class ReleaseBot:
         self.pypi = PyPi(configuration)
         self.fedora = Fedora(configuration)
         self.logger = configuration.logger
-        self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
         self.new_release = {}
 
     def find_newest_release_pull_request(self):
@@ -77,6 +76,7 @@ class ReleaseBot:
             self.new_release['tempdir'].cleanup()
 
     def run(self):
+        self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
         while True:
             if self.find_newest_release_pull_request():
                 self.make_new_github_release()
