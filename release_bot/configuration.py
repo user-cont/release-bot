@@ -60,13 +60,13 @@ class Configuration:
         """Load bot configuration from .yaml file"""
         if not self.configuration:
             # configuration not supplied, look for conf.yaml in cwd
-            path = os.path.join(os.getcwd(), 'conf.yaml')
-            if os.path.isfile(path):
+            path = Path.cwd() / 'conf.yaml'
+            if path.is_file():
                 self.configuration = path
             else:
                 self.logger.error("Cannot find valid configuration")
                 sys.exit(1)
-        with open(self.configuration, 'r') as ymlfile:
+        with self.configuration.open() as ymlfile:
             file = yaml.safe_load(ymlfile)
         for item in file:
             if hasattr(self, item):
