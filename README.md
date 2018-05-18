@@ -2,22 +2,25 @@ Release bot [![Build Status](https://travis-ci.org/user-cont/release-bot.svg?bra
 ============
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for
 release pull requests. The PR must be named in this format `0.1.0 release`. No other format is supported yet.
-Once the PR is merged, bot will create a new github release. Changelog will be pulled from root of the
+Once the PR is merged, bot will create a new Github release. Changelog will be pulled from root of the
 repository and must be named `CHANGELOG.md`. Changelog for the new version must begin with version heading, i.e `# 0.1.0`.
 Everything between this heading and the heading for previous version will be pulled into the changelog.
 
 A `release-conf.yaml` file is required. See [Configuration](#configuration) section for details.
 
-Once a release is complete, bot will upload this release to PyPi. Note that you have to setup your login details (see [Requirements](#requirements)).
+Once a Github release is complete, bot will upload this release to PyPI. Note that you have to setup your login details (see [Requirements](#requirements)).
 
-After PyPi release, if enabled in  `release-conf.yaml`, bot will try to release on Fedora dist-git, on `master` branch and branches specified in configuration. 
+After PyPI release, if enabled in  `release-conf.yaml`, bot will try to release on Fedora dist-git, on `master` branch and branches specified in configuration. 
 It should not create merge conflicts, but in case it does, you have to solve them first before attempting the release again.
 
 
 # Configuration
-Configuration is in a form of a yaml file. You can specify your config using `-c file.yaml` or `--configuration file.yaml`.
-If you do not specify it using an argument, bot will try to find `conf.yaml` in current working directory.
-Here are the configuration options:
+There are two yaml configuration files, `conf.yaml` and `release-conf.yaml`.
+`conf.yaml` must be accessible during bot initialization and specifies how to access Github repository,
+while `release-conf.yaml` must be stored in the repository itself and specifies how to do a Github/PyPI/Fedora releases.
+If the path to `conf.yaml` is not passed to bot with `-c/--configuration`, bot will try to find it in current working directory.
+
+Here are the `conf.yaml` configuration options:
 
 | Option        | Meaning       | Required      |
 |------------- |-------------|-------------| 
@@ -27,12 +30,13 @@ Here are the configuration options:
 | `fas_username`		| [FAS](https://fedoraproject.org/wiki/Account_System)	username. Only need for releasing on Fedora| No |
 | `refresh_interval`	| Time in seconds between checks on repository. Default is 180 | No |
 
-Sample config can be found in this repository.
+Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
-Best option for this is creating a github account for this bot so you can keep track of what changes were made by bot and what are your own.
+Regarding `github_token`, it's usually a good idea to create a Github account for the bot (and use its Github API token)
+so you can keep track of what changes were made by bot and what are your own.
 
-You also have to have a `release-conf.yaml` file in the root of your project repository. 
-Here are the possible options:
+You also have to have a `release-conf.yaml` file in the root of your project repository.
+Here are possible options:
 
 | Option        | Meaning       | Required      |
 |---------------|---------------|---------------| 
@@ -46,9 +50,13 @@ Here are the possible options:
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
 
 # Requirements
-Releasing to PyPi requires to have `wheel` package both for python 2 and python 3, therefore please install `requirements.txt` with both versions of `pip`.
-You also have to setup your PyPi login details in `$HOME/.pypirc` as described in [PyPi documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account)
-If you are releasing to Fedora, you will need to have an active kerberos ticket while the bot runs. Also, `fedpkg` requires that you have ssh key in your keyring, that you uploaded to FAS.
+Releasing to PyPI requires to have `wheel` package both for python 2 and python 3,
+therefore please install `requirements.txt` with both versions of `pip`.
+You also have to setup your PyPI login details in `$HOME/.pypirc`
+as described in [PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
+If you are releasing to Fedora, you will need to have an active kerberos ticket while the bot runs
+or specify path to kerberos keytab file with `-k/--keytab`.
+Also, `fedpkg` requires that you have ssh key in your keyring, that you uploaded to FAS.
 
 # Docker image
 To make it easier to run this, release-bot is available as an [source-to-image](https://github.com/openshift/source-to-image) builder image. You need to setup a git repository, where you'll store the `conf.yaml` and `.pypirc` files. If you are releasing on Fedora, you will also need to add `id_rsa` (a private ssh key that you configured in FAS) and `fedora.keytab` (kerberos keytab for fedora). If this is not a local repository, make sure it's private so you prevent any private info leaking out. You can then create the final image like this:

@@ -1,3 +1,8 @@
+# 0.3.2
+* Iterate over PRs in descending order
+* Use nss_wrapper to create/use custom passwd file
+* Add status comments to PR
+
 # 0.3.0
 * Structure code into classes
 * bug fixes, bug fixes, bug fixes
