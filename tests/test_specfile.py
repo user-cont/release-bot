@@ -1,6 +1,9 @@
-from release_bot.configuration import configuration
-import pytest
+
 from pathlib import Path
+import pytest
+
+from release_bot.configuration import configuration
+from release_bot.exceptions import ReleaseException
 # import datetime from release_bot, because it needs to be patched
 from release_bot.utils import datetime, update_spec
 
@@ -80,10 +83,8 @@ class TestSpecFile:
         return new_release
 
     def test_missing_spec(self, valid_new_release):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             update_spec("", valid_new_release)
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     # test with no defined changelog
     def test_valid_conf(self, valid_spec, valid_new_release, spec_updated, patch_datetime_now):

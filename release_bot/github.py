@@ -1,9 +1,9 @@
 from os import listdir
 import requests
-from sys import exit
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
+from .exceptions import ReleaseException
 from .utils import parse_changelog
 
 
@@ -46,14 +46,12 @@ class Github:
         self.comment = []  # clean up
         return response
 
-    def detect_api_errors(self, response):
+    @staticmethod
+    def detect_api_errors(response):
         """This function looks for errors in API response"""
-        if 'errors' in response:
-            msg = ""
-            for err in response['errors']:
-                msg += "\t" + err['message'] + "\n"
-            self.logger.error("There are errors in github response:\n" + msg)
-            exit(1)
+        msg = '\n'.join((err['message'] for err in response.get('errors', [])))
+        if msg:
+            raise ReleaseException(msg)
 
     def latest_release(self):
         """
@@ -146,9 +144,9 @@ class Github:
                 # to fill in new_release['fs_path'] so that we can continue with PyPi upload
                 new_release = self.download_extract_zip(new_release)
             else:
-                self.logger.error((f"Something went wrong with creating "
-                                   f"new release on github:\n{response.text}"))
-                exit(1)
+                msg = (f"Something went wrong with creating "
+                       f"new release on github:\n{response.text}")
+                raise ReleaseException(msg)
         else:
             msg = f"Released {new_release['version']} on Github"
             self.logger.info(msg)

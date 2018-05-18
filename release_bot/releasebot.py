@@ -4,12 +4,12 @@ into various downstream services
 """
 import re
 import time
-import os
 from semantic_version import Version, validate
 from sys import exit
 
 from .cli import CLI
 from .configuration import configuration
+from .exceptions import ReleaseException
 from .fedora import Fedora
 from .github import Github
 from .pypi import PyPi
@@ -83,16 +83,22 @@ class ReleaseBot:
 
     def run(self):
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
+
         while True:
-            if self.find_newest_release_pull_request():
-                self.make_new_github_release()
-                # Try to do PyPi release regardless whether we just did github release
-                # for case that in previous iteration (of the 'while True' loop)
-                # we succeeded with github release, but failed with PyPi release
-                if self.make_new_pypi_release():
-                    # There's no way how to tell whether there's already such a fedora 'release'
-                    # so try to do it only when we just did PyPi release
-                    self.make_new_fedora_release()
+            try:
+                if self.find_newest_release_pull_request():
+                    self.make_new_github_release()
+                    # Try to do PyPi release regardless whether we just did github release
+                    # for case that in previous iteration (of the 'while True' loop)
+                    # we succeeded with github release, but failed with PyPi release
+                    if self.make_new_pypi_release():
+                        # There's no way how to tell whether there's already such a fedora 'release'
+                        # so try to do it only when we just did PyPi release
+                        self.make_new_fedora_release()
+            except ReleaseException as exc:
+                self.logger.error(exc)
+                # TODO: Do we want to report the failure also to Github PR (as comment) ?
+
             self.github.add_comment(self.new_release['pr_id'])
             self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
             time.sleep(self.conf.refresh_interval)

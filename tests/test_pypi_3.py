@@ -7,6 +7,7 @@ from flexmock import flexmock
 from pathlib import Path
 
 from release_bot.configuration import configuration
+from release_bot.exceptions import ReleaseException
 from release_bot.pypi import PyPi
 
 
@@ -62,23 +63,17 @@ class TestPypi3:
         return str(path)
 
     def test_missing_setup_sdist(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.pypi.build_sdist(non_existent_path)
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_missing_setup_wheel(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.pypi.build_wheel(non_existent_path, 2)
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_missing_project_wrapper(self, minimal_conf_array, non_existent_path):
         minimal_conf_array['fs_path'] = non_existent_path
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.pypi.release(minimal_conf_array)
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_sdist(self, package_setup):
         self.pypi.build_sdist(package_setup)

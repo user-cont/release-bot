@@ -1,8 +1,8 @@
 from glob import glob
 import os
 import requests
-from sys import exit
 
+from .exceptions import ReleaseException
 from .utils import shell_command
 
 
@@ -20,11 +20,11 @@ class PyPi:
         if response.status_code == 200:
             return response.json()['info']['version']
         else:
-            self.logger.error(f"Pypi package '{self.conf.repository_name}' "
-                              f"doesn't exist:\n{response.text}")
-            exit(1)
+            msg = f"Pypi package {self.conf.repository_name!r} doesn't exist:\n{response.text}"
+            raise ReleaseException(msg)
 
-    def build_sdist(self, project_root):
+    @staticmethod
+    def build_sdist(project_root):
         """
         Builds source distribution out of setup.py
 
@@ -33,10 +33,10 @@ class PyPi:
         if os.path.isfile(os.path.join(project_root, 'setup.py')):
             shell_command(project_root, "python setup.py sdist", "Cannot build sdist:")
         else:
-            self.logger.error(f"Cannot find setup.py:")
-            exit(1)
+            raise ReleaseException("Cannot find setup.py:")
 
-    def build_wheel(self, project_root, python_version):
+    @staticmethod
+    def build_wheel(project_root, python_version):
         """
         Builds wheel for specified version of python
 
@@ -48,12 +48,10 @@ class PyPi:
             interpreter = "python3"
         elif python_version != 2:
             # no other versions of python other than 2 and three are supported
-            self.logger.error(f"Unsupported python version: {python_version}")
-            exit(1)
+            raise ReleaseException(f"Unsupported python version: {python_version}")
 
         if not os.path.isfile(os.path.join(project_root, 'setup.py')):
-            self.logger.error(f"Cannot find setup.py:")
-            exit(1)
+            raise ReleaseException("Cannot find setup.py:")
 
         shell_command(project_root, f"{interpreter} setup.py bdist_wheel",
                       f"Cannot build wheel for python {python_version}")
@@ -73,8 +71,7 @@ class PyPi:
             shell_command(project_root, f"twine upload {files}",
                           "Cannot upload python distribution:")
         else:
-            self.logger.error(f"dist/ folder cannot be found:")
-            exit(1)
+            raise ReleaseException("dist/ folder cannot be found:")
 
     def release(self, conf_array):
         """
@@ -90,5 +87,4 @@ class PyPi:
                 self.build_wheel(project_root, version)
             self.upload(project_root)
         else:
-            self.logger.error("Cannot find project root for PyPi release:")
-            exit(1)
+            raise ReleaseException("Cannot find project root for PyPi release:")

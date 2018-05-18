@@ -1,5 +1,4 @@
 import os
-import sys
 import pytest
 import subprocess
 from tempfile import TemporaryDirectory
@@ -7,6 +6,7 @@ from flexmock import flexmock
 from pathlib import Path
 
 from release_bot.configuration import configuration
+from release_bot.exceptions import ReleaseException
 from release_bot.fedora import Fedora
 from release_bot.utils import shell_command
 
@@ -43,14 +43,13 @@ class TestFedora:
 
     def fake_clone_func(self, directory, name):
         directory = Path(directory)
-        if directory.is_dir():
-            shell_command(directory,
-                          f"fedpkg clone {name!r} --anonymous",
-                          "Cloning fedora repository failed:")
-            return str(directory / name)
-        else:
-            configuration.logger.error(f"Cannot clone into non-existent directory {directory}:")
-            sys.exit(1)
+        if not directory.is_dir():
+            raise ReleaseException(f"Cannot clone into non-existent directory {directory}:")
+
+        shell_command(directory,
+                      f"fedpkg clone {name!r} --anonymous",
+                      "Cloning fedora repository failed:")
+        return str(directory / name)
 
     def fake_repository_clone_func(self, directory, name, non_ff=False):
         self.create_fake_repository(directory, non_ff)
@@ -169,58 +168,40 @@ class TestFedora:
         return str(spec)
 
     def test_wrong_dir_clone(self, non_existent_path, package, fake_clone):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_clone_repository(non_existent_path, package)
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_switch(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_switch_branch(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_build(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_build(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_push(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_push(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_merge(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_merge(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_commit(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_commit(non_existent_path, 'master', "Some message")
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_sources(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_sources(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_spectool(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_spectool(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_wrong_dir_lint(self, non_existent_path):
-        with pytest.raises(SystemExit) as error:
+        with pytest.raises(ReleaseException):
             self.fedora.fedpkg_lint(non_existent_path, 'master')
-        assert error.type == SystemExit
-        assert error.value.code == 1
 
     def test_clone(self, tmp, package, fake_clone):
         directory = Path(self.fedora.fedpkg_clone_repository(tmp, package))

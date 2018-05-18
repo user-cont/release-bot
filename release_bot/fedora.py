@@ -1,9 +1,9 @@
 from glob import glob
 import os
-from sys import exit
 from tempfile import TemporaryDirectory
 
 from .utils import shell_command, update_spec
+from .exceptions import ReleaseException
 
 
 class Fedora:
@@ -11,100 +11,92 @@ class Fedora:
         self.conf = configuration
         self.logger = configuration.logger
 
-    def fedpkg_clone_repository(self, directory, name):
-        if os.path.isdir(directory):
-            if shell_command(directory,
-                             f"fedpkg clone {name!r}",
-                             "Cloning fedora repository failed:"):
-                return os.path.join(directory, name)
-            else:
-                return ''
-        else:
-            self.logger.error(f"Cannot clone fedpkg repository into non-existent directory:")
-            exit(1)
+    @staticmethod
+    def fedpkg_clone_repository(directory, name):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot clone fedpkg repository into non-existent directory:")
 
-    def fedpkg_switch_branch(self, directory, branch, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 f"fedpkg switch-branch {branch}",
-                                 f"Switching to {branch} failed:", fail)
+        if shell_command(directory, f"fedpkg clone {name!r}",
+                         "Cloning fedora repository failed:"):
+            return os.path.join(directory, name)
         else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+            return ''
 
-    def fedpkg_build(self, directory, branch, scratch=False, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 f"fedpkg build {'--scratch' if scratch else ''}",
-                                 f"Building branch {branch!r} in Fedora failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+    @staticmethod
+    def fedpkg_switch_branch(directory, branch, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
 
-    def fedpkg_push(self, directory, branch, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 f"fedpkg push",
-                                 f"Pushing branch {branch!r} to Fedora failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+        return shell_command(directory, f"fedpkg switch-branch {branch}",
+                             f"Switching to {branch} failed:", fail)
 
-    def fedpkg_merge(self, directory, branch, ff_only=True, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 f"git merge master {'--ff-only' if ff_only else ''}",
-                                 f"Merging master to branch {branch!r} failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+    @staticmethod
+    def fedpkg_build(directory, branch, scratch=False, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
 
-    def fedpkg_commit(self, directory, branch, message, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 f"fedpkg commit -m '{message}'",
-                                 f"Committing on branch {branch} failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+        return shell_command(directory,
+                             f"fedpkg build {'--scratch' if scratch else ''}",
+                             f"Building branch {branch!r} in Fedora failed:", fail)
 
-    def fedpkg_sources(self, directory, branch, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 "fedpkg sources",
-                                 f"Retrieving sources for branch {branch} failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+    @staticmethod
+    def fedpkg_push(directory, branch, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
 
-    def fedpkg_spectool(self, directory, branch, fail=True):
-        if os.path.isdir(directory):
-            spec_files = glob(os.path.join(directory, "*spec"))
-            spec_files = " ".join(spec_files)
-            return shell_command(directory,
-                                 f"spectool -g {spec_files}",
-                                 f"Retrieving new sources for branch {branch} failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+        return shell_command(directory, "fedpkg push",
+                             f"Pushing branch {branch!r} to Fedora failed:", fail)
 
-    def fedpkg_lint(self, directory, branch, fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 "fedpkg lint",
-                                 f"Spec lint on branch {branch} failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+    @staticmethod
+    def fedpkg_merge(directory, branch, ff_only=True, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
 
-    def fedpkg_new_sources(self, directory, branch, sources="", fail=True):
-        if os.path.isdir(directory):
-            return shell_command(directory,
-                                 f"fedpkg new-sources {sources}",
-                                 f"Adding new sources on branch {branch} failed:", fail)
-        else:
-            self.logger.error(f"Cannot access fedpkg repository:")
-            exit(1)
+        return shell_command(directory,
+                             f"git merge master {'--ff-only' if ff_only else ''}",
+                             f"Merging master to branch {branch!r} failed:", fail)
+
+    @staticmethod
+    def fedpkg_commit(directory, branch, message, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
+
+        return shell_command(directory, f"fedpkg commit -m '{message}'",
+                             f"Committing on branch {branch} failed:", fail)
+
+    @staticmethod
+    def fedpkg_sources(directory, branch, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
+
+        return shell_command(directory, "fedpkg sources",
+                             f"Retrieving sources for branch {branch} failed:", fail)
+
+    @staticmethod
+    def fedpkg_spectool(directory, branch, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
+
+        spec_files = glob(os.path.join(directory, "*spec"))
+        spec_files = " ".join(spec_files)
+        return shell_command(directory, f"spectool -g {spec_files}",
+                             f"Retrieving new sources for branch {branch} failed:", fail)
+
+    @staticmethod
+    def fedpkg_lint(directory, branch, fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
+
+        return shell_command(directory, "fedpkg lint",
+                             f"Spec lint on branch {branch} failed:", fail)
+
+    @staticmethod
+    def fedpkg_new_sources(directory, branch, sources="", fail=True):
+        if not os.path.isdir(directory):
+            raise ReleaseException("Cannot access fedpkg repository:")
+
+        return shell_command(directory, f"fedpkg new-sources {sources}",
+                             f"Adding new sources on branch {branch} failed:", fail)
 
     @staticmethod
     def init_ticket(keytab, fas_username):
