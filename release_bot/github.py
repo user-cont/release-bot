@@ -45,7 +45,7 @@ class Github:
 
     def add_comment(self, subject_id):
         """Add self.comment to subject_id issue/PR"""
-        if not self.comment:
+        if not subject_id or not self.comment:
             return
         comment = '\n'.join(self.comment)
         mutation = (f'mutation {{addComment(input:'
