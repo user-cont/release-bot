@@ -3,11 +3,11 @@ import datetime
 import os
 import re
 import subprocess
-import sys
 import locale
 from semantic_version import Version
 
 from .configuration import configuration
+from .exceptions import ReleaseException
 
 
 def parse_changelog(previous_version, version, path):
@@ -64,8 +64,7 @@ def update_spec(spec_path, new_release):
             spec_file.truncate()
             spec_file.close()
     else:
-        configuration.logger.error("No spec file found in dist-git repository!\n")
-        sys.exit(1)
+        raise ReleaseException("No spec file found in dist-git repository!")
 
 
 def shell_command(work_directory, cmd, error_message, fail=True):
@@ -90,6 +89,6 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     if shell.returncode != 0:
         configuration.logger.error(f"{error_message}\n{shell.stderr}")
         if fail:
-            sys.exit(1)
+            raise ReleaseException(f"{shell.args!r} failed with {error_message!r}")
         return False
     return True

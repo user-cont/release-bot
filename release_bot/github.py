@@ -1,9 +1,9 @@
 from os import listdir
 import requests
-from sys import exit
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
+from .exceptions import ReleaseException
 from .utils import parse_changelog
 
 
@@ -16,21 +16,42 @@ class Github:
         self.conf = configuration
         self.logger = configuration.logger
         self.headers = {'Authorization': f'token {configuration.github_token}'}
+        self.comment = []
 
     def send_query(self, query):
         """Send query to Github v4 API and return the response"""
-        query = {"query": (f'query {{repository(owner: "{self.conf.repository_owner}", '
-                           f'name: "{self.conf.repository_name}") {{{query}}}}}')}
-        return requests.post(url=self.API_ENDPOINT, json=query, headers=self.headers)
+        return requests.post(url=self.API_ENDPOINT, json={'query': query}, headers=self.headers)
 
-    def detect_api_errors(self, response):
+    def query_repository(self, query):
+        """Query Github repository"""
+        repo_query = (f'query {{repository(owner: "{self.conf.repository_owner}", '
+                      f'name: "{self.conf.repository_name}") {{{query}}}}}')
+        return self.send_query(repo_query)
+
+    def add_comment(self, subject_id):
+        """Add self.comment to subject_id issue/PR"""
+        if not self.comment:
+            return
+        comment = '\n'.join(self.comment)
+        mutation = (f'mutation {{addComment(input:'
+                    f'{{subjectId: "{subject_id}", body: "{comment}"}})' +
+                    '''{
+                         subject {
+                           id
+                         }
+                       }}''')
+        response = self.send_query(mutation).json()
+        self.detect_api_errors(response)
+        self.logger.debug(f'Comment added to PR: {comment}')
+        self.comment = []  # clean up
+        return response
+
+    @staticmethod
+    def detect_api_errors(response):
         """This function looks for errors in API response"""
-        if 'errors' in response:
-            msg = ""
-            for err in response['errors']:
-                msg += "\t" + err['message'] + "\n"
-            self.logger.error("There are errors in github response:\n" + msg)
-            exit(1)
+        msg = '\n'.join((err['message'] for err in response.get('errors', [])))
+        if msg:
+            raise ReleaseException(msg)
 
     def latest_release(self):
         """
@@ -48,7 +69,7 @@ class Github:
                   }
                 }
             '''
-        response = self.send_query(query).json()
+        response = self.query_repository(query).json()
         self.detect_api_errors(response)
 
         # check for empty response
@@ -82,6 +103,7 @@ class Github:
                   edges {
                     cursor
                     node {
+                      id
                       title
                       mergeCommit {
                         oid
@@ -93,7 +115,7 @@ class Github:
                     }
                   }
                 }''')
-            response = self.send_query(query).json()
+            response = self.query_repository(query).json()
             self.detect_api_errors(response)
             return response['data']['repository']['pullRequests']['edges']
 
@@ -121,17 +143,18 @@ class Github:
                 self.logger.info(f"{new_release['version']} has already been released on Github")
                 # to fill in new_release['fs_path'] so that we can continue with PyPi upload
                 new_release = self.download_extract_zip(new_release)
+                released = False
             else:
-                self.logger.error((f"Something went wrong with creating "
-                                   f"new release on github:\n{response.text}"))
-                exit(1)
+                msg = (f"Something went wrong with creating "
+                       f"new release on github:\n{response.text}")
+                raise ReleaseException(msg)
         else:
-            self.logger.info(f"Released {new_release['version']} on Github")
+            released = True
             new_release = self.download_extract_zip(new_release)
             self.update_changelog(previous_pypi_release,
                                   new_release['version'], new_release['fs_path'],
                                   response.json()['id'])
-        return new_release
+        return released, new_release
 
     def download_extract_zip(self, new_release):
         url = f"https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}/" \
