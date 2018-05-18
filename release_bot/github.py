@@ -143,19 +143,18 @@ class Github:
                 self.logger.info(f"{new_release['version']} has already been released on Github")
                 # to fill in new_release['fs_path'] so that we can continue with PyPi upload
                 new_release = self.download_extract_zip(new_release)
+                released = False
             else:
                 msg = (f"Something went wrong with creating "
                        f"new release on github:\n{response.text}")
                 raise ReleaseException(msg)
         else:
-            msg = f"Released {new_release['version']} on Github"
-            self.logger.info(msg)
-            self.comment.append(msg)
+            released = True
             new_release = self.download_extract_zip(new_release)
             self.update_changelog(previous_pypi_release,
                                   new_release['version'], new_release['fs_path'],
                                   response.json()['id'])
-        return new_release
+        return released, new_release
 
     def download_extract_zip(self, new_release):
         url = f"https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}/" \

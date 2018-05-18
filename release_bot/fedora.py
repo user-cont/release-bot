@@ -10,6 +10,7 @@ class Fedora:
     def __init__(self, configuration):
         self.conf = configuration
         self.logger = configuration.logger
+        self.builds = []  # list of branches where we successfully built
 
     @staticmethod
     def fedpkg_clone_repository(directory, name):
@@ -30,14 +31,15 @@ class Fedora:
         return shell_command(directory, f"fedpkg switch-branch {branch}",
                              f"Switching to {branch} failed:", fail)
 
-    @staticmethod
-    def fedpkg_build(directory, branch, scratch=False, fail=True):
+    def fedpkg_build(self, directory, branch, scratch=False, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory,
-                             f"fedpkg build {'--scratch' if scratch else ''}",
-                             f"Building branch {branch!r} in Fedora failed:", fail)
+        success = shell_command(directory,
+                                f"fedpkg build {'--scratch' if scratch else ''}",
+                                f"Building branch {branch!r} in Fedora failed:", fail)
+        if success:
+            self.builds.append(f"{branch}")
 
     @staticmethod
     def fedpkg_push(directory, branch, fail=True):
@@ -119,10 +121,10 @@ class Fedora:
         :param new_release: an array containing info about new release, see main() for definition
         :return: True on success, False on failure
         """
-        fail = branch.lower() == "master"
+        is_master = branch.lower() == "master"
 
         # retrieve sources
-        if not self.fedpkg_sources(fedpkg_root, branch, fail):
+        if not self.fedpkg_sources(fedpkg_root, branch, fail=is_master):
             return False
 
         # update spec file
@@ -130,13 +132,13 @@ class Fedora:
         update_spec(spec_path, new_release)
 
         # check if spec file is valid
-        if not self.fedpkg_lint(fedpkg_root, branch, fail):
+        if not self.fedpkg_lint(fedpkg_root, branch, fail=is_master):
             return False
 
         dir_listing = os.listdir(fedpkg_root)
 
         # get new source
-        if not self.fedpkg_spectool(fedpkg_root, branch, fail):
+        if not self.fedpkg_spectool(fedpkg_root, branch, fail=is_master):
             return False
 
         # find new sources
@@ -154,16 +156,18 @@ class Fedora:
             return False
 
         # add new sources
-        if not self.fedpkg_new_sources(fedpkg_root, branch, sources, fail):
+        if not self.fedpkg_new_sources(fedpkg_root, branch, sources, fail=is_master):
             return False
 
         # commit this change, push it and start a build
-        if not self.fedpkg_commit(fedpkg_root, branch, f"Update to {new_release['version']}", fail):
+        if not self.fedpkg_commit(fedpkg_root, branch,
+                                  f"Update to {new_release['version']}", fail=is_master):
             return False
-        if not self.fedpkg_push(fedpkg_root, branch, fail):
+        if not self.fedpkg_push(fedpkg_root, branch, fail=is_master):
             return False
-        if not self.fedpkg_build(fedpkg_root, branch, False, fail):
+        if not self.fedpkg_build(fedpkg_root, branch, scratch=False, fail=is_master):
             return False
+
         return True
 
     def release(self, new_release):
