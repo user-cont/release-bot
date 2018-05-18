@@ -34,14 +34,14 @@ class CLI:
         parser.add_argument("-k", "--keytab", help="keytab file for fedora", default='')
 
         args = parser.parse_args()
+
         if args.configuration:
-            path = Path(args.configuration)
-            if not path.is_absolute():
-                args.configuration = path.resolve()
-            if not path.is_file():
+            args.configuration = Path(args.configuration).resolve()
+            if not args.configuration.is_file():
                 configuration.logger.error(
                     f"Supplied configuration file is not found: {args.configuration}")
                 exit(1)
+
         if args.debug:
             configuration.logger.setLevel(logging.DEBUG)
         for key, value in vars(args).items():
