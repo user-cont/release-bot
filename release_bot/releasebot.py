@@ -160,7 +160,7 @@ class ReleaseBot:
             except ReleaseException as exc:
                 self.logger.error(exc)
 
-            self.github.add_comment(self.new_release['pr_id'])
+            self.github.add_comment(self.new_release.get('pr_id'))
             self.cleanup()
             self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
             time.sleep(self.conf.refresh_interval)
