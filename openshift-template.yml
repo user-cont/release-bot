@@ -88,6 +88,14 @@ objects:
           containers :
             - name : ${APP_NAME}
               image : ${APP_NAME}:latest
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+
 parameters :
   - name : APP_NAME
     description : Name of application
