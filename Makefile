@@ -10,6 +10,9 @@ image:
 image-dev:
 	docker build --tag=$(IMAGE_NAME_DEV) -f Dockerfile.dev .
 
+image-dev-no-cache:
+	docker build --no-cache --tag=$(IMAGE_NAME_DEV) -f Dockerfile.dev .
+
 image-test:
 	docker build --tag=$(TEST_IMAGE_NAME) -f Dockerfile.test .
 
