@@ -1,3 +1,6 @@
+# 0.3.6
+* Fix KeyError
+
 # 0.3.5
 * Request/Limit openshift resources
 
