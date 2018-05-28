@@ -120,7 +120,7 @@ class ReleaseBot:
         return True
 
     def make_new_fedora_release(self):
-        if not self.new_release['fedora']:
+        if not self.new_release.get('fedora'):
             self.logger.debug('Skipping Fedora release')
             return
 
