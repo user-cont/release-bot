@@ -1,3 +1,6 @@
+# 0.3.5
+* Request/Limit openshift resources
+
 # 0.3.2
 * Iterate over PRs in descending order
 * Use nss_wrapper to create/use custom passwd file
