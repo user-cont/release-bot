@@ -116,13 +116,11 @@ class Configuration:
                 if item not in parsed_conf:
                     self.logger.error(f"Item {item!r} is required in release-conf!")
                     sys.exit(1)
-            if 'python_versions' in parsed_conf:
-                for index, version in enumerate(parsed_conf['python_versions']):
-                    parsed_conf['python_versions'][index] = int(version)
-            if 'fedora_branches' in parsed_conf:
-                for index, branch in enumerate(parsed_conf['fedora_branches']):
-                    parsed_conf['fedora_branches'][index] = str(branch)
-            if parsed_conf['fedora'] and not self.fas_username:
+            for index, version in enumerate(parsed_conf.get('python_versions', [])):
+                parsed_conf['python_versions'][index] = int(version)
+            for index, branch in enumerate(parsed_conf.get('fedora_branches', [])):
+                parsed_conf['fedora_branches'][index] = str(branch)
+            if parsed_conf.get('fedora') and not self.fas_username:
                 self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
                 parsed_conf['fedora'] = False
         return parsed_conf
