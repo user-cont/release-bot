@@ -133,7 +133,7 @@ class ReleaseBot:
             msg = f"I just {result} on Fedora"
             builds = ', '.join(self.fedora.builds)
             if builds:
-                msg += ", successfully built for branches: {builds}"
+                msg += f", successfully built for branches: {builds}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)

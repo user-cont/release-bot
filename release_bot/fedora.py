@@ -50,6 +50,7 @@ class Fedora:
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
+        self.logger.debug(f"Building branch {branch!r} in Fedora. It can take a long time.")
         success = shell_command(directory,
                                 f"fedpkg build {'--scratch' if scratch else ''}",
                                 f"Building branch {branch!r} in Fedora failed:", fail)
