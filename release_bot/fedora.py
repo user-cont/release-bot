@@ -158,11 +158,7 @@ class Fedora:
 
         # find new sources
         dir_new_listing = os.listdir(fedpkg_root)
-        sources = ""
-        for item in dir_new_listing:
-            if item not in dir_listing:
-                # this is a new file therefore it should be added to sources
-                sources += f"{item!r} "
+        sources = " ".join((set(dir_new_listing) - set(dir_listing)))
 
         # if there are no new sources, abort update
         if not sources.strip():
