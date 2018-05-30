@@ -53,33 +53,33 @@ def update_spec(spec_path, new_release):
     :param spec_path: Path to package .spec file
     :param new_release: an array containing info about new release, see main() for definition
     """
-    if os.path.isfile(spec_path):
-        # make changelog and get version
-        locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
-        changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release['author_name']!s} "
-                     f"<{new_release['author_email']!s}> {new_release['version']}-1\n")
-        # add entries
-        if new_release['changelog']:
-            for item in new_release['changelog']:
-                changelog += f"- {item}\n"
-        else:
-            changelog += f"- {new_release['version']} release\n"
-        # change the version and add changelog in spec file
-        with open(spec_path, 'r+') as spec_file:
-            spec = spec_file.read()
-            # replace version
-            spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + new_release['version'], spec)
-            # make release 1
-            spec = re.sub(r'(Release:\s*)([0-9]*)(.*)', r'\g<1>1\g<3>', spec)
-            # insert changelog
-            spec = re.sub(r'(%changelog\n)', r'\g<1>' + changelog + '\n', spec)
-            # write and close
-            spec_file.seek(0)
-            spec_file.write(spec)
-            spec_file.truncate()
-            spec_file.close()
-    else:
+    if not os.path.isfile(spec_path):
         raise ReleaseException("No spec file found in dist-git repository!")
+
+    # make changelog and get version
+    locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
+    changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release['author_name']!s} "
+                 f"<{new_release['author_email']!s}> {new_release['version']}-1\n")
+    # add entries
+    if new_release['changelog']:
+        for item in new_release['changelog']:
+            changelog += f"- {item}\n"
+    else:
+        changelog += f"- {new_release['version']} release\n"
+    # change the version and add changelog in spec file
+    with open(spec_path, 'r+') as spec_file:
+        spec = spec_file.read()
+        # replace version
+        spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + new_release['version'], spec)
+        # make release 1
+        spec = re.sub(r'(Release:\s*)([0-9]*)(.*)', r'\g<1>1\g<3>', spec)
+        # insert changelog
+        spec = re.sub(r'(%changelog\n)', r'\g<1>' + changelog + '\n', spec)
+        # write and close
+        spec_file.seek(0)
+        spec_file.write(spec)
+        spec_file.truncate()
+        spec_file.close()
 
 
 def shell_command(work_directory, cmd, error_message, fail=True):
