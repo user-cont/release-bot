@@ -61,7 +61,7 @@ def update_spec(spec_path, new_release):
     changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release['author_name']!s} "
                  f"<{new_release['author_email']!s}> {new_release['version']}-1\n")
     # add entries
-    if new_release['changelog']:
+    if new_release.get('changelog'):
         for item in new_release['changelog']:
             changelog += f"- {item}\n"
     else:

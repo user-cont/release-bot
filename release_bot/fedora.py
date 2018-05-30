@@ -214,7 +214,7 @@ class Fedora:
             return False
 
         # cycle through other branches and merge the changes there, or do them from scratch, push, build
-        for branch in new_release['fedora_branches']:
+        for branch in new_release.get('fedora_branches', []):
             if not self.fedpkg_switch_branch(fedpkg_root, branch, fail=False):
                 continue
             if not self.fedpkg_merge(fedpkg_root, branch, True, False):
