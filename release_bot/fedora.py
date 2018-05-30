@@ -57,6 +57,8 @@ class Fedora:
         if success:
             self.builds.append(f"{branch}")
 
+        return success
+
     @staticmethod
     def fedpkg_push(directory, branch, fail=True):
         if not os.path.isdir(directory):
