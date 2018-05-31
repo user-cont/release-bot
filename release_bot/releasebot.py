@@ -48,6 +48,11 @@ class ReleaseBot:
         self.github.comment = []
         self.fedora.progress_log = []
 
+    def load_release_conf(self):
+        # load release configuration from release-conf.yaml in repository
+        release_conf = self.conf.load_release_conf(self.new_release['fs_path'])
+        self.new_release.update(release_conf)
+
     def find_newest_release_pull_request(self):
         """
         Find newest merged release PR
@@ -107,9 +112,6 @@ class ReleaseBot:
             self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
             return False
 
-        # load release configuration from release-conf.yaml in repository
-        release_conf = self.conf.load_release_conf(self.new_release['fs_path'])
-        self.new_release.update(release_conf)
         try:
             self.pypi.release(self.new_release)
             release_handler(success=True)
@@ -131,7 +133,7 @@ class ReleaseBot:
             msg = f"I just {result} on Fedora"
             builds = ', '.join(self.fedora.builds)
             if builds:
-                msg += ", successfully built for branches: {builds}"
+                msg += f", successfully built for branches: {builds}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
@@ -150,6 +152,7 @@ class ReleaseBot:
             try:
                 if self.find_newest_release_pull_request():
                     self.make_new_github_release()
+                    self.load_release_conf()
                     # Try to do PyPi release regardless whether we just did github release
                     # for case that in previous iteration (of the 'while True' loop)
                     # we succeeded with github release, but failed with PyPi release

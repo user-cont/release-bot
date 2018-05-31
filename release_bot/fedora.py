@@ -50,11 +50,14 @@ class Fedora:
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
+        self.logger.debug(f"Building branch {branch!r} in Fedora. It can take a long time.")
         success = shell_command(directory,
                                 f"fedpkg build {'--scratch' if scratch else ''}",
                                 f"Building branch {branch!r} in Fedora failed:", fail)
         if success:
             self.builds.append(f"{branch}")
+
+        return success
 
     @staticmethod
     def fedpkg_push(directory, branch, fail=True):
@@ -158,11 +161,7 @@ class Fedora:
 
         # find new sources
         dir_new_listing = os.listdir(fedpkg_root)
-        sources = ""
-        for item in dir_new_listing:
-            if item not in dir_listing:
-                # this is a new file therefore it should be added to sources
-                sources += f"{item!r} "
+        sources = " ".join((set(dir_new_listing) - set(dir_listing)))
 
         # if there are no new sources, abort update
         if not sources.strip():
@@ -214,7 +213,7 @@ class Fedora:
             return False
 
         # cycle through other branches and merge the changes there, or do them from scratch, push, build
-        for branch in new_release['fedora_branches']:
+        for branch in new_release.get('fedora_branches', []):
             if not self.fedpkg_switch_branch(fedpkg_root, branch, fail=False):
                 continue
             if not self.fedpkg_merge(fedpkg_root, branch, True, False):
