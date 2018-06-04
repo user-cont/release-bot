@@ -17,7 +17,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from .configuration import configuration
+from release_bot.configuration import configuration
 
 
 class CLI:

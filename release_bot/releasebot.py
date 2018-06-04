@@ -23,12 +23,12 @@ import time
 from semantic_version import Version, validate
 from sys import exit
 
-from .cli import CLI
-from .configuration import configuration
-from .exceptions import ReleaseException
-from .fedora import Fedora
-from .github import Github
-from .pypi import PyPi
+from release_bot.cli import CLI
+from release_bot.configuration import configuration
+from release_bot.exceptions import ReleaseException
+from release_bot.fedora import Fedora
+from release_bot.github import Github
+from release_bot.pypi import PyPi
 
 
 class ReleaseBot:

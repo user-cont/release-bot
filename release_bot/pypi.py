@@ -17,8 +17,8 @@ from glob import glob
 import os
 import requests
 
-from .exceptions import ReleaseException
-from .utils import shell_command
+from release_bot.exceptions import ReleaseException
+from release_bot.utils import shell_command
 
 
 class PyPi:
