@@ -18,8 +18,8 @@ import requests
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
-from .exceptions import ReleaseException
-from .utils import parse_changelog
+from release_bot.exceptions import ReleaseException
+from release_bot.utils import parse_changelog
 
 
 class Github:

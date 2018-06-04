@@ -15,12 +15,11 @@
 
 
 import logging
-import os
 from pathlib import Path
 import yaml
 import sys
 
-from .version import __version__
+from release_bot.version import __version__
 
 
 class Configuration:

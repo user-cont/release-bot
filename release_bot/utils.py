@@ -21,8 +21,8 @@ import subprocess
 import locale
 from semantic_version import Version
 
-from .configuration import configuration
-from .exceptions import ReleaseException
+from release_bot.configuration import configuration
+from release_bot.exceptions import ReleaseException
 
 
 def parse_changelog(previous_version, version, path):
