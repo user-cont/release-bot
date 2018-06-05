@@ -17,4 +17,8 @@ export LD_PRELOAD=libnss_wrapper.so
 export NSS_WRAPPER_PASSWD="${HOME}/passwd"
 export NSS_WRAPPER_GROUP=/etc/group
 
-release-bot --debug --configuration=$HOME/conf.yaml --keytab=$HOME/fedora.keytab
+if [ -f "${HOME}/fedora.keytab" ]; then
+    release-bot --debug --configuration="${HOME}/conf.yaml" --keytab="${HOME}/fedora.keytab"
+else
+    release-bot --debug --configuration="${HOME}/conf.yaml"
+fi
