@@ -16,3 +16,7 @@
 
 class ReleaseException(Exception):
     """ Generic exception when something goes wrong. """
+
+
+class GitException(Exception):
+    """ Generic exception when something during git operations fails"""

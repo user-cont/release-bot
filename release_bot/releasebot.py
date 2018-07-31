@@ -40,18 +40,49 @@ class ReleaseBot:
         self.fedora = Fedora(configuration)
         self.logger = configuration.logger
         self.new_release = {}
+        self.new_pr = {}
 
     def cleanup(self):
         if 'tempdir' in self.new_release:
             self.new_release['tempdir'].cleanup()
         self.new_release = {}
+        self.new_pr = {}
         self.github.comment = []
         self.fedora.progress_log = []
 
     def load_release_conf(self):
         # load release configuration from release-conf.yaml in repository
-        release_conf = self.conf.load_release_conf(self.new_release['fs_path'])
+        repo = self.github.clone_repository()
+        release_conf = self.conf.load_release_conf(repo.repo_path)
         self.new_release.update(release_conf)
+        repo.cleanup()
+
+    def find_open_release_issues(self):
+        cursor = ''
+        release_issues = {}
+        while True:
+            edges = self.github.walk_through_open_issues(start=cursor, direction='before')
+            if not edges:
+                self.logger.debug(f'No more open issues found')
+                break
+            else:
+                for edge in reversed(edges):
+                    cursor = edge['cursor']
+                    match = re.match(r'(.+) release', edge['node']['title'].lower())
+                    if match and validate(match[1]) and edge['node']['authorAssociation'] in ['MEMBER', 'OWNER']:
+                        release_issues[match[1]] = edge['node']
+                        self.logger.info(f'Found new release issue with version: {match[1]}')
+        if len(release_issues) > 1:
+            self.logger.error(f'Multiple release issues are open {release_issues}, please reduce them to one')
+            return False
+        if len(release_issues) == 1:
+            for version, node in release_issues.items():
+                self.new_pr = {'version': version,
+                               'issue_id': node['id'],
+                               'issue_number': node['number']}
+                return True
+        else:
+            return False
 
     def find_newest_release_pull_request(self):
         """
@@ -61,7 +92,7 @@ class ReleaseBot:
         """
         cursor = ''
         while True:
-            edges = self.github.walk_through_closed_prs(start=cursor, direction='before')
+            edges = self.github.walk_through_prs(start=cursor, direction='before', closed=True)
             if not edges:
                 self.logger.debug(f'No merged release PR found')
                 return False
@@ -79,6 +110,39 @@ class ReleaseBot:
                                         'author_name': merge_commit['author']['name'],
                                         'author_email': merge_commit['author']['email']}
                     return True
+
+    def make_release_pull_request(self):
+        def pr_handler(success):
+            result = 'made' if success else 'failed to make'
+            msg = f"I just {result} a PR request for a release version {self.new_pr['version']}"
+            level = logging.INFO if success else logging.ERROR
+            self.logger.log(level, msg)
+            if success:
+                msg += f"\n Here's a [link to the PR]({self.new_pr['pr_url']})"
+            comment_backup = self.github.comment.copy()
+            self.github.comment = [msg]
+            self.github.add_comment(self.new_pr['issue_id'])
+            self.github.comment = comment_backup
+            if success:
+                self.github.close_issue(self.new_pr['issue_number'])
+            self.new_pr['repo'].cleanup()
+
+        self.new_pr['previous_version'] = self.github.latest_release()
+        if Version.coerce(self.new_pr['previous_version']) >= Version.coerce(self.new_pr['version']):
+            self.logger.warning(f"Version ({self.new_pr['version']}) is already released and this issue is ignored.")
+            return False
+        self.logger.info(f"Making a new PR for release of version {self.new_pr['version']} based on an issue.")
+
+        try:
+            self.new_pr['repo'] = self.github.clone_repository()
+            if not self.new_pr['repo']:
+                raise ReleaseException("Couldn't clone repository!")
+
+            if self.github.make_release_pr(self.new_pr):
+                pr_handler(success=True)
+        except ReleaseException:
+            pr_handler(success=False)
+            raise
 
     def make_new_github_release(self):
         def release_handler(success):
@@ -147,7 +211,6 @@ class ReleaseBot:
 
     def run(self):
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
-
         while True:
             try:
                 if self.find_newest_release_pull_request():
@@ -160,6 +223,8 @@ class ReleaseBot:
                         # There's no way how to tell whether there's already such a fedora 'release'
                         # so try to do it only when we just did PyPi release
                         self.make_new_fedora_release()
+                if self.new_release.get('trigger_on_issue') and self.find_open_release_issues():
+                    self.make_release_pull_request()
             except ReleaseException as exc:
                 self.logger.error(exc)
 

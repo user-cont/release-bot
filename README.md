@@ -6,6 +6,10 @@ Once the PR is merged, bot will create a new Github release. Changelog will be p
 repository and must be named `CHANGELOG.md`. Changelog for the new version must begin with version heading, i.e `# 0.1.0`.
 Everything between this heading and the heading for previous version will be pulled into the changelog.
 
+Alternatively, you can let the bot do the boring work, update `__version__` variable and fill changelog with commit messages from git log. 
+You can trigger this action by creating an issue and name the same as you would a release PR, e.g. `0.1.0 release`. 
+All you have to do after that is merge the PR that the bot will make.
+
 A `release-conf.yaml` file is required. See [Configuration](#configuration) section for details.
 
 Once a Github release is complete, bot will upload this release to PyPI. Note that you have to setup your login details (see [Requirements](#requirements)).
@@ -27,9 +31,9 @@ Here are the `conf.yaml` configuration options:
 | `repository_name`     | Name of your Github repository  | Yes |
 | `repository_owner`    | Owner of the repository    	  | Yes |
 | `github_token`		| [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)   | Yes |
+| `github_username`	    | Name of the account that the `github_token` belongs to. Only needed for triggering the bot on an issue. | No |
 | `fas_username`		| [FAS](https://fedoraproject.org/wiki/Account_System)	username. Only need for releasing on Fedora| No |
 | `refresh_interval`	| Time in seconds between checks on repository. Default is 180 | No |
-
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
 Regarding `github_token`, it's usually a good idea to create a Github account for the bot (and use its Github API token)
@@ -46,7 +50,7 @@ Here are possible options:
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
 | `fedora`      | Whether to release on fedora. False by default | No |
 | `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |
-
+| `trigger_on_issue`| Whether to allow bot to make PRs based on issues. False by default. | No |
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
 
 # Requirements

@@ -32,11 +32,13 @@ class Configuration:
         self.repository_name = ''
         self.repository_owner = ''
         self.github_token = ''
+        self.github_username = ''
         self.refresh_interval = 3 * 60
         self.debug = False
         self.configuration = ''
         self.keytab = ''
         self.fas_username = ''
+        self.version_path = ''
         self.logger = None
         self.set_logging()
 
@@ -122,6 +124,9 @@ class Configuration:
             if parsed_conf.get('fedora') and not self.fas_username:
                 self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
                 parsed_conf['fedora'] = False
+            if parsed_conf.get('trigger_on_issue') and not self.github_username:
+                self.logger.warning("Can't trigger on issue if 'github_username' is not known, disabling")
+                parsed_conf['trigger_on_issue'] = False
         return parsed_conf
 
 
