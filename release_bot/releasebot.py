@@ -58,6 +58,10 @@ class ReleaseBot:
         repo.cleanup()
 
     def find_open_release_issues(self):
+        """
+        Looks for opened release issues on github
+        :return: True on found, False if not found
+        """
         cursor = ''
         release_issues = {}
         while True:
@@ -69,11 +73,13 @@ class ReleaseBot:
                 for edge in reversed(edges):
                     cursor = edge['cursor']
                     match = re.match(r'(.+) release', edge['node']['title'].lower())
-                    if match and validate(match[1]) and edge['node']['authorAssociation'] in ['MEMBER', 'OWNER']:
+                    if match and validate(match[1]) and \
+                            edge['node']['authorAssociation'] in ['MEMBER', 'OWNER']:
                         release_issues[match[1]] = edge['node']
                         self.logger.info(f'Found new release issue with version: {match[1]}')
         if len(release_issues) > 1:
-            self.logger.error(f'Multiple release issues are open {release_issues}, please reduce them to one')
+            msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
+            self.logger.error(msg)
             return False
         if len(release_issues) == 1:
             for version, node in release_issues.items():
@@ -112,7 +118,16 @@ class ReleaseBot:
                     return True
 
     def make_release_pull_request(self):
+        """
+        Makes release pull request and handles outcome
+        :return: whether making PR was successful
+        """
         def pr_handler(success):
+            """
+            Handler for the outcome of making a PR
+            :param success: whether making PR was successful
+            :return:
+            """
             result = 'made' if success else 'failed to make'
             msg = f"I just {result} a PR request for a release version {self.new_pr['version']}"
             level = logging.INFO if success else logging.ERROR
@@ -127,11 +142,14 @@ class ReleaseBot:
                 self.github.close_issue(self.new_pr['issue_number'])
             self.new_pr['repo'].cleanup()
 
-        self.new_pr['previous_version'] = self.github.latest_release()
-        if Version.coerce(self.new_pr['previous_version']) >= Version.coerce(self.new_pr['version']):
-            self.logger.warning(f"Version ({self.new_pr['version']}) is already released and this issue is ignored.")
+        prev_version = self.github.latest_release()
+        self.new_pr['previous_version'] = prev_version
+        if Version.coerce(prev_version) >= Version.coerce(self.new_pr['version']):
+            msg = f"Version ({prev_version}) is already released and this issue is ignored."
+            self.logger.warning(msg)
             return False
-        self.logger.info(f"Making a new PR for release of version {self.new_pr['version']} based on an issue.")
+        msg = f"Making a new PR for release of version {self.new_pr['version']} based on an issue."
+        self.logger.info(msg)
 
         try:
             self.new_pr['repo'] = self.github.clone_repository()
@@ -140,9 +158,11 @@ class ReleaseBot:
 
             if self.github.make_release_pr(self.new_pr):
                 pr_handler(success=True)
+                return True
         except ReleaseException:
             pr_handler(success=False)
             raise
+        return False
 
     def make_new_github_release(self):
         def release_handler(success):

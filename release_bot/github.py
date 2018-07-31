@@ -14,13 +14,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from os import listdir
-import requests
+import re
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
-from release_bot.git import Git
+import requests
 
+from release_bot.git import Git
 from release_bot.exceptions import ReleaseException, GitException
-from release_bot.utils import *
+from release_bot.utils import insert_in_changelog, parse_changelog, look_for_version_files
 
 
 class Github:
@@ -109,6 +110,7 @@ class Github:
         :param direction: Direction to go from cursor, can be 'after' or 'before'
         :param which: Indicates which part of the result list
                       should be returned, can be 'first' or 'last'
+        :param closed: filters PRs by state (closed/open). True by default
         :return: edges from API query response
         """
         state = 'MERGED' if closed else 'OPEN'
@@ -226,10 +228,19 @@ class Github:
                                f"update for {new_version}:\n{response.text}"))
 
     def clone_repository(self):
+        """
+        Clones repository from configuration
+        :return: Git object with cloned repository
+        """
         url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
         return Git(url, self.conf)
 
     def check_branch_existence(self, branch):
+        """
+        Makes a call to github api to check if branch already exists
+        :param branch: name of the branch
+        :return: True if exists, False if not
+        """
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/branches/{branch}")
         response = requests.post(url=url, headers=self.headers)
@@ -242,15 +253,27 @@ class Github:
             raise ReleaseException(msg)
 
     def make_pr(self, branch, version, log, changed_version_files, base='master'):
-        message = (f'Hi,\n you have requested a release PR from me. Here it is!\nThis is the changelog I created:\n'
+        """
+        Makes a pull request with info on the new release
+        :param branch: name of the branch to make PR from
+        :param version: version that is being released
+        :param log: changelog
+        :param changed_version_files: list of files that have been changed
+                                      in order to update version
+        :param base: base of the PR. 'master' by default
+        :return: url of the PR
+        """
+        message = (f'Hi,\n you have requested a release PR from me. Here it is!\n'
+                   f'This is the changelog I created:\n'
                    f'### Changes\n{log}\n\nYou can change it by editing `CHANGELOG.md` '
-                   f'in the root of this repository and pushing to `{branch}` branch before merging this PR.\n')
+                   f'in the root of this repository and pushing to `{branch}` branch'
+                   f' before merging this PR.\n')
         if len(changed_version_files) == 1:
             message += 'I have also updated the  `__version__ ` in file:\n'
         elif len(changed_version_files) > 1:
-            message += ('There were multiple files where  `__version__ ` was set, so I left updating them up to you.'
-                        'These are the files:\n')
-        elif len(changed_version_files) == 0:
+            message += ('There were multiple files where  `__version__ ` was set, '
+                        'so I left updating them up to you. These are the files:\n')
+        elif not changed_version_files:
             message += "I didn't find any files where  `__version__` is set."
 
         for file in changed_version_files:
@@ -275,6 +298,12 @@ class Github:
             raise ReleaseException(msg)
 
     def make_release_pr(self, new_pr):
+        """
+        Makes the steps to prepare new branch for the release PR,
+        like generating changelog and updating version
+        :param new_pr: dict with info about the new release
+        :return: True on success, False on fail
+        """
         repo = new_pr['repo']
         version = new_pr['version']
         branch = f'{version}-release'
@@ -300,6 +329,11 @@ class Github:
         return False
 
     def check_if_pr_exists(self, name):
+        """
+        Makes a call to github api to check if PR already exists
+        :param name: name of the PR
+        :return: True if exists, False if not
+        """
         cursor = ''
         while True:
             edges = self.walk_through_prs(start=cursor, direction='before', closed=False)
@@ -314,6 +348,10 @@ class Github:
                     return True
 
     def get_user_contact(self):
+        """
+        Makes a call to github api to get user's contact details
+        :return: name and email
+        """
         query = (f'query {{user(login: "{self.conf.github_username}")'
                  '''  {
                      email
@@ -331,6 +369,11 @@ class Github:
         return name, email
 
     def close_issue(self, number):
+        """
+        Close an github issue
+        :param number: number of the issue in repository
+        :return: True on success, False on fail
+        """
         payload = {'state': 'closed'}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")
@@ -339,6 +382,5 @@ class Github:
         if response.status_code == 200:
             self.logger.debug(f'Closed issue #{number}')
             return True
-        else:
-            self.logger.error(f'Failed to close issue #{number}')
-            return False
+        self.logger.error(f'Failed to close issue #{number}')
+        return False

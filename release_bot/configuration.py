@@ -125,7 +125,8 @@ class Configuration:
                 self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
                 parsed_conf['fedora'] = False
             if parsed_conf.get('trigger_on_issue') and not self.github_username:
-                self.logger.warning("Can't trigger on issue if 'github_username' is not known, disabling")
+                msg = "Can't trigger on issue if 'github_username' is not known, disabling"
+                self.logger.warning(msg)
                 parsed_conf['trigger_on_issue'] = False
         return parsed_conf
 
