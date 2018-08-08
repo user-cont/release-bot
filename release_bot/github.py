@@ -235,7 +235,7 @@ class Github:
         url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
         return Git(url, self.conf)
 
-    def check_branch_existence(self, branch):
+    def branch_exists(self, branch):
         """
         Makes a call to github api to check if branch already exists
         :param branch: name of the branch
@@ -307,28 +307,28 @@ class Github:
         repo = new_pr['repo']
         version = new_pr['version']
         branch = f'{version}-release'
-        if not self.check_branch_existence(branch):
-            try:
-                name, email = self.get_user_contact()
-                repo.set_credentials(name, email)
-                repo.set_credential_store()
-                changelog = repo.get_log_since_last_release(new_pr['previous_version'])
-                repo.checkout_new_branch(branch)
-                insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md', new_pr['version'], changelog)
-                changed = look_for_version_files(repo.repo_path, new_pr['version'])
-                repo.add(['.'])
-                repo.commit(f'{version} release')
-                repo.push(branch)
-                if not self.check_if_pr_exists(f'{version} release'):
-                    new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed)
-                    return True
-            except GitException as exc:
-                raise ReleaseException(exc)
-        else:
+        if self.branch_exists(branch):
             self.logger.warning(f'Branch {branch} already exists, aborting creating PR.')
+            return False
+        try:
+            name, email = self.get_user_contact()
+            repo.set_credentials(name, email)
+            repo.set_credential_store()
+            changelog = repo.get_log_since_last_release(new_pr['previous_version'])
+            repo.checkout_new_branch(branch)
+            insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md', new_pr['version'], changelog)
+            changed = look_for_version_files(repo.repo_path, new_pr['version'])
+            repo.add(['.'])
+            repo.commit(f'{version} release')
+            repo.push(branch)
+            if not self.pr_exists(f'{version} release'):
+                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed)
+                return True
+        except GitException as exc:
+            raise ReleaseException(exc)
         return False
 
-    def check_if_pr_exists(self, name):
+    def pr_exists(self, name):
         """
         Makes a call to github api to check if PR already exists
         :param name: name of the PR
@@ -384,3 +384,25 @@ class Github:
             return True
         self.logger.error(f'Failed to close issue #{number}')
         return False
+
+    def get_configuration(self):
+        """
+        Fetches release-conf.yaml via Github API
+        :return: release-conf.yaml contents or False in case of error
+        """
+        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
+               f"{self.conf.repository_name}/contents/release-conf.yaml")
+        self.logger.debug(f'Fetching release-conf.yaml')
+        response = requests.get(url=url, headers=self.headers)
+        if response.status_code != 200:
+            self.logger.error(f'Failed to fetch release-conf.yaml')
+            return False
+
+        parsed = response.json()
+        download_url = parsed['download_url']
+        response = requests.get(url=download_url)
+        if response.status_code != 200:
+            self.logger.error(f'Failed to fetch release-conf.yaml')
+            return False
+
+        return response.text

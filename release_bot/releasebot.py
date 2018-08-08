@@ -51,11 +51,14 @@ class ReleaseBot:
         self.fedora.progress_log = []
 
     def load_release_conf(self):
+        """
+        Updates new_release with latest release-conf.yaml from repository
+        :return:
+        """
         # load release configuration from release-conf.yaml in repository
-        repo = self.github.clone_repository()
-        release_conf = self.conf.load_release_conf(repo.repo_path)
+        conf = self.github.get_configuration()
+        release_conf = self.conf.load_release_conf(conf)
         self.new_release.update(release_conf)
-        repo.cleanup()
 
     def find_open_release_issues(self):
         """
@@ -234,8 +237,8 @@ class ReleaseBot:
         while True:
             try:
                 if self.find_newest_release_pull_request():
-                    self.make_new_github_release()
                     self.load_release_conf()
+                    self.make_new_github_release()
                     # Try to do PyPi release regardless whether we just did github release
                     # for case that in previous iteration (of the 'while True' loop)
                     # we succeeded with github release, but failed with PyPi release

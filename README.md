@@ -7,7 +7,7 @@ repository and must be named `CHANGELOG.md`. Changelog for the new version must 
 Everything between this heading and the heading for previous version will be pulled into the changelog.
 
 Alternatively, you can let the bot do the boring work, update `__version__` variable and fill changelog with commit messages from git log. 
-You can trigger this action by creating an issue and name the same as you would a release PR, e.g. `0.1.0 release`. 
+You can trigger this action by creating an issue and name it the same as you would a release PR, e.g. `0.1.0 release`. 
 All you have to do after that is merge the PR that the bot will make.
 
 A `release-conf.yaml` file is required. See [Configuration](#configuration) section for details.

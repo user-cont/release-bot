@@ -13,14 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from release_bot.configuration import configuration
 from pathlib import Path
 import pytest
+
+from release_bot.configuration import configuration
 
 
 class TestLoadReleaseConf:
 
-    def setup_method(self, method):
+    def setup_method(self):
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
@@ -33,17 +34,27 @@ class TestLoadReleaseConf:
         """
 
     @pytest.fixture
-    def empty_conf(self, tmpdir):
-        conf = Path(str(tmpdir))/"relase-conf.yaml"
-        conf.touch()
-        return str(tmpdir)
+    def empty_conf(self):
+        """
+        Emulates an empty configuration
+        :return:
+        """
+        return ""
 
     @pytest.fixture
-    def non_existing_conf(self, tmpdir):
-        return str(tmpdir)
+    def non_existing_conf(self):
+        """
+        Emulates missing configuration
+        :return:
+        """
+        return False
 
     @pytest.fixture
     def valid_new_release(self):
+        """
+        Emulates valid new_release dict
+        :return:
+        """
         new_release = {'version': '0.1.0',
                        'commitish': 'xxx',
                        'author_name': 'John Doe',
@@ -57,25 +68,28 @@ class TestLoadReleaseConf:
         return new_release
 
     @pytest.fixture
-    def missing_items_conf(self, tmpdir):
-        conf_content = (Path(__file__).parent/"src/missing_items_conf.yaml").read_text()
-        conf = Path(str(tmpdir))/"release-conf.yaml"
-        conf.write_text(conf_content)
-        return str(tmpdir)
+    def missing_items_conf(self):
+        """
+        Emulates configuration with missing required items
+        :return:
+        """
+        return (Path(__file__).parent / "src/missing_items_conf.yaml").read_text()
 
     @pytest.fixture
-    def missing_author_conf(self, tmpdir):
-        conf_content = (Path(__file__).parent/"src/missing_author.yaml").read_text()
-        conf = Path(str(tmpdir))/"release-conf.yaml"
-        conf.write_text(conf_content)
-        return str(tmpdir)
+    def missing_author_conf(self):
+        """
+        Emulates configuration with missing author
+        :return:
+        """
+        return (Path(__file__).parent / "src/missing_author.yaml").read_text()
 
     @pytest.fixture
-    def valid_conf(self, tmpdir):
-        conf_content = (Path(__file__).parent/"src/release-conf.yaml").read_text()
-        conf = Path(str(tmpdir))/"release-conf.yaml"
-        conf.write_text(conf_content)
-        return str(tmpdir)
+    def valid_conf(self):
+        """
+        Emulates valid configuration
+        :return:
+        """
+        return (Path(__file__).parent / "src/release-conf.yaml").read_text()
 
     def test_empty_conf(self, empty_conf):
         # if there are any required items, this test must fail

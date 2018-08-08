@@ -95,39 +95,38 @@ class Configuration:
                 sys.exit(1)
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
-    def load_release_conf(self, conf_dir):
+    def load_release_conf(self, conf):
         """
         Load items from release-conf.yaml
 
-        :param conf_dir: path to directory containing release-conf.yaml
+        :param conf: contents of release-conf.yaml
         :return dict with configuration
         """
-        conf_file_path = Path(conf_dir) / 'release-conf.yaml'
-        if not conf_file_path.is_file():
+        if not conf:
             self.logger.error("No release-conf.yaml found in "
                               f"{self.repository_owner}/{self.repository_name} repository root!\n"
                               "You have to add one for releasing to PyPi/Fedora")
             if self.REQUIRED_ITEMS['release-conf']:
                 sys.exit(1)
 
-        with conf_file_path.open() as conf_file:
-            parsed_conf = yaml.safe_load(conf_file) or {}
-            parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
-            for item in self.REQUIRED_ITEMS['release-conf']:
-                if item not in parsed_conf:
-                    self.logger.error(f"Item {item!r} is required in release-conf!")
-                    sys.exit(1)
-            for index, version in enumerate(parsed_conf.get('python_versions', [])):
-                parsed_conf['python_versions'][index] = int(version)
-            for index, branch in enumerate(parsed_conf.get('fedora_branches', [])):
-                parsed_conf['fedora_branches'][index] = str(branch)
-            if parsed_conf.get('fedora') and not self.fas_username:
-                self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
-                parsed_conf['fedora'] = False
-            if parsed_conf.get('trigger_on_issue') and not self.github_username:
-                msg = "Can't trigger on issue if 'github_username' is not known, disabling"
-                self.logger.warning(msg)
-                parsed_conf['trigger_on_issue'] = False
+        parsed_conf = yaml.safe_load(conf) or {}
+        parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
+        for item in self.REQUIRED_ITEMS['release-conf']:
+            if item not in parsed_conf:
+                self.logger.error(f"Item {item!r} is required in release-conf!")
+                sys.exit(1)
+        for index, version in enumerate(parsed_conf.get('python_versions', [])):
+            parsed_conf['python_versions'][index] = int(version)
+        for index, branch in enumerate(parsed_conf.get('fedora_branches', [])):
+            parsed_conf['fedora_branches'][index] = str(branch)
+        if parsed_conf.get('fedora') and not self.fas_username:
+            self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
+            parsed_conf['fedora'] = False
+        if parsed_conf.get('trigger_on_issue') and not self.github_username:
+            msg = "Can't trigger on issue if 'github_username' is not known, disabling"
+            self.logger.warning(msg)
+            parsed_conf['trigger_on_issue'] = False
+
         return parsed_conf
 
 
