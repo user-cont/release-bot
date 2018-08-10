@@ -19,7 +19,7 @@ import os
 import re
 import subprocess
 import locale
-from semantic_version import Version
+from semantic_version import Version, validate
 
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
@@ -100,6 +100,7 @@ def shell_command(work_directory, cmd, error_message, fail=True):
         shell=False,
         cwd=work_directory,
         universal_newlines=True)
+
     configuration.logger.debug(f"{shell.args}\n{shell.stdout}")
     if shell.returncode != 0:
         configuration.logger.error(f"{error_message}\n{shell.stderr}")
@@ -107,3 +108,97 @@ def shell_command(work_directory, cmd, error_message, fail=True):
             raise ReleaseException(f"{shell.args!r} failed with {error_message!r}")
         return False
     return True
+
+
+def shell_command_get_output(work_directory, cmd):
+    """
+    Same as shell command, but more simple and returns stdout
+    :param work_directory: A directory to execute the command in
+    :param cmd: The shell command
+    :return: stdout of the command
+    """
+    cmd = shlex.split(cmd)
+    shell = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=False,
+        cwd=work_directory,
+        universal_newlines=True)
+    success = shell.returncode == 0
+    if not success:
+        return success, shell.stderr
+    return success, shell.stdout
+
+
+def insert_in_changelog(changelog, version, log):
+    """
+    Patches file with new changelog
+    :param changelog: file with changelog
+    :param version: current version
+    :param log: the changelog to insert
+    :return:
+    """
+    content = f"# {version}\n\n{log}\n"
+    try:
+        with open(changelog, 'r+') as file:
+            original = file.read()
+            file.seek(0)
+            file.write(content + original)
+    except FileNotFoundError as exc:
+        configuration.logger.warning(f"No CHANGELOG.md present in repository\n{exc}")
+
+
+def look_for_version_files(repo_directory, new_version):
+    """
+    Walks through repository and looks for suspects that may be hiding the __version__ variable
+    :param repo_directory: repository path
+    :param new_version: version to update to
+    :return: list of changed files
+    """
+    changed = []
+    for root, _, files in os.walk(repo_directory):
+        for file in files:
+            if file in ('setup.py', '__init__.py', 'version.py'):
+                filename = os.path.join(root, file)
+                success = update_version(filename, new_version)
+                if success:
+                    changed.append(filename.replace(repo_directory + '/', '', 1))
+    if len(changed) > 1:
+        configuration.logger.error('Multiple version files found. Aborting version update.')
+    elif not changed:
+        configuration.logger.error('No version files found. Aborting version update.')
+
+    return changed
+
+
+def update_version(file, new_version):
+    """
+    Patches the file with new version
+    :param file: file containing __version__ variable
+    :param new_version: version to update the file with
+    :return: True if file was changed, else False
+    """
+    with open(file, 'r') as input_file:
+        content = input_file.read().splitlines()
+
+    changed = False
+    for index, line in enumerate(content):
+        if line.startswith('__version__'):
+            pieces = line.split('=', maxsplit=1)
+            if len(pieces) == 2:
+                configuration.logger.info(f"Editing line with new version:\n{line}")
+                old_version = (pieces[1].strip())[1:-1]  # strip whitespace and ' or "
+                if validate(old_version):
+                    configuration.logger.info(f"Replacing version {old_version} with {new_version}")
+                    content[index] = f"{pieces[0].strip()} = '{new_version}'"
+                    changed = True
+                    break
+                else:
+                    configuration.logger.warning(f"Failed to validate version, aborting")
+                    return False
+    if changed:
+        with open(file, 'w') as output:
+            output.write('\n'.join(content) + '\n')
+        configuration.logger.info('Version replaced.')
+    return changed
