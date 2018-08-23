@@ -12,12 +12,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This module provides functions that help test github dependent part of the bot
+"""
+
 from pathlib import Path
 import string
+import base64
 import random
 import requests
 import yaml
-import base64
 
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
@@ -26,12 +30,15 @@ RELEASE_CONF = yaml.dump({"python_versions": [3], "trigger_on_issue": True})
 
 
 class GithubUtils:
+    """Functions to help test github part of the bot"""
     def __init__(self, github_token, github_user):
         self.github_token = github_token
         self.github_user = github_user
         self.headers = {'Authorization': f'token {github_token}'}
+        self.repo = None
+        self.random_string = None
 
-    def _create_repo(self):
+    def create_repo(self):
         """Creates a new github repository with example files"""
         url = f"{API3_ENDPOINT}user/repos"
         self.random_string = ''.join(
@@ -48,21 +55,23 @@ class GithubUtils:
 
         return name
 
-    def _setup_repo(self):
+    def setup_repo(self):
         """Fills repo with release-conf.yaml and setup.py"""
-        self._upload_file_to_github(RELEASE_CONF, 'release-conf.yaml')
+        self.upload_file_to_github(RELEASE_CONF, 'release-conf.yaml')
 
         setup = (Path(__file__).parent / "src/example_setup.py.txt").read_text()
-        setup = setup.format(self.repo.replace('-', '_'), self.github_user, self.repo)
-        self._upload_file_to_github(setup, 'setup.py')
+        setup = setup.format(name=self.repo.replace('-', '_'),
+                             user=self.github_user,
+                             repo=self.repo)
+        self.upload_file_to_github(setup, 'setup.py')
 
         init = (Path(__file__).parent / "src/release_bot_test/__init__.py.txt").read_text()
-        self._upload_file_to_github(init, 'release_bot_test/__init__.py')
+        self.upload_file_to_github(init, 'release_bot_test/__init__.py')
 
         main = (Path(__file__).parent / "src/release_bot_test/release_bot_test.py.txt").read_text()
-        self._upload_file_to_github(main, 'release_bot_test/release_bot_test.py')
+        self.upload_file_to_github(main, 'release_bot_test/release_bot_test.py')
 
-    def _upload_file_to_github(self, file, path):
+    def upload_file_to_github(self, file, path):
         """Uploads file to path in github repository"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/contents"
         payload = {"content": base64.b64encode(file.encode('utf-8')).decode('utf-8'),
@@ -73,7 +82,7 @@ class GithubUtils:
             raise Exception(f'Failed creating {path} in {self.github_user}/{self.repo}:'
                             f'\n{response.text}')
 
-    def _delete_repo(self):
+    def delete_repo(self):
         """Deletes previously setup github repository"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}"
         response = requests.delete(url=url, headers=self.headers)
@@ -83,7 +92,7 @@ class GithubUtils:
                             f'{response.text}')
         self.repo = None
 
-    def _open_issue(self, title="Test issue"):
+    def open_issue(self, title="Test issue"):
         """Opens issue in a repository"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/issues"
         payload = {'title': title}
@@ -95,29 +104,32 @@ class GithubUtils:
         parsed = response.json()
         return parsed['number']
 
-    def _merge_pull_request(self, number):
+    def merge_pull_request(self, number):
         """Merges open pull request in a repository"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/pulls/{number}/merge"
         response = requests.put(url=url, headers=self.headers)
 
         if response.status_code != 200:
-            raise Exception(f'Failed merging PR #{number} in repository {self.github_user}/{self.repo}\n'
+            raise Exception(f'Failed merging PR #{number} in repository '
+                            f'{self.github_user}/{self.repo}\n'
                             f'{response.text}')
         return True
 
-    def _count_comments(self, number):
+    def count_comments(self, number):
         """Counts comments on issue/PR"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/issues/{number}/comments"
         response = requests.get(url=url, headers=self.headers)
 
         if response.status_code != 200:
-            raise Exception(f'Failed merging PR #{number} in repository {self.github_user}/{self.repo}\n'
+            raise Exception(f'Failed counting comments on issue #{number} '
+                            f'in repository {self.github_user}/{self.repo}\n'
                             f'{response.text}')
         parsed = response.json()
         return len(parsed)
 
     @staticmethod
-    def _github_api_status():
+    def github_api_status():
+        """Checks status of Github API"""
         url = f"https://status.github.com/api/status.json"
         response = requests.get(url=url)
 

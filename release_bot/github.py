@@ -324,8 +324,10 @@ class Github:
             changelog = repo.get_log_since_last_release(new_pr['previous_version'])
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr['version'])
-            changelog_changed = insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md', new_pr['version'], changelog)
-            changed.append(f'{repo.repo_path}/CHANGELOG.md') if changelog_changed else None
+            changelog_changed = insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',
+                                                    new_pr['version'], changelog)
+            if changelog_changed:
+                changed.append(f'{repo.repo_path}/CHANGELOG.md')
             if changed:
                 repo.add(changed)
             repo.commit(f'{version} release', allow_empty=True)

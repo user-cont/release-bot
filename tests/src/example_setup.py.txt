@@ -2,14 +2,14 @@ import setuptools
 import release_bot_test
 
 setuptools.setup(
-    name="{}",
+    name="{name}",
     version=release_bot_test.__version__,
     author="User Cont",
     author_email="user-cont@redhat.com",
     description="A small example package used fo release-bot testing",
     long_description="Test",
     long_description_content_type="text/markdown",
-    url="https://github.com/{}/{}",
+    url="https://github.com/{user}/{repo}",
     packages=setuptools.find_packages(),
     classifiers=(
         "Programming Language :: Python :: 3",
