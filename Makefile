@@ -17,7 +17,7 @@ image-test:
 	docker build --tag=$(TEST_IMAGE_NAME) -f Dockerfile.test .
 
 test-in-container: image-test
-	docker run -it $(TEST_IMAGE_NAME)
+	docker run -it -e GITHUB_USER=${GITHUB_USER} -e GITHUB_TOKEN=${GITHUB_TOKEN} $(TEST_IMAGE_NAME)
 
 test:
 	PYTHONPATH=$(CURDIR) pytest -v
