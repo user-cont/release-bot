@@ -69,36 +69,39 @@ class Github:
         if msg:
             raise ReleaseException(msg)
 
-    def latest_release(self):
+    def latest_release(self, cursor=''):
         """
-        Get the latest project release number on Github
+        Get the latest project release number on Github. Ignores drafts and pre releases
 
         :return: Release number or None
         """
-        query = '''url
-                releases(last: 1) {
-                    nodes {
-                      id
-                      isPrerelease
-                      isDraft
-                      name
-                  }
-                }
-            '''
+        query = (f"releases(last: 1 " +
+                 (f'before:"{cursor}"' if cursor else '') +
+                 '''){
+                        edges{
+                         cursor
+                         node {
+                           isPrerelease
+                           isDraft
+                           name
+                        }
+                       }
+                     }
+                 ''')
         response = self.query_repository(query).json()
         self.detect_api_errors(response)
 
         # check for empty response
-        nodes = response['data']['repository']['releases']['nodes']
-        if not nodes:
+        edges = response['data']['repository']['releases']['edges']
+        if not edges:
             self.logger.debug("There is no github release")
             return None
 
-        release = nodes[0]
+        release = edges[0]['node']
         # check for pre-release / draft
         if release['isPrerelease'] or release['isDraft']:
             self.logger.debug("Latest github release is a Prerelease/Draft")
-            return None
+            return self.latest_release(cursor=edges[0]['cursor'])
 
         return release['name']
 
@@ -123,6 +126,7 @@ class Github:
                     node {
                       id
                       title
+                      number
                       mergeCommit {
                         oid
                         author {
@@ -161,13 +165,15 @@ class Github:
             self.detect_api_errors(response)
             return response['data']['repository']['issues']['edges']
 
-    def make_new_release(self, new_release, previous_pypi_release):
+    def make_new_release(self, new_release, previous_release):
         """
+        Makes new release to Github.
         This has to be done using github api v3 because v4 (GraphQL) doesn't support this yet
 
-        :param new_release:
-        :param previous_pypi_release:
-        :return:
+        :param new_release: version number of the new release
+        :param previous_release: version number of the previous release, used for release changelog
+        :return: tuple (released, new_release) - released is bool, new_release contains info about
+                 the new release
         """
         payload = {"tag_name": new_release['version'],
                    "target_commitish": new_release['commitish'],
@@ -193,7 +199,7 @@ class Github:
         else:
             released = True
             new_release = self.download_extract_zip(new_release)
-            self.update_changelog(previous_pypi_release,
+            self.update_changelog(previous_release,
                                   new_release['version'], new_release['fs_path'],
                                   response.json()['id'])
         return released, new_release
@@ -243,10 +249,11 @@ class Github:
         """
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/branches/{branch}")
-        response = requests.post(url=url, headers=self.headers)
+        response = requests.get(url=url, headers=self.headers)
         if response.status_code == 200:
             return True
         elif response.status_code == 404:
+            self.logger.debug(response.text)
             return False
         else:
             msg = f"Unexpected response code from Github:\n{response.text}"
@@ -316,10 +323,12 @@ class Github:
             repo.set_credential_store()
             changelog = repo.get_log_since_last_release(new_pr['previous_version'])
             repo.checkout_new_branch(branch)
-            insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md', new_pr['version'], changelog)
             changed = look_for_version_files(repo.repo_path, new_pr['version'])
-            repo.add(['.'])
-            repo.commit(f'{version} release')
+            changelog_changed = insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md', new_pr['version'], changelog)
+            changed.append(f'{repo.repo_path}/CHANGELOG.md') if changelog_changed else None
+            if changed:
+                repo.add(changed)
+            repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
                 new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed)
@@ -332,7 +341,7 @@ class Github:
         """
         Makes a call to github api to check if PR already exists
         :param name: name of the PR
-        :return: True if exists, False if not
+        :return: PR number if exists, False if not
         """
         cursor = ''
         while True:
@@ -345,7 +354,7 @@ class Github:
                 cursor = edge['cursor']
                 match = re.match(name, edge['node']['title'].lower())
                 if match:
-                    return True
+                    return edge['node']['number']
 
     def get_user_contact(self):
         """

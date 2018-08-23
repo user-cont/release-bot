@@ -38,7 +38,6 @@ class Configuration:
         self.configuration = ''
         self.keytab = ''
         self.fas_username = ''
-        self.version_path = ''
         self.logger = None
         self.set_logging()
 

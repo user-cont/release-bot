@@ -113,11 +113,12 @@ class ReleaseBot:
                     merge_commit = edge['node']['mergeCommit']
                     self.logger.info(f"Found merged release PR with version {match[1]}, "
                                      f"commit id: {merge_commit['oid']}")
-                    self.new_release = {'version': match[1],
-                                        'commitish': merge_commit['oid'],
-                                        'pr_id': edge['node']['id'],
-                                        'author_name': merge_commit['author']['name'],
-                                        'author_email': merge_commit['author']['email']}
+                    new_release = {'version': match[1],
+                                   'commitish': merge_commit['oid'],
+                                   'pr_id': edge['node']['id'],
+                                   'author_name': merge_commit['author']['name'],
+                                   'author_email': merge_commit['author']['email']}
+                    self.new_release.update(new_release)
                     return True
 
     def make_release_pull_request(self):
@@ -125,6 +126,7 @@ class ReleaseBot:
         Makes release pull request and handles outcome
         :return: whether making PR was successful
         """
+
         def pr_handler(success):
             """
             Handler for the outcome of making a PR
@@ -146,6 +148,9 @@ class ReleaseBot:
             self.new_pr['repo'].cleanup()
 
         prev_version = self.github.latest_release()
+
+        # if there are no previous releases, set version to 0.0.0
+        prev_version = prev_version if prev_version else '0.0.0'
         self.new_pr['previous_version'] = prev_version
         if Version.coerce(prev_version) >= Version.coerce(self.new_pr['version']):
             msg = f"Version ({prev_version}) is already released and this issue is ignored."
@@ -177,7 +182,7 @@ class ReleaseBot:
 
         try:
             released, self.new_release = self.github.make_new_release(self.new_release,
-                                                                      self.pypi.latest_version())
+                                                                      self.github.latest_release())
             if released:
                 release_handler(success=True)
         except ReleaseException:
@@ -195,6 +200,9 @@ class ReleaseBot:
             self.github.comment.append(msg)
 
         latest_pypi = self.pypi.latest_version()
+
+        # if there are no previous releases, set version to 0.0.0
+        latest_pypi = latest_pypi if latest_pypi else '0.0.0'
         if Version.coerce(latest_pypi) >= Version.coerce(self.new_release['version']):
             self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
             return False
@@ -236,8 +244,8 @@ class ReleaseBot:
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
         while True:
             try:
+                self.load_release_conf()
                 if self.find_newest_release_pull_request():
-                    self.load_release_conf()
                     self.make_new_github_release()
                     # Try to do PyPi release regardless whether we just did github release
                     # for case that in previous iteration (of the 'while True' loop)

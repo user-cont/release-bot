@@ -34,8 +34,10 @@ class PyPi:
         response = requests.get(url=f"{self.PYPI_URL}{self.conf.repository_name}/json")
         if response.status_code == 200:
             return response.json()['info']['version']
+        elif response.status_code == 404:
+            return None
         else:
-            msg = f"Pypi package {self.conf.repository_name!r} doesn't exist:\n{response.text}"
+            msg = f"Error getting latest version from PyPi:\n{response.text}"
             raise ReleaseException(msg)
 
     @staticmethod
