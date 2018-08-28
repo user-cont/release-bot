@@ -69,13 +69,14 @@ class Git:
             if not success:
                 raise GitException(f"Can't git add file {file}!")
 
-    def commit(self, message='release commit'):
+    def commit(self, message='release commit', allow_empty=False):
         """
         Executes git commit
         :param message: commit message
         :return:
         """
-        success = shell_command(self.repo_path, f'git commit -m \"{message}\"', '', False)
+        arg = '--allow-empty' if allow_empty else ''
+        success = shell_command(self.repo_path, f'git commit {arg} -m \"{message}\"', '', False)
         if not success:
             raise GitException(f"Can't commit files!")
 

@@ -39,7 +39,7 @@ def parse_changelog(previous_version, version, path):
         file = open(path + '/CHANGELOG.md', 'r').read()
         # detect position of this version header
         pos_start = file.find("# " + version)
-        pos_end = file.find("# " + previous_version)
+        pos_end = file.find("# " + previous_version) if previous_version else len(file)
         changelog = file[pos_start + len("# " + version):(pos_end if pos_end >= 0 else len(file))].strip()
         if changelog:
             return changelog
@@ -137,7 +137,7 @@ def insert_in_changelog(changelog, version, log):
     :param changelog: file with changelog
     :param version: current version
     :param log: the changelog to insert
-    :return:
+    :return: bool success
     """
     content = f"# {version}\n\n{log}\n"
     try:
@@ -145,8 +145,10 @@ def insert_in_changelog(changelog, version, log):
             original = file.read()
             file.seek(0)
             file.write(content + original)
+            return True
     except FileNotFoundError as exc:
         configuration.logger.warning(f"No CHANGELOG.md present in repository\n{exc}")
+    return False
 
 
 def look_for_version_files(repo_directory, new_version):
@@ -181,6 +183,7 @@ def update_version(file, new_version):
     """
     with open(file, 'r') as input_file:
         content = input_file.read().splitlines()
+        content_original = content.copy()
 
     changed = False
     for index, line in enumerate(content):
@@ -192,7 +195,7 @@ def update_version(file, new_version):
                 if validate(old_version):
                     configuration.logger.info(f"Replacing version {old_version} with {new_version}")
                     content[index] = f"{pieces[0].strip()} = '{new_version}'"
-                    changed = True
+                    changed = True if content != content_original else False
                     break
                 else:
                     configuration.logger.warning(f"Failed to validate version, aborting")
