@@ -1,3 +1,17 @@
+# 0.4.0
+
+* Allow self-releasing on issue
+* Fix code style issues
+* Add more tests on github & bot itself
+* Ability to do initial release + fixes
+* Fix minor issues from code review, change how release-conf is loaded
+* Fix code style issues
+* Add ability to make PRs with version change based on release issue
+* Update config files from kwaciaren
+* Use bandit/pylintrc file from kwaciaren
+* [.s2i/bin/run] Don't use --keytab if there's no such file
+* Use absolute imports
+
 # 0.3.8
 * Fedora-related bug fixes
 
