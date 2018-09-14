@@ -39,6 +39,19 @@ class Fedora:
             return ''
 
     @staticmethod
+    def set_git_credentials(repo_path, name, email):
+        """
+        Sets credentials fo git repo to keep git from resisting to commit
+        :param repo_path: path to git repository
+        :param name: committer name
+        :param email: committer email
+        :return: True on success False on fail
+        """
+        email = shell_command(repo_path, f'git config user.email "{email}"', '', fail=False)
+        name = shell_command(repo_path, f'git config user.name "{name}"', '', fail=False)
+        return email and name
+
+    @staticmethod
     def fedpkg_switch_branch(directory, branch, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
@@ -201,6 +214,12 @@ class Fedora:
         # clone the repository from dist-git
         fedpkg_root = self.fedpkg_clone_repository(tmp.name, self.conf.repository_name)
         if not fedpkg_root:
+            return False
+
+        # set git credentials
+        if not self.set_git_credentials(fedpkg_root,
+                                        new_release['commit_name'],
+                                        new_release['commit_email']):
             return False
 
         # make sure the current branch is master

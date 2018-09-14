@@ -73,6 +73,7 @@ class TestFedora:
     def create_fake_repository(self, directory, non_ff=False):
         self.run_cmd("git init .", directory)
         self.run_cmd("git checkout -b master", directory)
+        assert self.fedora.set_git_credentials(directory, "Name", "email@email.com")
         spec_content = Path(__file__).parent.joinpath("src/example.spec").read_text()
         Path(directory).joinpath("example.spec").write_text(spec_content)
         self.run_cmd("git add .", directory)
@@ -93,6 +94,8 @@ class TestFedora:
                        'commitish': '',
                        'author_name': 'John Doe',
                        'author_email': 'jdoe@example.com',
+                       'commit_name': 'Testy McTestFace',
+                       'commit_email': 'email@email.com',
                        'python_versions': [3],
                        'fedora_branches': ["f28"],
                        'fedora': True,
@@ -163,7 +166,7 @@ class TestFedora:
 
     @pytest.fixture
     def non_existent_path(self, tmpdir):
-        path = Path(str(tmpdir))/'fooo'
+        path = Path(str(tmpdir)) / 'fooo'
         return str(path)
 
     @pytest.fixture
@@ -177,8 +180,8 @@ class TestFedora:
 
     @pytest.fixture
     def example_spec(self, tmpdir):
-        spec_content = (Path(__file__).parent/"src/example.spec").read_text()
-        spec = Path(str(tmpdir))/"example.spec"
+        spec_content = (Path(__file__).parent / "src/example.spec").read_text()
+        spec = Path(str(tmpdir)) / "example.spec"
         spec.write_text(spec_content)
         return str(spec)
 
@@ -220,8 +223,8 @@ class TestFedora:
 
     def test_clone(self, tmp, package, fake_clone):
         directory = Path(self.fedora.fedpkg_clone_repository(tmp, package))
-        assert (directory/f"{package}.spec").is_file()
-        assert (directory/".git").is_dir()
+        assert (directory / f"{package}.spec").is_file()
+        assert (directory / ".git").is_dir()
 
     def test_switch_branch(self, fake_repository):
         self.fedora.fedpkg_switch_branch(fake_repository, "f28", False)
@@ -230,7 +233,7 @@ class TestFedora:
         assert "master" == self.run_cmd("git rev-parse --abbrev-ref HEAD", fake_repository).stdout.strip()
 
     def test_commit(self, fake_repository):
-        spec_path = fake_repository/"example.spec"
+        spec_path = fake_repository / "example.spec"
         spec_content = spec_path.read_text() + "\n Test test"
         spec_path.write_text(spec_content)
 
@@ -244,7 +247,7 @@ class TestFedora:
         directory = Path(self.fedora.fedpkg_clone_repository(tmp, package))
         assert self.fedora.fedpkg_lint(str(directory), "master", False)
 
-        spec_path = directory/f"{package}.spec"
+        spec_path = directory / f"{package}.spec"
         with spec_path.open('r+') as spec_file:
             spec = spec_file.read() + "\n Test test"
             spec_file.write(spec)
@@ -263,7 +266,7 @@ class TestFedora:
         assert file_number != len(os.listdir(directory))
 
     def test_workflow(self, fake_repository):
-        spec_path = fake_repository/"example.spec"
+        spec_path = fake_repository / "example.spec"
         spec_content = spec_path.read_text() + "\n Test test"
         spec_path.write_text(spec_content)
 

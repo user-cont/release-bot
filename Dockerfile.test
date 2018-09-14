@@ -21,7 +21,4 @@ RUN chown -R 1001:0 ${HOME}
 
 USER 1001
 
-RUN git config --global user.email "jdoe@example.com" && \
-    git config --global user.name "John Doe"
-
 CMD make test
