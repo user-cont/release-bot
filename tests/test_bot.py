@@ -72,16 +72,19 @@ class TestBot:
         self.g_utils.open_issue("0.0.1 release")
         self.g_utils.open_issue("0.0.2 release")
 
-    @pytest.fixture()
     def open_pr(self):
         """Opens two release issues in a repository"""
         conf = yaml.safe_load(RELEASE_CONF) or {}
         self.release_bot.new_release.update(conf)
-        self.open_issue()
+        self.g_utils.open_issue("0.0.1 release")
         self.release_bot.find_open_release_issues()
         self.release_bot.make_release_pull_request()
         pr_number = self.release_bot.github.pr_exists("0.0.1 release")
         assert pr_number and self.g_utils.merge_pull_request(pr_number)
+
+    @pytest.fixture()
+    def open_pr_fixture(self):
+        self.open_pr()
 
     @pytest.fixture()
     def github_release(self):
@@ -124,7 +127,7 @@ class TestBot:
         assert self.release_bot.make_release_pull_request()
         assert self.release_bot.github.pr_exists("0.0.1 release")
 
-    def test_github_release(self, open_pr):
+    def test_github_release(self, open_pr_fixture):
         """Tests releasing on Github"""
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
