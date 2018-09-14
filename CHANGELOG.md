@@ -1,3 +1,9 @@
+# 0.4.1
+
+* Fix wrong PR description
+* Fix pytest fixture warnings
+* Fix git credentials for Fedora releasing
+
 # 0.4.0
 
 * Allow self-releasing on issue
