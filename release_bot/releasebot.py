@@ -234,6 +234,9 @@ class ReleaseBot:
             self.github.comment.append(msg)
 
         try:
+            name, email = self.github.get_user_contact()
+            self.new_release['commit_name'] = name
+            self.new_release['commit_email'] = email
             success_ = self.fedora.release(self.new_release)
             release_handler(success_)
         except ReleaseException:
