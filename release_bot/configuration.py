@@ -118,6 +118,8 @@ class Configuration:
             parsed_conf['python_versions'][index] = int(version)
         for index, branch in enumerate(parsed_conf.get('fedora_branches', [])):
             parsed_conf['fedora_branches'][index] = str(branch)
+        for index, label in enumerate(parsed_conf.get('labels', [])):
+            parsed_conf['labels'][index] = str(label)
         if parsed_conf.get('fedora') and not self.fas_username:
             self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
             parsed_conf['fedora'] = False
