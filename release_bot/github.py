@@ -395,6 +395,18 @@ class Github:
         self.logger.error(f'Failed to close issue #{number}')
         return False
 
+    def put_labels_on_issue(self, number, labels):
+        payload = {'labels': labels}
+        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
+               f"{self.conf.repository_name}/issues/{number}")
+        self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
+        response = requests.patch(url=url, headers=self.headers, json=payload)
+        if response.status_code == 200:
+            self.logger.debug(f'Labels put on issue #{number}')
+            return True
+        self.logger.error(f'Failed to put labels on issue #{number}')
+        return False
+
     def get_configuration(self):
         """
         Fetches release-conf.yaml via Github API

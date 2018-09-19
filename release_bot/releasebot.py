@@ -258,6 +258,9 @@ class ReleaseBot:
                         # so try to do it only when we just did PyPi release
                         self.make_new_fedora_release()
                 if self.new_release.get('trigger_on_issue') and self.find_open_release_issues():
+                    if self.new_release.get('labels') is not None:
+                        self.github.put_labels_on_issue(self.new_pr['issue_number'],
+                                                        self.new_release.get('labels'))
                     self.make_release_pull_request()
             except ReleaseException as exc:
                 self.logger.error(exc)
