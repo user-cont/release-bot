@@ -16,3 +16,8 @@ fedora: false
 # list of fedora branches bot should release on. Master is always implied
 fedora_branches:
   - f27
+# list of labels to be put on issues and PRs created by bot
+labels:
+  - bot
+  - release-bot
+  - user-cont

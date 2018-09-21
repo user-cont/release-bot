@@ -86,11 +86,11 @@ class ReleaseBot:
             return False
         if len(release_issues) == 1:
             for version, node in release_issues.items():
-                if self.new_release.get('labels') is not None:
-                    self.new_pr.update({'labels': self.new_release.get('labels')})
                 self.new_pr = {'version': version,
                                'issue_id': node['id'],
                                'issue_number': node['number']}
+                if self.new_release.get('labels') is not None:
+                    self.new_pr.update({'labels': self.new_release.get('labels')})
                 return True
         else:
             return False

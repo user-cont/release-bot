@@ -12,5 +12,6 @@ fedora_branches:
   - f28
   - 13
 labels:
+  - bot
   - release-bot
   - user-cont

@@ -144,4 +144,4 @@ class TestLoadReleaseConf:
         assert valid_new_release['fedora'] is True
         # this assertion also tests if branches are correct data type
         assert valid_new_release['fedora_branches'] == ['f27', 'f28', '13']
-        assert valid_new_release['labels'] == ['release-bot', 'user-cont']
+        assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']

@@ -338,7 +338,8 @@ class Github:
             repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
-                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed, labels=new_pr.get('labels'))
+                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed,
+                                                labels=new_pr.get('labels'))
                 return True
         except GitException as exc:
             raise ReleaseException(exc)
@@ -402,6 +403,12 @@ class Github:
         return False
 
     def put_labels_on_issue(self, number, labels):
+        """
+        Put labels on Github issue or PR
+        :param number: number of issue/PR
+        :param labels: list of str
+        :return: True on success, False on fail
+        """
         payload = {'labels': labels}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")
