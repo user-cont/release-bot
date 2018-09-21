@@ -77,7 +77,7 @@ class ReleaseBot:
                     cursor = edge['cursor']
                     match = re.match(r'(.+) release', edge['node']['title'].lower())
                     if match and validate(match[1]) and \
-                            edge['node']['authorAssociation'] in ['MEMBER', 'OWNER']:
+                            edge['node']['authorAssociation'] in ['MEMBER', 'OWNER', 'COLLABORATOR']:
                         release_issues[match[1]] = edge['node']
                         self.logger.info(f'Found new release issue with version: {match[1]}')
         if len(release_issues) > 1:
