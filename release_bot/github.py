@@ -415,7 +415,7 @@ class Github:
         self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
         response = requests.patch(url=url, headers=self.headers, json=payload)
         if response.status_code == 200:
-            self.logger.debug(f'Following labels: #{",".join.(labels)} put on issue #{number}:')
+            self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
             return True
         self.logger.error(f'Failed to put labels on issue #{number}')
         return False
