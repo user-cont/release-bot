@@ -82,12 +82,12 @@ def update_spec(spec_path, new_release):
         spec_file.close()
 
 
-def shell_command(work_directory, cmd, error_message, fail=True):
+def run_command(work_directory, cmd, error_message, fail=True):
     """
-    Execute a shell command
+    Execute a command
 
     :param work_directory: A directory to execute the command in
-    :param cmd: The shell command
+    :param cmd: command
     :param error_message: An error message to return in case of failure
     :param fail: If failure should cause termination of the bot
     :return: Boolean indicating success/failure
@@ -110,11 +110,11 @@ def shell_command(work_directory, cmd, error_message, fail=True):
     return True
 
 
-def shell_command_get_output(work_directory, cmd):
+def run_command_get_output(work_directory, cmd):
     """
-    Same as shell command, but more simple and returns stdout
+    Same as run command, but more simple and returns stdout
     :param work_directory: A directory to execute the command in
-    :param cmd: The shell command
+    :param cmd: command
     :return: stdout of the command
     """
     cmd = shlex.split(cmd)

@@ -23,7 +23,7 @@ from pathlib import Path
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 from release_bot.fedora import Fedora
-from release_bot.utils import shell_command
+from release_bot.utils import run_command
 
 
 class TestFedora:
@@ -61,9 +61,9 @@ class TestFedora:
         if not directory.is_dir():
             raise ReleaseException(f"Cannot clone into non-existent directory {directory}:")
 
-        shell_command(directory,
-                      f"fedpkg clone {name!r} --anonymous",
-                      "Cloning fedora repository failed:")
+        run_command(directory,
+                    f"fedpkg clone {name!r} --anonymous",
+                    "Cloning fedora repository failed:")
         return str(directory / name)
 
     def fake_repository_clone_func(self, directory, name, non_ff=False):

@@ -17,7 +17,7 @@ from glob import glob
 import os
 from tempfile import TemporaryDirectory
 
-from release_bot.utils import shell_command, update_spec
+from release_bot.utils import run_command, update_spec
 from release_bot.exceptions import ReleaseException
 
 
@@ -32,8 +32,8 @@ class Fedora:
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot clone fedpkg repository into non-existent directory:")
 
-        if shell_command(directory, f"fedpkg clone {name!r}",
-                         "Cloning fedora repository failed:"):
+        if run_command(directory, f"fedpkg clone {name!r}",
+                       "Cloning fedora repository failed:"):
             return os.path.join(directory, name)
         else:
             return ''
@@ -47,8 +47,8 @@ class Fedora:
         :param email: committer email
         :return: True on success False on fail
         """
-        email = shell_command(repo_path, f'git config user.email "{email}"', '', fail=False)
-        name = shell_command(repo_path, f'git config user.name "{name}"', '', fail=False)
+        email = run_command(repo_path, f'git config user.email "{email}"', '', fail=False)
+        name = run_command(repo_path, f'git config user.name "{name}"', '', fail=False)
         return email and name
 
     @staticmethod
@@ -56,17 +56,17 @@ class Fedora:
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory, f"fedpkg switch-branch {branch}",
-                             f"Switching to {branch} failed:", fail)
+        return run_command(directory, f"fedpkg switch-branch {branch}",
+                           f"Switching to {branch} failed:", fail)
 
     def fedpkg_build(self, directory, branch, scratch=False, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
         self.logger.debug(f"Building branch {branch!r} in Fedora. It can take a long time.")
-        success = shell_command(directory,
-                                f"fedpkg build {'--scratch' if scratch else ''}",
-                                f"Building branch {branch!r} in Fedora failed:", fail)
+        success = run_command(directory,
+                              f"fedpkg build {'--scratch' if scratch else ''}",
+                              f"Building branch {branch!r} in Fedora failed:", fail)
         if success:
             self.builds.append(f"{branch}")
 
@@ -77,33 +77,33 @@ class Fedora:
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory, "fedpkg push",
-                             f"Pushing branch {branch!r} to Fedora failed:", fail)
+        return run_command(directory, "fedpkg push",
+                           f"Pushing branch {branch!r} to Fedora failed:", fail)
 
     @staticmethod
     def fedpkg_merge(directory, branch, ff_only=True, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory,
-                             f"git merge master {'--ff-only' if ff_only else ''}",
-                             f"Merging master to branch {branch!r} failed:", fail)
+        return run_command(directory,
+                           f"git merge master {'--ff-only' if ff_only else ''}",
+                           f"Merging master to branch {branch!r} failed:", fail)
 
     @staticmethod
     def fedpkg_commit(directory, branch, message, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory, f"fedpkg commit -m '{message}'",
-                             f"Committing on branch {branch} failed:", fail)
+        return run_command(directory, f"fedpkg commit -m '{message}'",
+                           f"Committing on branch {branch} failed:", fail)
 
     @staticmethod
     def fedpkg_sources(directory, branch, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory, "fedpkg sources",
-                             f"Retrieving sources for branch {branch} failed:", fail)
+        return run_command(directory, "fedpkg sources",
+                           f"Retrieving sources for branch {branch} failed:", fail)
 
     @staticmethod
     def fedpkg_spectool(directory, branch, fail=True):
@@ -112,24 +112,24 @@ class Fedora:
 
         spec_files = glob(os.path.join(directory, "*spec"))
         spec_files = " ".join(spec_files)
-        return shell_command(directory, f"spectool -g {spec_files}",
-                             f"Retrieving new sources for branch {branch} failed:", fail)
+        return run_command(directory, f"spectool -g {spec_files}",
+                           f"Retrieving new sources for branch {branch} failed:", fail)
 
     @staticmethod
     def fedpkg_lint(directory, branch, fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory, "fedpkg lint",
-                             f"Spec lint on branch {branch} failed:", fail)
+        return run_command(directory, "fedpkg lint",
+                           f"Spec lint on branch {branch} failed:", fail)
 
     @staticmethod
     def fedpkg_new_sources(directory, branch, sources="", fail=True):
         if not os.path.isdir(directory):
             raise ReleaseException("Cannot access fedpkg repository:")
 
-        return shell_command(directory, f"fedpkg new-sources {sources}",
-                             f"Adding new sources on branch {branch} failed:", fail)
+        return run_command(directory, f"fedpkg new-sources {sources}",
+                           f"Adding new sources on branch {branch} failed:", fail)
 
     @staticmethod
     def init_ticket(keytab, fas_username):
@@ -140,7 +140,7 @@ class Fedora:
         else:
             # there is no keytab, but user still migh have active ticket - try to renew it
             cmd = f"kinit -R {fas_username}@FEDORAPROJECT.ORG"
-        return shell_command(os.getcwd(), cmd, "Failed to init kerberos ticket:", False)
+        return run_command(os.getcwd(), cmd, "Failed to init kerberos ticket:", False)
 
     def update_package(self, fedpkg_root, branch, new_release):
         """
