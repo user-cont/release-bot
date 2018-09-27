@@ -51,6 +51,8 @@ Here are possible options:
 | `fedora`      | Whether to release on fedora. False by default | No |
 | `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |
 | `trigger_on_issue`| Whether to allow bot to make PRs based on issues. False by default. | No |
+| `labels`     | List of labels that bot will put on issues and PRs | No |
+
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
 
 # Requirements

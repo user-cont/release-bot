@@ -259,7 +259,7 @@ class Github:
             msg = f"Unexpected response code from Github:\n{response.text}"
             raise ReleaseException(msg)
 
-    def make_pr(self, branch, version, log, changed_version_files, base='master'):
+    def make_pr(self, branch, version, log, changed_version_files, base='master', labels=None):
         """
         Makes a pull request with info on the new release
         :param branch: name of the branch to make PR from
@@ -268,6 +268,7 @@ class Github:
         :param changed_version_files: list of files that have been changed
                                       in order to update version
         :param base: base of the PR. 'master' by default
+        :param labels: list of str, labels to be put on PR
         :return: url of the PR
         """
         message = (f'Hi,\n you have requested a release PR from me. Here it is!\n'
@@ -298,6 +299,11 @@ class Github:
         if response.status_code == 201:
             parsed = response.json()
             self.logger.info(f"Created PR: {parsed['html_url']}")
+
+            # put labels on PR
+            if labels is not None:
+                self.put_labels_on_issue(parsed['number'], labels)
+
             return parsed['html_url']
         else:
             msg = (f"Something went wrong with creating "
@@ -332,7 +338,8 @@ class Github:
             repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
-                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed)
+                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed,
+                                                labels=new_pr.get('labels'))
                 return True
         except GitException as exc:
             raise ReleaseException(exc)
@@ -393,6 +400,24 @@ class Github:
             self.logger.debug(f'Closed issue #{number}')
             return True
         self.logger.error(f'Failed to close issue #{number}')
+        return False
+
+    def put_labels_on_issue(self, number, labels):
+        """
+        Put labels on Github issue or PR
+        :param number: number of issue/PR
+        :param labels: list of str
+        :return: True on success, False on fail
+        """
+        payload = {'labels': labels}
+        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
+               f"{self.conf.repository_name}/issues/{number}")
+        self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
+        response = requests.patch(url=url, headers=self.headers, json=payload)
+        if response.status_code == 200:
+            self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
+            return True
+        self.logger.error(f'Failed to put labels on issue #{number}')
         return False
 
     def get_configuration(self):
