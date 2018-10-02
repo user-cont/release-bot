@@ -111,10 +111,10 @@ Identity added: ./.ssh/id_rsa (./.ssh/id_rsa)
 11:47:36.212 releasebot.py     INFO   release-bot v0.4.1 reporting for duty!
 11:47:36.212 github.py         DEBUG  Fetching release-conf.yaml
 11:47:51.636 releasebot.py     DEBUG  No merged release PR found
-11:47:52.196 releasebot.py     INFO   Found new release issue with version: 0.5.0
+11:47:52.196 releasebot.py     INFO   Found new release issue with version: 0.8.4
 11:47:55.578 releasebot.py     DEBUG  No more open issues found
-11:47:56.098 releasebot.py     INFO   Making a new PR for release of version 0.8.4 based on an issue.
-11:47:57.608 utils.py          DEBUG  ['git', 'clone', 'https://github.com/user-cont/conu.git', '.']
+11:47:56.098 releasebot.py     INFO   Making a new PR for release of version 0.8.5 based on an issue.
+11:47:57.608 utils.py          DEBUG  ['git', 'clone', 'https://github.com/fedora-modularity/meta-test-family.git', '.']
 ...
 ```
 # OpenShift template
