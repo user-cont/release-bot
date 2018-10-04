@@ -18,7 +18,7 @@ import os
 import requests
 
 from release_bot.exceptions import ReleaseException
-from release_bot.utils import shell_command
+from release_bot.utils import run_command
 
 
 class PyPi:
@@ -48,7 +48,7 @@ class PyPi:
         :param project_root: location of setup.py
         """
         if os.path.isfile(os.path.join(project_root, 'setup.py')):
-            shell_command(project_root, "python setup.py sdist", "Cannot build sdist:")
+            run_command(project_root, "python setup.py sdist", "Cannot build sdist:")
         else:
             raise ReleaseException("Cannot find setup.py:")
 
@@ -70,8 +70,8 @@ class PyPi:
         if not os.path.isfile(os.path.join(project_root, 'setup.py')):
             raise ReleaseException("Cannot find setup.py:")
 
-        shell_command(project_root, f"{interpreter} setup.py bdist_wheel",
-                      f"Cannot build wheel for python {python_version}")
+        run_command(project_root, f"{interpreter} setup.py bdist_wheel",
+                    f"Cannot build wheel for python {python_version}")
 
     def upload(self, project_root):
         """
@@ -85,8 +85,8 @@ class PyPi:
             for file in spec_files:
                 files += f"{file} "
             self.logger.debug(f"Uploading {files} to PyPi")
-            shell_command(project_root, f"twine upload {files}",
-                          "Cannot upload python distribution:")
+            run_command(project_root, f"twine upload {files}",
+                        "Cannot upload python distribution:")
         else:
             raise ReleaseException("dist/ folder cannot be found:")
 

@@ -20,7 +20,7 @@ This module provides interface to git
 from tempfile import TemporaryDirectory
 from os import path
 
-from release_bot.utils import shell_command, shell_command_get_output
+from release_bot.utils import run_command, run_command_get_output
 from release_bot.exceptions import GitException
 
 
@@ -43,8 +43,8 @@ class Git:
         :return: TemporaryDirectory object
         """
         temp_directory = TemporaryDirectory()
-        if not shell_command(temp_directory.name, f'git clone {url} .',
-                             "Couldn't clone repository!", fail=False):
+        if not run_command(temp_directory.name, f'git clone {url} .',
+                           "Couldn't clone repository!", fail=False):
             raise GitException(f"Can't clone repository {url}")
         return temp_directory
 
@@ -55,7 +55,7 @@ class Git:
         :return: changelog or placeholder
         """
         cmd = f'git log {latest_version}... --no-merges --format=\'* %s\''
-        success, changelog = shell_command_get_output(self.repo_path, cmd)
+        success, changelog = run_command_get_output(self.repo_path, cmd)
         return changelog if success and changelog else 'No changelog provided'
 
     def add(self, files: list):
@@ -65,7 +65,7 @@ class Git:
         :return:
         """
         for file in files:
-            success = shell_command(self.repo_path, f'git add {file}', '', False)
+            success = run_command(self.repo_path, f'git add {file}', '', False)
             if not success:
                 raise GitException(f"Can't git add file {file}!")
 
@@ -76,7 +76,7 @@ class Git:
         :return:
         """
         arg = '--allow-empty' if allow_empty else ''
-        success = shell_command(self.repo_path, f'git commit {arg} -m \"{message}\"', '', False)
+        success = run_command(self.repo_path, f'git commit {arg} -m \"{message}\"', '', False)
         if not success:
             raise GitException(f"Can't commit files!")
 
@@ -86,7 +86,7 @@ class Git:
         :param branch: branch to push
         :return:
         """
-        success = shell_command(self.repo_path, f'git push origin {branch}', '', False)
+        success = run_command(self.repo_path, f'git push origin {branch}', '', False)
         if not success:
             raise GitException(f"Can't push branch {branch} to origin!")
 
@@ -97,8 +97,8 @@ class Git:
         :param email: committer email
         :return: True on success False on fail
         """
-        email = shell_command(self.repo_path, f'git config user.email "{email}"', '', fail=False)
-        name = shell_command(self.repo_path, f'git config user.name "{name}"', '', fail=False)
+        email = run_command(self.repo_path, f'git config user.email "{email}"', '', fail=False)
+        name = run_command(self.repo_path, f'git config user.name "{name}"', '', fail=False)
         return email and name
 
     def set_credential_store(self):
@@ -125,7 +125,7 @@ class Git:
         :param branch: branch name
         :return: True on success False on fail
         """
-        return shell_command(self.repo_path, f'git checkout -b "{branch}"', '', fail=False)
+        return run_command(self.repo_path, f'git checkout -b "{branch}"', '', fail=False)
 
     def cleanup(self):
         """
