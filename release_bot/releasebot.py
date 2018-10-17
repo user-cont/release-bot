@@ -182,6 +182,17 @@ class ReleaseBot:
             self.github.comment.append(msg)
 
         try:
+            latest_github = self.github.latest_release()
+            if Version.coerce(latest_github) >= Version.coerce(self.new_release['version']):
+                self.logger.info(
+                    f"{self.new_release['version']} has already been released on Github")
+                # to fill in new_release['fs_path'] so that we can continue with PyPi upload
+                self.new_release = self.github.download_extract_zip(self.new_release)
+                return self.new_release
+        except ReleaseException as exc:
+            raise ReleaseException(f"Failed getting latest Github release (zip).\n{exc}")
+
+        try:
             released, self.new_release = self.github.make_new_release(self.new_release)
             if released:
                 release_handler(success=True)
