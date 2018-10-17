@@ -182,8 +182,7 @@ class ReleaseBot:
             self.github.comment.append(msg)
 
         try:
-            released, self.new_release = self.github.make_new_release(self.new_release,
-                                                                      self.github.latest_release())
+            released, self.new_release = self.github.make_new_release(self.new_release)
             if released:
                 release_handler(success=True)
         except ReleaseException:
