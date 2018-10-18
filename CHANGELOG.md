@@ -1,3 +1,10 @@
+# 0.5.0
+
+* You can specify github labels in release-conf.yaml configuration file
+  which should be applied on a pull request created by release bot.
+* Documentation is updated and is more clear now.
+* The bot no longer tries to release old versions again.
+
 # 0.4.1
 
 * Fix wrong PR description
