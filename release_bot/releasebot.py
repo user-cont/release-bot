@@ -149,9 +149,6 @@ class ReleaseBot:
             self.new_pr['repo'].cleanup()
 
         prev_version = self.github.latest_release()
-
-        # if there are no previous releases, set version to 0.0.0
-        prev_version = prev_version if prev_version else '0.0.0'
         self.new_pr['previous_version'] = prev_version
         if Version.coerce(prev_version) >= Version.coerce(self.new_pr['version']):
             msg = f"Version ({prev_version}) is already released and this issue is ignored."
@@ -211,9 +208,6 @@ class ReleaseBot:
             self.github.comment.append(msg)
 
         latest_pypi = self.pypi.latest_version()
-
-        # if there are no previous releases, set version to 0.0.0
-        latest_pypi = latest_pypi if latest_pypi else '0.0.0'
         if Version.coerce(latest_pypi) >= Version.coerce(self.new_release['version']):
             self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
             return False

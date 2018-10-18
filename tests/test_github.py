@@ -83,8 +83,8 @@ class TestGithub:
         assert self.github.close_issue(open_issue)
 
     def test_latest_rls_not_existing(self):
-        """Tests version number when there is no latest relase"""
-        assert not self.github.latest_release()
+        """Tests version number when there is no latest release"""
+        assert self.github.latest_release() == '0.0.0'
 
     def test_branch_exists_true(self):
         """Tests if branch exists"""

@@ -73,7 +73,7 @@ class Github:
         """
         Get the latest project release number on Github. Ignores drafts and pre releases
 
-        :return: Release number or None
+        :return: Release number or 0.0.0
         """
         query = (f"releases(last: 1 " +
                  (f'before:"{cursor}"' if cursor else '') +
@@ -95,7 +95,7 @@ class Github:
         edges = response['data']['repository']['releases']['edges']
         if not edges:
             self.logger.debug("There is no github release")
-            return None
+            return '0.0.0'
 
         release = edges[0]['node']
         # check for pre-release / draft
