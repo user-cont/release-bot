@@ -1,3 +1,18 @@
+# 0.5.0
+
+* Check latest github release before trying to create new
+* github.make_new_release(): remove redundant arg
+* rename shell_command to run_command
+* Couple fixes based on PR review
+* Update document
+* fix typo
+* log name of labels
+* add docstring to put_labels_on_issue method, add bot to labels
+* put labels on PRs
+* Add collaborator to the list of authorized users
+* put labels on release issue
+* add labels to release configuration
+
 # 0.4.1
 
 * Fix wrong PR description
