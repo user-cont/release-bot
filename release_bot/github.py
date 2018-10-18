@@ -165,13 +165,12 @@ class Github:
             self.detect_api_errors(response)
             return response['data']['repository']['issues']['edges']
 
-    def make_new_release(self, new_release, previous_release):
+    def make_new_release(self, new_release):
         """
         Makes new release to Github.
         This has to be done using github api v3 because v4 (GraphQL) doesn't support this yet
 
         :param new_release: version number of the new release
-        :param previous_release: version number of the previous release, used for release changelog
         :return: tuple (released, new_release) - released is bool, new_release contains info about
                  the new release
         """
@@ -185,23 +184,14 @@ class Github:
         self.logger.debug(f"About to release {new_release['version']} on Github")
         response = requests.post(url=url, headers=self.headers, json=payload)
         if response.status_code != 201:
-            response_get = requests.get(url=url, headers=self.headers)
-            if (response_get.status_code == 200 and
-                    [r for r in response_get.json() if r.get('name') == new_release['version']]):
-                self.logger.info(f"{new_release['version']} has already been released on Github")
-                # to fill in new_release['fs_path'] so that we can continue with PyPi upload
-                new_release = self.download_extract_zip(new_release)
-                released = False
-            else:
-                msg = (f"Something went wrong with creating "
-                       f"new release on github:\n{response.text}")
-                raise ReleaseException(msg)
-        else:
-            released = True
-            new_release = self.download_extract_zip(new_release)
-            self.update_changelog(previous_release,
-                                  new_release['version'], new_release['fs_path'],
-                                  response.json()['id'])
+            msg = f"Failed to create new release on github:\n{response.text}"
+            raise ReleaseException(msg)
+
+        released = True
+        new_release = self.download_extract_zip(new_release)
+        self.update_changelog(self.latest_release(),
+                              new_release['version'], new_release['fs_path'],
+                              response.json()['id'])
         return released, new_release
 
     def download_extract_zip(self, new_release):
@@ -223,9 +213,9 @@ class Github:
 
         return new_release
 
-    def update_changelog(self, previous_pypi_release, new_version, fs_path, id_):
+    def update_changelog(self, previous_release, new_version, fs_path, id_):
         # parse changelog and update the release with it
-        changelog = parse_changelog(previous_pypi_release, new_version, fs_path)
+        changelog = parse_changelog(previous_release, new_version, fs_path)
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases/{id_!s}")
         response = requests.post(url=url, json={'body': changelog}, headers=self.headers)
