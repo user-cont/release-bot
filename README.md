@@ -25,11 +25,10 @@ you have to solve them first before attempting the release again.
 
 
 # Configuration
-There are two yaml configuration files, `conf.yaml` and `release-conf.yaml`.
-`conf.yaml` must be accessible during bot initialization and specifies how to access Github repository,
-while `release-conf.yaml` must be stored in the upstream repository
-itself and specifies how to do a Github/PyPI/Fedora releases.
-The `conf.yaml` file should be stored in a private repository.
+There are two yaml configuration files:
+ 1. `conf.yaml` -- a config for the bot itself with some sensitive data
+ 2. `release-conf.yaml` -- stored in upstream repository and contains info on how to release the specific project.
+
 
 ## Private repository
 You need to setup a git repository, where you'll store  the `conf.yaml` and `.pypirc` files.
