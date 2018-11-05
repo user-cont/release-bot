@@ -41,16 +41,15 @@ bot will try to find it in current working directory.
 
 Here are the `conf.yaml` configuration options:
 
-| Option        | Meaning       | Required      |
-|------------- |-------------|-------------| 
-| `repository_name`     | Name of your Github repository  | Yes |
-| `repository_owner`    | Owner of the repository    	  | Yes |
-| `github_token`		| [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)   | Yes |
-| `github_username`	    | Name of the account that the `github_token` belongs to.
-Only needed for triggering the bot on an issue. | No |
-| `fas_username`		| [FAS](https://fedoraproject.org/wiki/Account_System)	username.
-Only need for releasing on Fedora| No |
-| `refresh_interval`	| Time in seconds between checks on repository. Default is 180 | No |
+| Option             | Description       | Required      |
+|--------------------|-------------|-------------|
+| `repository_name`  | Name of your Github repository | Yes |
+| `repository_owner` | Owner of the repository | Yes |
+| `github_token`     | [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) | Yes |
+| `github_username`  | Name of the account that the `github_token` belongs to. Only needed for triggering the bot on an issue. | No |
+| `fas_username`     | [FAS](https://fedoraproject.org/wiki/Account_System)	username. Only need for releasing on Fedora| No |
+| `refresh_interval` | Time in seconds between checks on repository. Default is 180 | No |
+
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
 Regarding `github_token`, it's usually a good idea to create a Github account for the bot
