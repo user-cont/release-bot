@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:28
+FROM registry.fedoraproject.org/fedora:29
 
 ENV STI_SCRIPTS_URL=image:///usr/libexec/s2i \
     STI_SCRIPTS_PATH=/usr/libexec/s2i \
