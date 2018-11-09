@@ -25,11 +25,10 @@ you have to solve them first before attempting the release again.
 
 
 # Configuration
-There are two yaml configuration files, `conf.yaml` and `release-conf.yaml`.
-`conf.yaml` must be accessible during bot initialization and specifies how to access Github repository,
-while `release-conf.yaml` must be stored in the upstream repository
-itself and specifies how to do a Github/PyPI/Fedora releases.
-The `conf.yaml` file should be stored in a private repository.
+There are two yaml configuration files:
+ 1. `conf.yaml` -- a config for the bot itself with some sensitive data
+ 2. `release-conf.yaml` -- stored in upstream repository and contains info on how to release the specific project.
+
 
 ## Private repository
 You need to setup a git repository, where you'll store  the `conf.yaml` and `.pypirc` files.
@@ -41,21 +40,27 @@ bot will try to find it in current working directory.
 
 Here are the `conf.yaml` configuration options:
 
-| Option        | Meaning       | Required      |
-|------------- |-------------|-------------| 
-| `repository_name`     | Name of your Github repository  | Yes |
-| `repository_owner`    | Owner of the repository    	  | Yes |
-| `github_token`		| [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)   | Yes |
-| `github_username`	    | Name of the account that the `github_token` belongs to.
-Only needed for triggering the bot on an issue. | No |
-| `fas_username`		| [FAS](https://fedoraproject.org/wiki/Account_System)	username.
-Only need for releasing on Fedora| No |
-| `refresh_interval`	| Time in seconds between checks on repository. Default is 180 | No |
+| Option                       | Description       | Required      |
+|------------------------------|-------------------|---------------|
+| `repository_name`            | Name of your Github repository | Yes |
+| `repository_owner`           | Owner of the repository | Yes |
+| `github_token`               | [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) | Yes |
+| `github_username`            | Name of the account that the `github_token` belongs to. Only needed for triggering the bot on an issue. | No |
+| `github_app_installation_id` | Installation ID (a number) of the Github app. | No |
+| `github_app_id`              | ID (a number) of the Github app. | No |
+| `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
+| `fas_username`               | [FAS](https://fedoraproject.org/wiki/Account_System) username. Only need for releasing on Fedora| No |
+| `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
+
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
 Regarding `github_token`, it's usually a good idea to create a Github account for the bot
 (and use its Github API token)
 so you can keep track of what changes were made by bot and what are your own.
+
+You can also create a Github app and use it as an authentication mechanism for
+the bot. For that you need to specify the three config values prefixed with
+`github_app`.
 
 ## Upstream repository
 

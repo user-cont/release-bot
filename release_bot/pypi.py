@@ -48,7 +48,7 @@ class PyPi:
         :param project_root: location of setup.py
         """
         if os.path.isfile(os.path.join(project_root, 'setup.py')):
-            run_command(project_root, "python setup.py sdist", "Cannot build sdist:")
+            run_command(project_root, "python3 setup.py sdist", "Cannot build sdist:")
         else:
             raise ReleaseException("Cannot find setup.py:")
 

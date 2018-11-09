@@ -40,6 +40,10 @@ class Configuration:
         self.fas_username = ''
         self.logger = None
         self.set_logging()
+        # configuration when bot is deployed as github app
+        self.github_app_installation_id = ''
+        self.github_app_id = ''
+        self.github_app_cert_path = ''
 
     def set_logging(self,
                     logger_name="release-bot",

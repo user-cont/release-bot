@@ -13,15 +13,81 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from os import listdir
+import os
+import time
 import re
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
-import requests
 
 from release_bot.git import Git
 from release_bot.exceptions import ReleaseException, GitException
 from release_bot.utils import insert_in_changelog, parse_changelog, look_for_version_files
+
+import jwt
+import requests
+
+
+# github app auth code "stolen" from https://github.com/swinton/github-app-demo.py
+class JWTAuth(requests.auth.AuthBase):
+    def __init__(self, iss, key, expiration=10 * 60):
+        self.iss = iss
+        self.key = key
+        self.expiration = expiration
+
+    def generate_token(self):
+        # Generate the JWT
+        payload = {
+          # issued at time
+          'iat': int(time.time()),
+          # JWT expiration time (10 minute maximum)
+          'exp': int(time.time()) + self.expiration,
+          # GitHub App's identifier
+          'iss': self.iss
+        }
+
+        tok = jwt.encode(payload, self.key, algorithm='RS256')
+
+        return tok.decode('utf-8')
+
+    def __call__(self, r):
+        r.headers['Authorization'] = 'bearer {}'.format(self.generate_token())
+        return r
+
+
+class GitHubApp:
+    def __init__(self, app_id, private_key_path):
+        self.session = requests.Session()
+        self.session.headers.update(dict(
+            accept='application/vnd.github.machine-man-preview+json'))
+        self.private_key = None
+        self.private_key_path = private_key_path
+        self.session.auth = JWTAuth(iss=app_id, key=self.read_private_key())
+        self.domain = 'api.github.com'  # not sure if it makes sense to make this configurable
+
+    def _request(self, method, path):
+        response = self.session.request(method, 'https://{}/{}'.format(self.domain, path))
+        return response.json()
+
+    def _get(self, path):
+        return self._request('GET', path)
+
+    def _post(self, path):
+        return self._request('POST', path)
+
+    def read_private_key(self):
+        if self.private_key is None:
+            with open(self.private_key_path) as fp:
+                self.private_key = fp.read()
+        return self.private_key
+
+    def get_app(self):
+        return self._get('app')
+
+    def get_installations(self):
+        return self._get('app/installations')
+
+    def get_installation_access_token(self, installation_id):
+        return self._post('installations/{}/access_tokens'.format(installation_id))["token"]
 
 
 class Github:
@@ -31,18 +97,71 @@ class Github:
     def __init__(self, configuration):
         self.conf = configuration
         self.logger = configuration.logger
-        self.headers = {'Authorization': f'token {configuration.github_token}'}
+        self.session = requests.Session()
+        self.session.headers.update({'Authorization': f'token {configuration.github_token}'})
+        self.github_app_session = None
+        if self.conf.github_app_installation_id and self.conf.github_app_id and self.conf.github_app_cert_path:
+            self.github_app_session = requests.Session()
+            self.github_app = GitHubApp(self.conf.github_app_id, self.conf.github_app_cert_path)
+            self.update_github_app_token()
         self.comment = []
 
-    def send_query(self, query):
-        """Send query to Github v4 API and return the response"""
-        return requests.post(url=self.API_ENDPOINT, json={'query': query}, headers=self.headers)
+    def update_github_app_token(self):
+        token = self.github_app.get_installation_access_token(self.conf.github_app_installation_id)
+        self.logger.debug("github app token obtained")
+        self.github_app_session.headers.update({'Authorization': f'token {token}'})
+
+    def do_request(self, query=None, method=None, json_payload=None, url=None, use_github_auth=False):
+        """
+        a single wrapper to make any type of request:
+
+        * query using graphql
+        * a request with selected method and json payload
+        * utilizing both tokens: github app and user token
+
+        this method returns requests.Response so that methods can play with return code
+
+        :param query:
+        :param method:
+        :param json_payload:
+        :param url:
+        :param use_github_auth: auth as github app, not as user (default is user)
+        :return: requests.Response
+        """
+        if query:
+            self.logger.debug(f'query = {query}')
+            if use_github_auth and self.github_app_session:
+                response = self.github_app_session.post(url=self.API_ENDPOINT, json={'query': query})
+            else:
+                response = self.session.post(url=self.API_ENDPOINT, json={'query': query})
+            if response.status_code == 401 and self.github_app_session:
+                self.update_github_app_token()
+                response = self.github_app_session.post(url=self.API_ENDPOINT, json={'query': query})
+        elif method and url:
+            self.logger.debug(f'{method} {url}')
+            if use_github_auth and self.github_app_session:
+                response = self.github_app_session.request(method=method, url=url, json=json_payload)
+            else:
+                response = self.session.request(method=method, url=url, json=json_payload)
+            if response.status_code == 401 and self.github_app_session:
+                self.update_github_app_token()
+                response = self.github_app_session.request(method=method, url=url, json=json_payload)
+            if not response.ok:
+                self.logger.error(f"error message: {response.content}")
+        else:
+            raise RuntimeError("please specify query or both method and url")
+        return response
 
     def query_repository(self, query):
-        """Query Github repository"""
+        """
+        Query a Github repo using GraphQL API
+
+        :param query: str
+        :return: requests.Response
+        """
         repo_query = (f'query {{repository(owner: "{self.conf.repository_owner}", '
                       f'name: "{self.conf.repository_name}") {{{query}}}}}')
-        return self.send_query(repo_query)
+        return self.do_request(query=repo_query)
 
     def add_comment(self, subject_id):
         """Add self.comment to subject_id issue/PR"""
@@ -56,7 +175,7 @@ class Github:
                            id
                          }
                        }}''')
-        response = self.send_query(mutation).json()
+        response = self.do_request(query=mutation, use_github_auth=True).json()
         self.detect_api_errors(response)
         self.logger.debug(f'Comment added to PR: {comment}')
         self.comment = []  # clean up
@@ -182,7 +301,7 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases")
         self.logger.debug(f"About to release {new_release['version']} on Github")
-        response = requests.post(url=url, headers=self.headers, json=payload)
+        response = self.do_request(method="POST", url=url, json_payload=payload, use_github_auth=True)
         if response.status_code != 201:
             msg = f"Failed to create new release on github:\n{response.text}"
             raise ReleaseException(msg)
@@ -208,7 +327,7 @@ class Github:
         open(path + '.zip', 'wb').write(response.content)
         archive = ZipFile(path + '.zip')
         archive.extractall(path=path)
-        dirs = listdir(path)
+        dirs = os.listdir(path)
         new_release['fs_path'] = path + "/" + dirs[0]
 
         return new_release
@@ -218,7 +337,7 @@ class Github:
         changelog = parse_changelog(previous_release, new_version, fs_path)
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases/{id_!s}")
-        response = requests.post(url=url, json={'body': changelog}, headers=self.headers)
+        response = self.do_request(method="POST", url=url, json_payload={'body': changelog}, use_github_auth=True)
         if response.status_code != 200:
             self.logger.error((f"Something went wrong during changelog "
                                f"update for {new_version}:\n{response.text}"))
@@ -239,7 +358,7 @@ class Github:
         """
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/branches/{branch}")
-        response = requests.get(url=url, headers=self.headers)
+        response = self.do_request(method="GET", url=url)
         if response.status_code == 200:
             return True
         elif response.status_code == 404:
@@ -285,7 +404,7 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/pulls")
         self.logger.debug(f'Attempting a PR for {branch} branch')
-        response = requests.post(url=url, headers=self.headers, json=payload)
+        response = self.do_request(method="POST", url=url, json_payload=payload, use_github_auth=True)
         if response.status_code == 201:
             parsed = response.json()
             self.logger.info(f"Created PR: {parsed['html_url']}")
@@ -365,7 +484,7 @@ class Github:
                      name
                    }
                  }''')
-        response = self.send_query(query).json()
+        response = self.do_request(query=query).json()
         self.detect_api_errors(response)
         name = response['data']['user']['name']
         email = response['data']['user']['email']
@@ -385,7 +504,7 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")
         self.logger.debug(f'Attempting to close issue #{number}')
-        response = requests.patch(url=url, headers=self.headers, json=payload)
+        response = self.do_request(method='PATCH', url=url, json_payload=payload, use_github_auth=True)
         if response.status_code == 200:
             self.logger.debug(f'Closed issue #{number}')
             return True
@@ -403,7 +522,7 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")
         self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
-        response = requests.patch(url=url, headers=self.headers, json=payload)
+        response = self.do_request(method='PATCH', url=url, json_payload=payload, use_github_auth=True)
         if response.status_code == 200:
             self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
             return True
@@ -418,7 +537,7 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/contents/release-conf.yaml")
         self.logger.debug(f'Fetching release-conf.yaml')
-        response = requests.get(url=url, headers=self.headers)
+        response = self.do_request(url=url, method='GET')
         if response.status_code != 200:
             self.logger.error(f'Failed to fetch release-conf.yaml')
             return False
