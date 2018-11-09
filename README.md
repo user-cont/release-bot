@@ -59,7 +59,7 @@ Regarding `github_token`, it's usually a good idea to create a Github account fo
 so you can keep track of what changes were made by bot and what are your own.
 
 You can also create a Github app and use it as an authentication mechanism for
-the bot. For that you need specify the three config values prefixed with
+the bot. For that you need to specify the three config values prefixed with
 `github_app`.
 
 ## Upstream repository
