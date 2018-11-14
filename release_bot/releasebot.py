@@ -77,15 +77,17 @@ class ReleaseBot:
                     cursor = edge['cursor']
                     match = re.match(r'(.+) release', edge['node']['title'].lower())
                     if match:
-                        if validate(match[1]):
+                        version = match[1].strip()
+                        if validate(version):
                             if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER', 'COLLABORATOR']:
-                                release_issues[match[1]] = edge['node']
-                                self.logger.info(f'Found new release issue with version: {match[1]}')
+                                release_issues[version] = edge['node']
+                                self.logger.info(f'Found new release issue with version: {version}')
                             else:
-                                self.warning(f"{edge['node']['authorAssociation']} not in"
-                                             f"['MEMBER', 'OWNER', 'COLLABORATOR']")
+                                self.logger.warning(
+                                    f"Author association {edge['node']['authorAssociation']!r} "
+                                    f"not in ['MEMBER', 'OWNER', 'COLLABORATOR']")
                         else:
-                            self.warning(f"{match[1]!r} is not a valid version")
+                            self.logger.warning(f"{version!r} is not a valid version")
         if len(release_issues) > 1:
             msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
             self.logger.error(msg)
