@@ -79,7 +79,8 @@ class ReleaseBot:
                     if match:
                         version = match[1].strip()
                         if validate(version):
-                            if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER', 'COLLABORATOR']:
+                            if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
+                                                                     'COLLABORATOR']:
                                 release_issues[version] = edge['node']
                                 self.logger.info(f'Found new release issue with version: {version}')
                             else:
@@ -240,8 +241,10 @@ class ReleaseBot:
             result = "released" if success else "failed to release"
             msg = f"I just {result} on Fedora"
             builds = ', '.join(self.fedora.builds)
+            bodhi_update_url = "https://bodhi.fedoraproject.org/updates/new"
             if builds:
-                msg += f", successfully built for branches: {builds}"
+                msg += f", successfully built for branches: {builds}."
+                msg += f" Follow this link to create bodhi update(s): {bodhi_update_url}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
