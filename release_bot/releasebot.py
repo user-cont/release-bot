@@ -27,6 +27,7 @@ from release_bot.cli import CLI
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 from release_bot.fedora import Fedora
+from release_bot.git import Git
 from release_bot.github import Github
 from release_bot.pypi import PyPi
 
@@ -35,8 +36,11 @@ class ReleaseBot:
 
     def __init__(self, configuration):
         self.conf = configuration
-        self.github = Github(configuration)
-        self.pypi = PyPi(configuration)
+        url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
+        self.git = Git(url, self.conf)
+
+        self.github = Github(configuration, self.git)
+        self.pypi = PyPi(configuration, self.git)
         self.fedora = Fedora(configuration)
         self.logger = configuration.logger
         self.new_release = {}
@@ -157,17 +161,18 @@ class ReleaseBot:
                 self.github.close_issue(self.new_pr['issue_number'])
             self.new_pr['repo'].cleanup()
 
-        prev_version = self.github.latest_release()
-        self.new_pr['previous_version'] = prev_version
-        if Version.coerce(prev_version) >= Version.coerce(self.new_pr['version']):
-            msg = f"Version ({prev_version}) is already released and this issue is ignored."
+        prev_release = self.github.latest_release()
+        previous_version = prev_release["name"]
+        self.new_pr['previous_version'] = previous_version
+        if previous_version >= Version.coerce(self.new_pr['version']):
+            msg = f"Version ({prev_release}) is already released and this issue is ignored."
             self.logger.warning(msg)
             return False
         msg = f"Making a new PR for release of version {self.new_pr['version']} based on an issue."
         self.logger.info(msg)
 
         try:
-            self.new_pr['repo'] = self.github.clone_repository()
+            self.new_pr['repo'] = self.git
             if not self.new_pr['repo']:
                 raise ReleaseException("Couldn't clone repository!")
 
@@ -189,23 +194,21 @@ class ReleaseBot:
 
         try:
             latest_github = self.github.latest_release()
-            if Version.coerce(latest_github) >= Version.coerce(self.new_release['version']):
-                self.logger.info(
-                    f"{self.new_release['version']} has already been released on Github")
-                # to fill in new_release['fs_path'] so that we can continue with PyPi upload
-                self.new_release = self.github.download_extract_zip(self.new_release)
-                return self.new_release
         except ReleaseException as exc:
             raise ReleaseException(f"Failed getting latest Github release (zip).\n{exc}")
 
-        try:
-            released, self.new_release = self.github.make_new_release(self.new_release)
-            if released:
-                release_handler(success=True)
-        except ReleaseException:
-            release_handler(success=False)
-            raise
-
+        if Version.coerce(latest_github["name"]) >= Version.coerce(self.new_release['version']):
+            self.logger.info(
+                f"{self.new_release['version']} has already been released on Github")
+        else:
+            try:
+                released, self.new_release = self.github.make_new_release(self.new_release)
+                if released:
+                    release_handler(success=True)
+            except ReleaseException:
+                release_handler(success=False)
+                raise
+        self.github.update_changelog(self.new_release['version'])
         return self.new_release
 
     def make_new_pypi_release(self):
@@ -220,7 +223,8 @@ class ReleaseBot:
         if Version.coerce(latest_pypi) >= Version.coerce(self.new_release['version']):
             self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
             return False
-
+        self.git.fetch_tags()
+        self.git.checkout(latest_pypi)
         try:
             self.pypi.release(self.new_release)
             release_handler(success=True)

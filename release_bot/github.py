@@ -12,19 +12,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
 import os
 import time
 import re
-from tempfile import TemporaryDirectory
-from zipfile import ZipFile
 
-from release_bot.git import Git
 from release_bot.exceptions import ReleaseException, GitException
 from release_bot.utils import insert_in_changelog, parse_changelog, look_for_version_files
 
 import jwt
 import requests
+
+
+logger = logging.getLogger('release-bot')
 
 
 # github app auth code "stolen" from https://github.com/swinton/github-app-demo.py
@@ -94,7 +94,11 @@ class Github:
     API_ENDPOINT = "https://api.github.com/graphql"
     API3_ENDPOINT = "https://api.github.com/"
 
-    def __init__(self, configuration):
+    def __init__(self, configuration, git):
+        """
+        :param configuration: instance of Configuration
+        :param git: instance of Git
+        """
         self.conf = configuration
         self.logger = configuration.logger
         self.session = requests.Session()
@@ -105,6 +109,7 @@ class Github:
             self.github_app = GitHubApp(self.conf.github_app_id, self.conf.github_app_cert_path)
             self.update_github_app_token()
         self.comment = []
+        self.git = git
 
     def update_github_app_token(self):
         token = self.github_app.get_installation_access_token(self.conf.github_app_installation_id)
@@ -222,7 +227,7 @@ class Github:
             self.logger.debug("Latest github release is a Prerelease/Draft")
             return self.latest_release(cursor=edges[0]['cursor'])
 
-        return release['name']
+        return release
 
     def walk_through_prs(self, start='', direction='after', which="last", closed=True):
         """
@@ -305,50 +310,36 @@ class Github:
         if response.status_code != 201:
             msg = f"Failed to create new release on github:\n{response.text}"
             raise ReleaseException(msg)
+        return True, new_release
 
-        released = True
-        new_release = self.download_extract_zip(new_release)
-        self.update_changelog(self.latest_release(),
-                              new_release['version'], new_release['fs_path'],
-                              response.json()['id'])
-        return released, new_release
+    def update_changelog(self, new_version):
+        self.git.fetch_tags()
+        self.git.checkout(new_version)
+        # FIXME: make the file name configurable
+        p = os.path.join(self.git.repo.name, "CHANGELOG.md")
+        try:
+            with open(p, "r") as fd:
+                changelog_content = fd.read()
+        except FileNotFoundError:
+            logger.info("CHANGELOG.md not found")
+            return
 
-    def download_extract_zip(self, new_release):
-        url = f"https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}/" \
-              f"archive/{new_release['version']}.zip"
-
-        # download the new release to a temporary directory
-        temp_directory = TemporaryDirectory()
-        new_release['tempdir'] = temp_directory
-        response = requests.get(url=url)
-        path = temp_directory.name + '/' + new_release['version']
-
-        # extract it
-        open(path + '.zip', 'wb').write(response.content)
-        archive = ZipFile(path + '.zip')
-        archive.extractall(path=path)
-        dirs = os.listdir(path)
-        new_release['fs_path'] = path + "/" + dirs[0]
-
-        return new_release
-
-    def update_changelog(self, previous_release, new_version, fs_path, id_):
-        # parse changelog and update the release with it
-        changelog = parse_changelog(previous_release, new_version, fs_path)
+        # get latest release
+        changelog = parse_changelog(new_version, changelog_content)
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/releases/{id_!s}")
+               f"{self.conf.repository_name}/releases/latest")
+        latest_release = self.do_request(method="GET", url=url, use_github_auth=True).json()
+
+        # check if the changelog needs updating
+        if latest_release["body"] == changelog:
+            return
+
+        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
+               f"{self.conf.repository_name}/releases/{latest_release['id']}")
         response = self.do_request(method="POST", url=url, json_payload={'body': changelog}, use_github_auth=True)
         if response.status_code != 200:
             self.logger.error((f"Something went wrong during changelog "
                                f"update for {new_version}:\n{response.text}"))
-
-    def clone_repository(self):
-        """
-        Clones repository from configuration
-        :return: Git object with cloned repository
-        """
-        url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
-        return Git(url, self.conf)
 
     def branch_exists(self, branch):
         """

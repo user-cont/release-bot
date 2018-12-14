@@ -15,34 +15,37 @@
 
 import shlex
 import datetime
+import logging
 import os
 import re
 import subprocess
 import locale
-from semantic_version import Version, validate
+from semantic_version import validate
 
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 
 
-def parse_changelog(previous_version, version, path):
+logger = logging.getLogger('release-bot')
+
+
+def parse_changelog(version, changelog_content):
     """
     Get changelog for selected version
 
-    :param str previous_version: Version before the new one
     :param str version: A new version
-    :param str path: Path to CHANGELOG.md
+    :param changelog_content: str, content of CHANGELOG.md
     :return: Changelog entry or placeholder entry if no changelog is found
     """
-    if os.path.isfile(path + "/CHANGELOG.md") and \
-            Version.coerce(previous_version) < Version.coerce(version):
-        file = open(path + '/CHANGELOG.md', 'r').read()
-        # detect position of this version header
-        pos_start = file.find("# " + version)
-        pos_end = file.find("# " + previous_version) if previous_version else len(file)
-        changelog = file[pos_start + len("# " + version):(pos_end if pos_end >= 0 else len(file))].strip()
-        if changelog:
-            return changelog
+    logger.debug("getting changelog for version: %s", version)
+    chunks = re.split(r"\n# ", changelog_content)
+    try:
+        first_chunk = chunks[0]
+    except IndexError:
+        logger.info("changelog is probably in incorrect format: new releases are not separated by \\n# 1.2.3")
+    else:
+        if first_chunk.startswith(f"# {version}"):
+            return first_chunk
     return "No changelog provided"
 
 

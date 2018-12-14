@@ -119,6 +119,15 @@ class Git:
                 config.write(f'\n[credential]\n\thelper = store --file={store_path}\n')
         return path.join(self.credential_store.name, 'credentials')
 
+    def checkout(self, target):
+        """
+        checkout the target
+
+        :param target: str (branch, tag, file)
+        :return: None
+        """
+        return run_command(self.repo_path, f'git checkout "{target}"', '', fail=True)
+
     def checkout_new_branch(self, branch):
         """
         Creates a new local branch
@@ -126,6 +135,12 @@ class Git:
         :return: True on success False on fail
         """
         return run_command(self.repo_path, f'git checkout -b "{branch}"', '', fail=False)
+
+    def fetch_tags(self):
+        """
+        Fetch all tags from origin
+        """
+        return run_command(self.repo_path, 'git fetch --tags', 'Unable to fetch tags from remote server', fail=True)
 
     def cleanup(self):
         """
