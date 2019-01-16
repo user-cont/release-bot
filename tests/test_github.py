@@ -17,8 +17,9 @@ import os
 import pytest
 
 from release_bot.configuration import configuration
+from release_bot.git import Git
 from release_bot.github import Github
-from github_utils import GithubUtils, RELEASE_CONF
+from .github_utils import GithubUtils, RELEASE_CONF
 
 
 @pytest.mark.skipif(not GithubUtils.github_api_status(), reason="Github api is down")
@@ -49,7 +50,9 @@ class TestGithub:
         configuration.github_username = self.github_user
         configuration.refresh_interval = 1
 
-        self.github = Github(configuration)
+        repo_url = f"https://github.com/{self.github_user}/{self.g_utils.repo}"
+        git = Git(repo_url, configuration)
+        self.github = Github(configuration, git)
 
     def teardown_method(self):
         """ teardown any state that was previously setup with a setup_method

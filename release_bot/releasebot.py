@@ -161,9 +161,9 @@ class ReleaseBot:
             self.new_pr['repo'].cleanup()
 
         prev_release = self.github.latest_release()
-        previous_version = prev_release["name"]
+        previous_version = prev_release
         self.new_pr['previous_version'] = previous_version
-        if previous_version >= Version.coerce(self.new_pr['version']):
+        if Version.coerce(previous_version) >= Version.coerce(self.new_pr['version']):
             msg = f"Version ({prev_release}) is already released and this issue is ignored."
             self.logger.warning(msg)
             return False
@@ -196,7 +196,7 @@ class ReleaseBot:
         except ReleaseException as exc:
             raise ReleaseException(f"Failed getting latest Github release (zip).\n{exc}")
 
-        if Version.coerce(latest_github["name"]) >= Version.coerce(self.new_release['version']):
+        if Version.coerce(latest_github) >= Version.coerce(self.new_release['version']):
             self.logger.info(
                 f"{self.new_release['version']} has already been released on Github")
         else:
