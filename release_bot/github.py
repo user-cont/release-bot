@@ -316,7 +316,7 @@ class Github:
         self.git.fetch_tags()
         self.git.checkout(new_version)
         # FIXME: make the file name configurable
-        p = os.path.join(self.git.repo.name, "CHANGELOG.md")
+        p = os.path.join(self.git.repo_path, "CHANGELOG.md")
         try:
             with open(p, "r") as fd:
                 changelog_content = fd.read()
