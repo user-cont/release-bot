@@ -38,7 +38,6 @@ class ReleaseBot:
         self.conf = configuration
         url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
         self.git = Git(url, self.conf)
-
         self.github = Github(configuration, self.git)
         self.pypi = PyPi(configuration, self.git)
         self.fedora = Fedora(configuration)
