@@ -21,7 +21,7 @@ from flexmock import flexmock
 
 from release_bot.configuration import configuration
 from release_bot.releasebot import ReleaseBot
-from github_utils import GithubUtils, RELEASE_CONF
+from .github_utils import GithubUtils, RELEASE_CONF
 
 
 @pytest.mark.skipif(not GithubUtils.github_api_status(), reason="Github api is down")
