@@ -25,9 +25,15 @@ class PyPi:
 
     PYPI_URL = "https://pypi.org/pypi/"
 
-    def __init__(self, configuration):
+    def __init__(self, configuration, git):
+        """
+
+        :param configuration: instance of Configuration
+        :param git: instance of Git
+        """
         self.conf = configuration
         self.logger = configuration.logger
+        self.git = git
 
     def latest_version(self):
         """Get latest version of the package from PyPi or 0.0.0"""
@@ -96,7 +102,7 @@ class PyPi:
 
         :param conf_array: structure with information about the new release
         """
-        project_root = conf_array['fs_path']
+        project_root = self.git.repo_path
         if os.path.isdir(project_root):
             self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)

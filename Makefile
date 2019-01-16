@@ -16,11 +16,16 @@ image-dev-no-cache:
 image-test:
 	docker build --tag=$(TEST_IMAGE_NAME) -f Dockerfile.test .
 
-test-in-container: image-test
-	docker run -it -e GITHUB_USER=${GITHUB_USER} -e GITHUB_TOKEN=${GITHUB_TOKEN} $(TEST_IMAGE_NAME)
+test-in-container:
+	docker run -it \
+		-v $(CURDIR):/usr/src/app:Z \
+		-e GITHUB_USER=${GITHUB_USER} \
+		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
+		$(TEST_IMAGE_NAME) \
+		make test TEST_TARGET='$(TEST_TARGET)'
 
 test:
-	PYTHONPATH=$(CURDIR) pytest -v
+	PYTHONPATH=$(CURDIR) pytest -v $(TEST_TARGET)
 
 clean:
 	find . -name '*.pyc' -delete

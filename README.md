@@ -13,6 +13,12 @@ variable and fill changelog with commit messages from git log.
 You can trigger this action by creating an issue and name it the same as you would a release PR, e.g. `0.1.0 release`. 
 All you have to do after that is merge the PR that the bot will make.
 
+The bot works with
+[pypa/setuptools_scm](https://github.com/pypa/setuptools_scm/) plugin. If
+you're using it, you don't need to care about `__version__` at all. You can be
+also sure that the bot will make the PyPI release correctly — before it
+releases the software, it checks out the tag in the git repo.
+
 A `release-conf.yaml` file is required. See [Configuration](#configuration) section for details.
 
 Once a Github release is complete, bot will upload this release to PyPI.
