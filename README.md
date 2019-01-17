@@ -1,5 +1,5 @@
-Release bot [![Build Status](https://travis-ci.org/user-cont/release-bot.svg?branch=master)](https://travis-ci.org/user-cont/release-bot) [![PyPI version](https://badge.fury.io/py/release-bot.svg)](https://badge.fury.io/py/release-bot)
-============
+# Release bot [![Build Status](https://travis-ci.org/user-cont/release-bot.svg?branch=master)](https://travis-ci.org/user-cont/release-bot) [![PyPI version](https://badge.fury.io/py/release-bot.svg)](https://badge.fury.io/py/release-bot)
+
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for
 release pull requests. The PR must be named in this format `0.1.0 release`. No other format is supported yet.
 Once the PR is merged, bot will create a new Github release, PyPi and Fedora respectively.
@@ -149,3 +149,16 @@ new version of this image is pushed to docker hub.
 You can change it by uncommenting lines with `#importPolicy:`
 and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
 Then the image will be pulled on a new release.
+
+
+# Contributing
+
+We have an integration test suite in release bot which creates a new project on
+github and tries the functionality in there. It may easily happen that a bunch
+of test repositories will be left out in your account:
+
+ * We have a script which is able to delete all of these, please check
+   `./hack/clean-testing-github-repos`. We suggest reading out the sources
+   first before using it.
+ * The prerequisite for both, the integration tests and the script mentioned
+   above, is to have a token which is able to delete projects.
