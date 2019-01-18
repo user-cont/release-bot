@@ -34,7 +34,7 @@ class GithubUtils:
     def __init__(self, github_token, github_user):
         # This token needs github api token scope to delete repositories. If deleting a repo fails with
         # a message saying that you need to be admin for such action it means the token doesn't have it.
-        # We sugggest creating a new token with such scope:
+        # We suggest creating a new token with such scope:
         #   https://github.com/settings/tokens/new
         self.github_token = github_token
         self.github_user = github_user
