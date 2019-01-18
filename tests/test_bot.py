@@ -92,7 +92,7 @@ class TestBot:
         self.open_pr()
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
-        assert self.release_bot.github.latest_release() == "0.0.1"
+        assert self.release_bot.github.latest_release()["name"] == "0.0.1"
 
     @pytest.fixture()
     def mock_upload(self):
@@ -131,7 +131,7 @@ class TestBot:
         """Tests releasing on Github"""
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
-        assert self.release_bot.github.latest_release() == "0.0.1"
+        assert self.release_bot.github.latest_release()["name"] == "0.0.1"
 
     def test_pypi_release(self, mock_upload, github_release):
         """Test PyPi release"""

@@ -54,6 +54,7 @@ class ReleaseBot:
         self.new_pr = {}
         self.github.comment = []
         self.fedora.progress_log = []
+        self.git.cleanup()
 
     def load_release_conf(self):
         """
@@ -160,7 +161,6 @@ class ReleaseBot:
             self.github.comment = comment_backup
             if success:
                 self.github.close_issue(self.new_pr['issue_number'])
-            self.new_pr['repo'].cleanup()
 
         prev_release = self.github.latest_release()
         previous_version = prev_release
