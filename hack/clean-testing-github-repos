@@ -1,0 +1,48 @@
+#!/usr/bin/python3
+
+import os
+import re
+
+import github
+
+repo_name_re = r"release-bot-test-\w{16}"
+
+
+def main():
+    # This token needs github api token scope to delete repositories. If deleting a repo fails with
+    # a message saying that you need to be admin for such action it means the token doesn't have it.
+    # We sugggest creating a new token with such scope:
+    #   https://github.com/settings/tokens/new
+    token = os.environ["GITHUB_TOKEN"]
+
+    gh = github.Github(token)
+
+    user = gh.get_user()
+
+    repos = user.get_repos()
+
+    reg = re.compile(repo_name_re)
+
+    to_delete = []
+    for repo in repos:
+        if reg.match(repo.name):
+            print(f"Marking {repo.name} for deletion.")
+            to_delete.append(repo)
+
+    answer = input("\nAre you sure you want to delete these repos? [y/n]: ")
+
+    if answer == "y":
+        for r in to_delete:
+            try:
+                r.delete()
+            except github.GithubException as ex:
+                print(f"Repo {r.name} could not be deleted: {ex}")
+                continue
+
+            print(f"{r.name} was deleted")
+    else:
+        print("quiting")
+
+
+main()
+
