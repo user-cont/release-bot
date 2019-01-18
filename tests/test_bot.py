@@ -25,12 +25,11 @@ from .github_utils import GithubUtils, RELEASE_CONF
 
 
 @pytest.mark.skipif(not GithubUtils.github_api_status(), reason="Github api is down")
-@pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN') and not os.environ.get('GITHUB_USER'),
-                    reason="missing GITHUB_TOKEN and GITHUB_USER variables")
+@pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN'),
+                    reason="missing GITHUB_TOKEN environment variable")
 class TestBot:
     """ Tests parts of bot workflow"""
     github_token = os.environ.get('GITHUB_TOKEN')
-    github_user = os.environ.get('GITHUB_USER')
     headers = {'Authorization': f'token {github_token}'}
 
     def setup_method(self):
@@ -40,7 +39,8 @@ class TestBot:
         configuration.set_logging(level=10)
         configuration.debug = True
 
-        self.g_utils = GithubUtils(self.github_token, self.github_user)
+        self.g_utils = GithubUtils(self.github_token)
+        self.github_user = self.g_utils.github_user
 
         self.g_utils.create_repo()
         self.g_utils.setup_repo()
