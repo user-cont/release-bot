@@ -136,6 +136,6 @@ class TestBot:
     def test_pypi_release(self, mock_upload, github_release):
         """Test PyPi release"""
         assert self.release_bot.make_new_pypi_release()
-        path = Path(self.release_bot.new_release['fs_path'])
+        path = Path(self.release_bot.git.repo_path)
         assert list(path.glob(f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1-py3*.whl'))
         assert (path / f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz').is_file()

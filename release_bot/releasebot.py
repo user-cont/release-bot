@@ -225,7 +225,7 @@ class ReleaseBot:
             self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
             return False
         self.git.fetch_tags()
-        self.git.checkout(latest_pypi)
+        self.git.checkout(self.new_release['version'])
         try:
             self.pypi.release(self.new_release)
             release_handler(success=True)
