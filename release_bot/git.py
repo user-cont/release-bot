@@ -107,6 +107,7 @@ class Git:
         :return: path to temp file with credentials
         """
         if not self.credential_store:
+            # TODO: do only a single tmpdir; merge this into tmpdir with git repo itself
             self.credential_store = TemporaryDirectory()
             store_path = path.join(self.credential_store.name, 'credentials')
             # write down credentials

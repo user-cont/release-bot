@@ -42,6 +42,8 @@ class ReleaseBot:
         self.pypi = PyPi(configuration, self.git)
         self.fedora = Fedora(configuration)
         self.logger = configuration.logger
+        # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
+        #        get rid of them and replace them with individual variables
         self.new_release = {}
         self.new_pr = {}
 
