@@ -42,6 +42,8 @@ class ReleaseBot:
         self.pypi = PyPi(configuration, self.git)
         self.fedora = Fedora(configuration)
         self.logger = configuration.logger
+        # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
+        #        get rid of them and replace them with individual variables
         self.new_release = {}
         self.new_pr = {}
 
@@ -52,6 +54,7 @@ class ReleaseBot:
         self.new_pr = {}
         self.github.comment = []
         self.fedora.progress_log = []
+        self.git.cleanup()
 
     def load_release_conf(self):
         """
@@ -158,7 +161,6 @@ class ReleaseBot:
             self.github.comment = comment_backup
             if success:
                 self.github.close_issue(self.new_pr['issue_number'])
-            self.new_pr['repo'].cleanup()
 
         prev_release = self.github.latest_release()
         previous_version = prev_release
@@ -223,7 +225,7 @@ class ReleaseBot:
             self.logger.info(f"{self.new_release['version']} has already been released on PyPi")
             return False
         self.git.fetch_tags()
-        self.git.checkout(latest_pypi)
+        self.git.checkout(self.new_release['version'])
         try:
             self.pypi.release(self.new_release)
             release_handler(success=True)

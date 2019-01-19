@@ -25,12 +25,11 @@ from .github_utils import GithubUtils, RELEASE_CONF
 
 
 @pytest.mark.skipif(not GithubUtils.github_api_status(), reason="Github api is down")
-@pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN') and not os.environ.get('GITHUB_USER'),
-                    reason="missing GITHUB_TOKEN and GITHUB_USER variables")
+@pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN'),
+                    reason="missing GITHUB_TOKEN environment variable")
 class TestBot:
     """ Tests parts of bot workflow"""
     github_token = os.environ.get('GITHUB_TOKEN')
-    github_user = os.environ.get('GITHUB_USER')
     headers = {'Authorization': f'token {github_token}'}
 
     def setup_method(self):
@@ -40,7 +39,8 @@ class TestBot:
         configuration.set_logging(level=10)
         configuration.debug = True
 
-        self.g_utils = GithubUtils(self.github_token, self.github_user)
+        self.g_utils = GithubUtils(self.github_token)
+        self.github_user = self.g_utils.github_user
 
         self.g_utils.create_repo()
         self.g_utils.setup_repo()
@@ -92,7 +92,7 @@ class TestBot:
         self.open_pr()
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
-        assert self.release_bot.github.latest_release() == "0.0.1"
+        assert self.release_bot.github.latest_release()["name"] == "0.0.1"
 
     @pytest.fixture()
     def mock_upload(self):
@@ -131,11 +131,11 @@ class TestBot:
         """Tests releasing on Github"""
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
-        assert self.release_bot.github.latest_release() == "0.0.1"
+        assert self.release_bot.github.latest_release()["name"] == "0.0.1"
 
     def test_pypi_release(self, mock_upload, github_release):
         """Test PyPi release"""
         assert self.release_bot.make_new_pypi_release()
-        path = Path(self.release_bot.new_release['fs_path'])
+        path = Path(self.release_bot.git.repo_path)
         assert list(path.glob(f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1-py3*.whl'))
         assert (path / f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz').is_file()

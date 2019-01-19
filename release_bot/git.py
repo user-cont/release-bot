@@ -16,8 +16,8 @@
 """
 This module provides interface to git
 """
-
-from tempfile import TemporaryDirectory
+import shutil
+from tempfile import TemporaryDirectory, mkdtemp
 from os import path
 
 from release_bot.utils import run_command, run_command_get_output
@@ -29,8 +29,7 @@ class Git:
     Interface to git
     """
     def __init__(self, url, conf):
-        self.repo = self.clone(url)
-        self.repo_path = self.repo.name
+        self.repo_path = self.clone(url)
         self.credential_store = None
         self.conf = conf
         self.logger = conf.logger
@@ -42,9 +41,9 @@ class Git:
         :param url:
         :return: TemporaryDirectory object
         """
-        temp_directory = TemporaryDirectory()
-        if not run_command(temp_directory.name, f'git clone {url} .',
-                           "Couldn't clone repository!", fail=False):
+        temp_directory = mkdtemp()
+        if not run_command(temp_directory, f'git clone {url} .',
+                           "Couldn't clone repository!", fail=True):
             raise GitException(f"Can't clone repository {url}")
         return temp_directory
 
@@ -107,6 +106,7 @@ class Git:
         :return: path to temp file with credentials
         """
         if not self.credential_store:
+            # TODO: do only a single tmpdir; merge this into tmpdir with git repo itself
             self.credential_store = TemporaryDirectory()
             store_path = path.join(self.credential_store.name, 'credentials')
             # write down credentials
@@ -147,4 +147,4 @@ class Git:
         Cleans up the directory with repository
         :return:
         """
-        self.repo.cleanup()
+        shutil.rmtree(self.repo_path)
