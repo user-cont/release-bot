@@ -323,6 +323,8 @@ class Github:
         except FileNotFoundError:
             logger.info("CHANGELOG.md not found")
             return
+        finally:
+            self.git.checkout('master')
 
         # get latest release
         changelog = parse_changelog(new_version, changelog_content)
