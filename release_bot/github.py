@@ -427,7 +427,7 @@ class Github:
             name, email = self.get_user_contact()
             repo.set_credentials(name, email)
             repo.set_credential_store()
-            changelog = repo.get_log_since_last_release(new_pr['previous_version'])
+            changelog = repo.get_log_since_latest_release(new_pr['previous_version'])
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr['version'])
             if insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',
