@@ -23,6 +23,8 @@ import random
 import requests
 import yaml
 
+from tests.conftest import prepare_conf
+
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
 
@@ -31,8 +33,9 @@ RELEASE_CONF = yaml.dump({"python_versions": [3], "trigger_on_issue": True})
 
 class GithubUtils:
     """Functions to help test github part of the bot"""
-    def __init__(self, github_token):
-        self.headers = {'Authorization': f'token {github_token}'}
+    def __init__(self):
+        self.conf = prepare_conf()
+        self.headers = {'Authorization': f'token {self.conf.github_token}'}
         self.repo = None
         self.random_string = None
 
@@ -40,7 +43,7 @@ class GithubUtils:
         # a message saying that you need to be admin for such action it means the token doesn't have it.
         # We suggest creating a new token with such scope:
         #   https://github.com/settings/tokens/new
-        self.github_token = github_token
+        self.github_token = self.conf.github_token
         self.github_user = self.get_username()
 
     def get_username(self):

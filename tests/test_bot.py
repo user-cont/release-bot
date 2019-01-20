@@ -19,8 +19,8 @@ import pytest
 import yaml
 from flexmock import flexmock
 
-from release_bot.configuration import configuration
 from release_bot.releasebot import ReleaseBot
+from tests.conftest import prepare_conf
 from .github_utils import GithubUtils, RELEASE_CONF
 
 
@@ -29,17 +29,14 @@ from .github_utils import GithubUtils, RELEASE_CONF
                     reason="missing GITHUB_TOKEN environment variable")
 class TestBot:
     """ Tests parts of bot workflow"""
-    github_token = os.environ.get('GITHUB_TOKEN')
-    headers = {'Authorization': f'token {github_token}'}
 
     def setup_method(self):
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        configuration.set_logging(level=10)
-        configuration.debug = True
+        configuration = prepare_conf()
 
-        self.g_utils = GithubUtils(self.github_token)
+        self.g_utils = GithubUtils()
         self.github_user = self.g_utils.github_user
 
         self.g_utils.create_repo()
@@ -48,7 +45,6 @@ class TestBot:
         # set conf
         configuration.repository_name = self.g_utils.repo
         configuration.repository_owner = self.github_user
-        configuration.github_token = self.github_token
         configuration.github_username = self.github_user
         configuration.refresh_interval = 1
 
@@ -92,7 +88,7 @@ class TestBot:
         self.open_pr()
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
-        assert self.release_bot.github.latest_release()["name"] == "0.0.1"
+        assert self.release_bot.github.latest_release() == "0.0.1"
 
     @pytest.fixture()
     def mock_upload(self):
@@ -131,7 +127,7 @@ class TestBot:
         """Tests releasing on Github"""
         assert self.release_bot.find_newest_release_pull_request()
         self.release_bot.make_new_github_release()
-        assert self.release_bot.github.latest_release()["name"] == "0.0.1"
+        assert self.release_bot.github.latest_release() == "0.0.1"
 
     def test_pypi_release(self, mock_upload, github_release):
         """Test PyPi release"""

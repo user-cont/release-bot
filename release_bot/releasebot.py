@@ -162,11 +162,10 @@ class ReleaseBot:
             if success:
                 self.github.close_issue(self.new_pr['issue_number'])
 
-        prev_release = self.github.latest_release()
-        previous_version = prev_release
-        self.new_pr['previous_version'] = previous_version
-        if Version.coerce(previous_version) >= Version.coerce(self.new_pr['version']):
-            msg = f"Version ({prev_release}) is already released and this issue is ignored."
+        latest_gh_str = self.github.latest_release()
+        self.new_pr['previous_version'] = latest_gh_str
+        if Version.coerce(latest_gh_str) >= Version.coerce(self.new_pr['version']):
+            msg = f"Version ({latest_gh_str}) is already released and this issue is ignored."
             self.logger.warning(msg)
             return False
         msg = f"Making a new PR for release of version {self.new_pr['version']} based on an issue."
@@ -194,11 +193,11 @@ class ReleaseBot:
             self.github.comment.append(msg)
 
         try:
-            latest_github = self.github.latest_release()
+            latest_release = self.github.latest_release()
         except ReleaseException as exc:
             raise ReleaseException(f"Failed getting latest Github release (zip).\n{exc}")
 
-        if Version.coerce(latest_github) >= Version.coerce(self.new_release['version']):
+        if Version.coerce(latest_release) >= Version.coerce(self.new_release['version']):
             self.logger.info(
                 f"{self.new_release['version']} has already been released on Github")
         else:
