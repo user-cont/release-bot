@@ -67,12 +67,13 @@ class Configuration:
         # logger.propagate = False
         logger.setLevel(level)
 
-        handler_kwargs = handler_kwargs or {}
-        handler = handler_class(**handler_kwargs)
+        if not [x for x in logger.handlers if isinstance(x, handler_class)]:
+            handler_kwargs = handler_kwargs or {}
+            handler = handler_class(**handler_kwargs)
 
-        formatter = logging.Formatter(msg_format, date_format)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+            formatter = logging.Formatter(msg_format, date_format)
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
 
         self.logger = logger
 

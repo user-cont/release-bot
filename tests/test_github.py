@@ -16,9 +16,9 @@
 import os
 import pytest
 
-from release_bot.configuration import configuration
 from release_bot.git import Git
 from release_bot.github import Github
+from tests.conftest import prepare_conf
 from .github_utils import GithubUtils, RELEASE_CONF
 
 
@@ -27,30 +27,24 @@ from .github_utils import GithubUtils, RELEASE_CONF
                     reason="missing GITHUB_TOKEN environment variable")
 class TestGithub:
     """Tests bot communication with Github"""
-    github_token = os.environ.get('GITHUB_TOKEN')
-    headers = {'Authorization': f'token {github_token}'}
 
     def setup_method(self):
         """ setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
-        configuration.set_logging(level=10)
-        configuration.debug = True
+        configuration = prepare_conf()
 
-        self.g_utils = GithubUtils(self.github_token)
-        self.github_user = self.g_utils.github_user
+        self.g_utils = GithubUtils()
 
         self.g_utils.create_repo()
         self.g_utils.setup_repo()
 
         # set conf
         configuration.repository_name = self.g_utils.repo
-        configuration.repository_owner = self.github_user
-        configuration.github_token = self.github_token
-        configuration.github_username = self.github_user
+        configuration.github_username = self.g_utils.github_user
         configuration.refresh_interval = 1
 
-        repo_url = f"https://github.com/{self.github_user}/{self.g_utils.repo}"
+        repo_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}"
         git = Git(repo_url, configuration)
         self.github = Github(configuration, git)
 
