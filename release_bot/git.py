@@ -156,4 +156,5 @@ class Git:
         Cleans up the directory with repository
         :return:
         """
+        self.logger.info("cleaning up the cloned repository")
         shutil.rmtree(self.repo_path)
