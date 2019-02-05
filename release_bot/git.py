@@ -79,6 +79,15 @@ class Git:
         if not success:
             raise GitException(f"Can't commit files!")
 
+    def pull(self):
+        """
+        Pull from origin/master to local master branch.
+        """
+        run_command(
+            self.repo_path,
+            'git pull --rebase origin master',
+            'Unable to pull from remote repository', True)
+
     def push(self, branch):
         """
         Executes git push
@@ -147,4 +156,5 @@ class Git:
         Cleans up the directory with repository
         :return:
         """
+        self.logger.info("cleaning up the cloned repository")
         shutil.rmtree(self.repo_path)
