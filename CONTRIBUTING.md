@@ -61,16 +61,24 @@ When you are contributing to changelog, please follow these suggestions:
   trying to convince the person to use the project and that the changelog
   should help with that.
 
+### How to contribute code to release-bot
+
+1. Create a fork of the `release-bot` repository.
+2. Create a new branch just for the bug/feature you are working on.
+
+   - If you want to work on multiple bugs/features, you can use branches to keep them separate, so that you can submit a separate Pull Request for each one.
+
+3. Once you have completed your work, create a Pull Request, ensuring that it meets the requirements listed below.
 
 ### Testing
 
 For testing, we are using [pytest](https://docs.pytest.org/en/latest/) framework. Tests are stored in the [tests](/tests) directory. We recommend to run tests inside docker container using:
 ```
-# if TEST_TARGET is empty whole test suite is executed
-make test-in-container TEST_TARGET=<PATH>
+# execute whole test suite
+make test-in-container
 ```
 
-Substitute `<PATH>` with path to specific file, for example:
+You can also run specific tests by setting `TEST_TARGET` variable equal to test file path, for example:
 ```
 make test-in-container TEST_TARGET=tests/test_github.py
 ```
@@ -86,15 +94,6 @@ of test repositories will be left out in your account:
    first before using it.
  * The prerequisite for both, the integration tests and the script mentioned
    above, is to have a token which is able to delete projects.
-
-### How to contribute code to release-bot
-
-1. Create a fork of the `release-bot` repository.
-2. Create a new branch just for the bug/feature you are working on.
-
-   - If you want to work on multiple bugs/features, you can use branches to keep them separate, so that you can submit a separate Pull Request for each one.
-
-3. Once you have completed your work, create a Pull Request, ensuring that it meets the requirements listed below.
 
 ### Requirements for Pull Requests
 

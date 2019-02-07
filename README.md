@@ -149,3 +149,7 @@ new version of this image is pushed to docker hub.
 You can change it by uncommenting lines with `#importPolicy:`
 and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
 Then the image will be pulled on a new release.
+
+# Contributing
+
+If you are interested in making contribution to release-bot project, please read [Contribution guide](/CONTRIBUTING.md) for more information.
