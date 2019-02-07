@@ -150,15 +150,6 @@ You can change it by uncommenting lines with `#importPolicy:`
 and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
 Then the image will be pulled on a new release.
 
-
 # Contributing
 
-We have an integration test suite in release bot which creates a new project on
-github and tries the functionality in there. It may easily happen that a bunch
-of test repositories will be left out in your account:
-
- * We have a script which is able to delete all of these, please check
-   `./hack/clean-testing-github-repos`. We suggest reading out the sources
-   first before using it.
- * The prerequisite for both, the integration tests and the script mentioned
-   above, is to have a token which is able to delete projects.
+If you are interested in making contribution to release-bot project, please read [Contribution guide](/CONTRIBUTING.md) for more information.
