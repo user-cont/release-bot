@@ -1,7 +1,4 @@
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
 
 def get_requirements():
@@ -15,5 +12,5 @@ with open("./release_bot/version.py") as fp:
 
 
 setup(version=version["__version__"],
-      packages=['release_bot'],
+      packages=find_packages(exclude=['tests*']),
       install_requires=get_requirements(), )
