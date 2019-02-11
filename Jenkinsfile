@@ -1,5 +1,3 @@
-def test-suite
-
 def onmyduffynode(script){
     ansiColor('xterm'){
         timestamps{
@@ -8,8 +6,18 @@ def onmyduffynode(script){
     }
 }
 
-test-suite = {
-    stage("Release-bot test") {
+def synctoduffynode(source)
+{
+    sh 'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ' + source + " " + "root@" + "${DUFFY_NODE}.ci.centos.org:~/"
+}
+
+node('slave06.ci.centos.org'){
+
+    stage('Checkout'){
+        checkout scm
+    }
+
+    stage('Build'){
         try{
             stage ("Allocate node"){
                 env.CICO_API_KEY = readFile("${env.HOME}/duffy.key").trim()
@@ -22,7 +30,8 @@ test-suite = {
             }
 
             stage ("setup"){
-                    onmyduffynode "yum -y install docker make"
+                onmyduffynode "yum -y install docker make"
+                synctoduffynode "*" // copy all source files
             }
 
             stage("build test image"){
@@ -41,18 +50,5 @@ test-suite = {
                 sh 'cico node done ${env.SSID}'
             }
         }
-    }
-}
-
-
-
-node('slave06.ci.centos.org'){
-
-    stage('Checkout'){
-        checkout scm
-    }
-
-    stage('Build'){
-        test-suite
     }
 }
