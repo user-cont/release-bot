@@ -11,7 +11,7 @@ def synctoduffynode(source)
     sh 'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ' + source + " " + "root@" + "${DUFFY_NODE}.ci.centos.org:~/"
 }
 
-node('slave06.ci.centos.org'){
+node('userspace-containerization'){
 
     stage('Checkout'){
         checkout scm
