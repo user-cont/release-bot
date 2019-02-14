@@ -62,11 +62,6 @@ class TestPypi:
         return shell
 
     @pytest.fixture
-    def minimal_conf_array(self, tmpdir):
-        return {'python_versions': [2, 3],
-                'fs_path': tmpdir}
-
-    @pytest.fixture
     def pypi(self, tmpdir):
         conf = Configuration()
         path = str(tmpdir)
@@ -95,41 +90,38 @@ class TestPypi:
 
     def test_missing_setup_wheel(self, non_existent_path, pypi):
         with pytest.raises(ReleaseException):
-            pypi.build_wheel(non_existent_path, 2)
+            pypi.build_wheel(non_existent_path)
 
-    def test_missing_project_wrapper(self, minimal_conf_array, non_existent_path, pypi):
+    def test_missing_project_wrapper(self, pypi):
         pypi.git.repo_path = "nope"
         with pytest.raises(ReleaseException):
-            pypi.release(minimal_conf_array)
+            pypi.release()
 
     def test_sdist(self, pypi):
         repo_path = pypi.git.repo_path
         pypi.build_sdist(repo_path)
         assert os.path.isfile(os.path.join(repo_path, 'dist/rlsbot-test-1.0.0.tar.gz'))
 
-    @pytest.mark.parametrize("py", (2, 3))
-    def test_wheel_3(self, pypi, py):
+    def test_wheel(self, pypi):
         repo_path = pypi.git.repo_path
-        pypi.build_wheel(repo_path, py)
-        assert glob(os.path.join(repo_path, f'dist/rlsbot_test-1.0.0-py{py}*.whl'))
+        pypi.build_wheel(repo_path)
+        assert glob(os.path.join(repo_path, f'dist/rlsbot_test-1.0.0-py3*.whl'))
 
-    @pytest.mark.parametrize("pip,py", (("pip2", 2), ("pip3", 3)))
-    def test_install(self, pypi, pip, py):
+    def test_install(self, pypi):
         repo_path = pypi.git.repo_path
         pypi.build_sdist(repo_path)
-        pypi.build_wheel(repo_path, py)
-        whl = glob(os.path.join(repo_path, f'dist/rlsbot_test-1.0.0-py{py}*.whl'))[0]
-        assert self.run_cmd(f'{pip} install --user {whl}', repo_path).returncode == 0
-        assert self.run_cmd(f'{pip} show rlsbot-test', repo_path).returncode == 0
+        pypi.build_wheel(repo_path)
+        whl = glob(os.path.join(repo_path, f'dist/rlsbot_test-1.0.0-py3*.whl'))[0]
+        assert self.run_cmd(f'pip3 install --user {whl}', repo_path).returncode == 0
+        assert self.run_cmd(f'pip3 show rlsbot-test', repo_path).returncode == 0
         assert self.run_cmd(f'$HOME/.local/bin/rlsbot-test', repo_path).returncode == 0
 
-    @pytest.mark.parametrize("pip,py", (("pip2", 2), ("pip3", 3)))
-    def test_full_release(self, minimal_conf_array, pypi, pip, py):
+    def test_full_release(self, pypi):
         repo_path = pypi.git.repo_path
-        pypi.release(minimal_conf_array)
+        pypi.release()
         assert os.path.isfile(os.path.join(repo_path, 'dist/rlsbot-test-1.0.0.tar.gz'))
-        whl = glob(os.path.join(repo_path, f'dist/rlsbot_test-1.0.0-py{py}*.whl'))[0]
+        whl = glob(os.path.join(repo_path, f'dist/rlsbot_test-1.0.0-py3*.whl'))[0]
         assert whl
-        assert self.run_cmd(f'{pip} install --user {whl}', repo_path).returncode == 0
-        assert self.run_cmd(f'{pip} show rlsbot-test', repo_path).returncode == 0
+        assert self.run_cmd(f'pip3 install --user {whl}', repo_path).returncode == 0
+        assert self.run_cmd(f'pip3 show rlsbot-test', repo_path).returncode == 0
         assert self.run_cmd(f'$HOME/.local/bin/rlsbot-test', repo_path).returncode == 0

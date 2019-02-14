@@ -75,7 +75,6 @@ Here are possible options:
 
 | Option        | Meaning       | Required      |
 |---------------|---------------|---------------| 
-| `python_versions`     | List of major python versions that bot will build separate wheels for | Yes |
 | `changelog`   | List of changelog entries. If empty, changelog defaults to `$version release` | No |
 | `author_name`	| Author name for changelog. If not set, author of the merge commit is used	    | No |
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
@@ -87,10 +86,9 @@ Here are possible options:
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
 
 # Requirements
-Releasing to PyPI requires to have `wheel` package both for python 2 and python 3,
-therefore please install `requirements.txt` with both versions of `pip`.
-You also have to setup your PyPI login details in `$HOME/.pypirc`
-as described in [PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
+Are specified in `requirements.txt`.
+You have to setup your PyPI login details in `$HOME/.pypirc` as described in
+[PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
 If you are releasing to Fedora, you will need to have an active kerberos ticket while the bot runs
 or specify path to kerberos keytab file with `-k/--keytab`.
 Also, `fedpkg` requires that you have ssh key in your keyring, that you uploaded to FAS.

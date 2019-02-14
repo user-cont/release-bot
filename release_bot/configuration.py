@@ -25,7 +25,7 @@ from release_bot.version import __version__
 class Configuration:
     # note that required items need to reference strings as their length is checked
     REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
-                      "release-conf": ['python_versions']}
+                      "release-conf": []}
 
     def __init__(self):
         self.version = __version__
@@ -119,8 +119,6 @@ class Configuration:
             if item not in parsed_conf:
                 self.logger.error(f"Item {item!r} is required in release-conf!")
                 sys.exit(1)
-        for index, version in enumerate(parsed_conf.get('python_versions', [])):
-            parsed_conf['python_versions'][index] = int(version)
         for index, branch in enumerate(parsed_conf.get('fedora_branches', [])):
             parsed_conf['fedora_branches'][index] = str(branch)
         for index, label in enumerate(parsed_conf.get('labels', [])):

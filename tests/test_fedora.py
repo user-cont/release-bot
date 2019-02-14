@@ -96,11 +96,9 @@ class TestFedora:
                        'author_email': 'jdoe@example.com',
                        'commit_name': 'Testy McTestFace',
                        'commit_email': 'email@email.com',
-                       'python_versions': [3],
                        'fedora_branches': ["f28"],
                        'fedora': True,
                        'changelog': ['Test'],
-                       'fs_path': '',
                        'tempdir': None}
         return new_release
 

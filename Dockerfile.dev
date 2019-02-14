@@ -15,7 +15,7 @@ LABEL summary="Automated releasing from GitHub repositories" \
       io.openshift.s2i.scripts-url="$STI_SCRIPTS_URL" \
       usage="s2i build <CONFIGURATION-REPOSITORY> usercont/release-bot:dev <APP-NAME>"
 
-RUN dnf install -y python2-pip fedpkg git krb5-workstation nss_wrapper
+RUN dnf install -y fedpkg git krb5-workstation nss_wrapper
 
 RUN mkdir -p ${HOME} && \
     useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
@@ -27,7 +27,6 @@ USER 1001
 
 RUN git clone https://github.com/user-cont/release-bot.git $HOME/release-bot && \
     pip3 install --user $HOME/release-bot/ && \
-    pip install --user wheel PyYaml && \
     chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
 
