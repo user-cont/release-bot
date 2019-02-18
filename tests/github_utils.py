@@ -28,7 +28,7 @@ from tests.conftest import prepare_conf
 API_ENDPOINT = "https://api.github.com/graphql"
 API3_ENDPOINT = "https://api.github.com/"
 
-RELEASE_CONF = yaml.dump({"python_versions": [3], "trigger_on_issue": True})
+RELEASE_CONF = yaml.dump({"trigger_on_issue": True})
 
 
 class GithubUtils:

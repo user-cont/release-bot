@@ -1,6 +1,6 @@
 FROM registry.fedoraproject.org/fedora:29
 
-RUN dnf install -y python2-pip fedpkg git make
+RUN dnf install -y fedpkg git make
 
 ENV HOME=/home/test-user \
     PYTHONDONTWRITEBYTECODE=1
@@ -11,8 +11,7 @@ WORKDIR ${HOME}
 
 COPY requirements.txt ${HOME}/
 COPY tests/requirements.txt ${HOME}/tests/
-RUN pip3 install -r requirements.txt -r tests/requirements.txt && \
-    pip2 install wheel
+RUN pip3 install -r requirements.txt -r tests/requirements.txt
 
 COPY Makefile ${HOME}/
 

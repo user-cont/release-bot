@@ -59,25 +59,16 @@ class PyPi:
             raise ReleaseException("Cannot find setup.py:")
 
     @staticmethod
-    def build_wheel(project_root, python_version):
+    def build_wheel(project_root):
         """
         Builds wheel for specified version of python
 
         :param project_root: location of setup.py
-        :param python_version: python version to build wheel for
         """
-        interpreter = "python2"
-        if python_version == 3:
-            interpreter = "python3"
-        elif python_version != 2:
-            # no other versions of python other than 2 and three are supported
-            raise ReleaseException(f"Unsupported python version: {python_version}")
-
         if not os.path.isfile(os.path.join(project_root, 'setup.py')):
             raise ReleaseException("Cannot find setup.py:")
 
-        run_command(project_root, f"{interpreter} setup.py bdist_wheel",
-                    f"Cannot build wheel for python {python_version}")
+        run_command(project_root, "python3 setup.py bdist_wheel", "Cannot build wheel:")
 
     def upload(self, project_root):
         """
@@ -96,18 +87,15 @@ class PyPi:
         else:
             raise ReleaseException("dist/ folder cannot be found:")
 
-    def release(self, conf_array):
+    def release(self):
         """
         Release project on PyPi
-
-        :param conf_array: structure with information about the new release
         """
         project_root = self.git.repo_path
         if os.path.isdir(project_root):
             self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)
-            for version in conf_array['python_versions']:
-                self.build_wheel(project_root, version)
+            self.build_wheel(project_root)
             self.upload(project_root)
         else:
             raise ReleaseException("Cannot find project root for PyPi release:")

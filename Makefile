@@ -25,7 +25,7 @@ test-in-container:
 		make test TEST_TARGET='$(TEST_TARGET)'
 
 test:
-	PYTHONPATH=$(CURDIR) pytest -v $(TEST_TARGET)
+	PYTHONPATH=$(CURDIR) pytest --color=yes --verbose --showlocals $(TEST_TARGET)
 
 clean:
 	find . -name '*.pyc' -delete

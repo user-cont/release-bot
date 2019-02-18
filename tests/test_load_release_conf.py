@@ -59,11 +59,9 @@ class TestLoadReleaseConf:
                        'commitish': 'xxx',
                        'author_name': 'John Doe',
                        'author_email': 'jdoe@example.com',
-                       'python_versions': [],
                        'fedora': False,
                        'fedora_branches': [],
                        'changelog': [],
-                       'fs_path': '',
                        'tempdir': None}
         return new_release
 
@@ -100,18 +98,22 @@ class TestLoadReleaseConf:
             assert error.value.code == 1
 
     def test_non_exiting_conf(self, non_existing_conf):
-        with pytest.raises(SystemExit) as error:
-            configuration.load_release_conf(non_existing_conf)
-        assert error.type == SystemExit
-        assert error.value.code == 1
+        # if there are any required items, this test must fail
+        if configuration.REQUIRED_ITEMS['release-conf']:
+            with pytest.raises(SystemExit) as error:
+                configuration.load_release_conf(non_existing_conf)
+            assert error.type == SystemExit
+            assert error.value.code == 1
 
     def test_missing_required_items(self, missing_items_conf):
-        # set python_versions as required
-        configuration.REQUIRED_ITEMS['release_conf'] = ['python_versions']
+        backup = configuration.REQUIRED_ITEMS['release-conf']
+        # set trigger_on_issue as required
+        configuration.REQUIRED_ITEMS['release-conf'] = ['trigger_on_issue']
         with pytest.raises(SystemExit) as error:
             configuration.load_release_conf(missing_items_conf)
         assert error.type == SystemExit
         assert error.value.code == 1
+        configuration.REQUIRED_ITEMS['release-conf'] = backup
 
     def test_author_overwrites(self, missing_author_conf, valid_new_release):
         author_name = valid_new_release['author_name']
@@ -135,8 +137,6 @@ class TestLoadReleaseConf:
         # test if all items in configuration are properly loaded
         release_conf = configuration.load_release_conf(valid_conf)
         valid_new_release.update(release_conf)
-        # this assertion also tests if versions are correct data type
-        assert valid_new_release['python_versions'] == [2, 3]
         assert valid_new_release['changelog'] == ['Example changelog entry',
                                                   'Another changelog entry']
         assert valid_new_release['author_name'] == 'John Smith'

@@ -88,11 +88,9 @@ class TestSpecFile:
                        'commitish': 'xxx',
                        'author_name': 'John Doe',
                        'author_email': 'jdoe@example.com',
-                       'python_versions': [],
                        'fedora': False,
                        'fedora_branches': [],
                        'changelog': [],
-                       'fs_path': '',
                        'tempdir': None}
         return new_release
 
