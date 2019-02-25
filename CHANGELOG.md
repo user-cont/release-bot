@@ -1,3 +1,8 @@
+# 0.6.1
+
+* Jenkins pipeline with tests running in parallel
+* Drop 'python_versions' from release-conf and build py3 wheel only.
+
 # 0.6.0
 
 * Jenkinsfile and Contribution guide have been added.
