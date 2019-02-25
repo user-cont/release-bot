@@ -1,5 +1,9 @@
 # Release bot [![Build Status](https://travis-ci.org/user-cont/release-bot.svg?branch=master)](https://travis-ci.org/user-cont/release-bot) [![PyPI version](https://badge.fury.io/py/release-bot.svg)](https://badge.fury.io/py/release-bot) [![Build Status](https://ci.centos.org/job/release-bot-push/badge/icon)](https://ci.centos.org/job/release-bot-push/)
 
+Automate releases on Github and PyPi.
+
+## Description
+
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for
 release pull requests. The PR must be named in this format `0.1.0 release`. No other format is supported yet.
 Once the PR is merged, bot will create a new Github release, PyPi and Fedora respectively.
@@ -29,10 +33,47 @@ bot will try to release on Fedora dist-git, on `master` branch and branches spec
 It should not create merge conflicts, but in case it does,
 you have to solve them first before attempting the release again.
 
+# Try it locally
+For now, the easiest way how to install release-bot is via pip.
+Other possible installations are through
+[Docker](#docker-image), [OpenShift](#openshift-template).
+```
+$ pip install release-bot
+``` 
+First interaction with release bot may be automated releases on Github. Let's do it. 
 
-# Configuration
+#### 1. Create upstream repository 
+First of all, create a Github repository or use an existing one. This will be upstream repository
+were releases will be published. Within upstream repository create `release-conf.yaml` file which contains info on how to release the specific project.
+
+Copy and edit [release-conf.yaml](release-conf-example.yaml). For possible advanced setup check [the documentation for an upstream repository](#upstream-repository).
+
+#### 2. Create another private repository
+In the next step, create another private Github or local repository for the purpose of storing config files with access tokens.
+
+Within private repository copy and edit [conf.yaml](conf.yaml) to allow automatic Github releases. You will need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
+Recommended permissions for access token are: `repo`, `delete_repo`, `user`. Later on, this repository will store also `.pypirc` file for PyPi configuration.
+For possible advanced setup check [the documentation for a private repository](#private-repository).
+
+#### 3. Run release-bot
+At this point, release-bot is installed. At least two configuration files are set `release-conf.yaml` and `conf.yaml` (optionally `.pypirc`).
+ 
+ Launch bot by a command:  
+```$ release-bot -c <path_to_conf.yaml> --debug```  
+You can scroll down and see debug information of running bot.
+
+#### 4. Make a new release
+- Create a PR named `0.0.1 release` in your upstream repository. You can select your own version number.
+- Once the PR is merged, wait for bot to make a new release (refresh interval is set in conf.yaml).  
+- Check release page of your upstream repository at GitHub and you should see new release `0.0.1`.
+
+Since now, feel free to create releases automatically just by creating PRs. 
+
+# Documentation 
+
+## Configuration
 There are two yaml configuration files:
- 1. `conf.yaml` -- a config for the bot itself with some sensitive data
+ 1. `conf.yaml` -- a config for the bot itself with some sensitive data (recommended to store in private repo)
  2. `release-conf.yaml` -- stored in upstream repository and contains info on how to release the specific project.
 
 
@@ -85,7 +126,7 @@ Here are possible options:
 
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
 
-# Requirements
+## Requirements
 Are specified in `requirements.txt`.
 You have to setup your PyPI login details in `$HOME/.pypirc` as described in
 [PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
@@ -93,7 +134,7 @@ If you are releasing to Fedora, you will need to have an active kerberos ticket 
 or specify path to kerberos keytab file with `-k/--keytab`.
 Also, `fedpkg` requires that you have ssh key in your keyring, that you uploaded to FAS.
 
-# Docker image
+## Docker image
 To make it easier to run this, release-bot is available as an
  [source-to-image](https://github.com/openshift/source-to-image) builder image.
 
@@ -128,7 +169,7 @@ Identity added: ./.ssh/id_rsa (./.ssh/id_rsa)
 11:47:57.608 utils.py          DEBUG  ['git', 'clone', 'https://github.com/fedora-modularity/meta-test-family.git', '.']
 ...
 ```
-# OpenShift template
+## OpenShift template
 You can also run this bot in OpenShift using [openshift-template.yml](openshift-template.yml) in this repository.
 You must set two environment variables, the `$APP_NAME` is the name of your release-bot deployment,
 and `$CONFIGURATION_REPOSITORY` which contains configuration for the release-bot.
@@ -147,6 +188,7 @@ new version of this image is pushed to docker hub.
 You can change it by uncommenting lines with `#importPolicy:`
 and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
 Then the image will be pulled on a new release.
+
 
 # Contributing
 
