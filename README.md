@@ -33,27 +33,43 @@ bot will try to release on Fedora dist-git, on `master` branch and branches spec
 It should not create merge conflicts, but in case it does,
 you have to solve them first before attempting the release again.
 
-# Try it locally
-For now, the easiest way how to install release-bot is via pip.
-Other possible installations are through
-[Docker](#docker-image), [OpenShift](#openshift-template).
+## Try it locally
 ```
 $ pip install release-bot
 ``` 
+Other possible installations are through
+[Docker](#docker-image), [OpenShift](#openshift-template).  
+
 First interaction with release bot may be automated releases on Github. Let's do it. 
 
-#### 1. Create upstream repository 
-First of all, create a Github repository or use an existing one. This will be upstream repository
-were releases will be published. Within upstream repository create `release-conf.yaml` file which contains info on how to release the specific project.
+#### 1. Create upstream repository or use existing one
+This is meant to be upstream repository where new releases will be published.
+ 
+Within upstream repository create `release-conf.yaml` file which contains info on how to release the specific project.
+Copy and edit [release-conf.yaml](release-conf-example.yaml).
+ 
+At the end of `release-conf.yaml` add this line of code:
+```yaml
+# whether to allow bot to make PRs based on issues
+trigger_on_issue: true
+```
+For possible advanced setup check [the documentation for an upstream repository](#upstream-repository).
 
-Copy and edit [release-conf.yaml](release-conf-example.yaml). For possible advanced setup check [the documentation for an upstream repository](#upstream-repository).
+#### 2. Create `conf.yaml`
 
-#### 2. Create another private repository
-In the next step, create another private Github or local repository for the purpose of storing config files with access tokens.
+Create configuration file `conf.yaml`. You can use [one](conf.yaml) from this repository. You will need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
+Recommended permissions for access token are: `repo`, `delete_repo`, `user`. 
 
-Within private repository copy and edit [conf.yaml](conf.yaml) to allow automatic Github releases. You will need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
-Recommended permissions for access token are: `repo`, `delete_repo`, `user`. Later on, this repository will store also `.pypirc` file for PyPi configuration.
+At the end of `conf.yaml` add this line of code:
+```yaml
+# Name of the account that the github_token belongs to
+# Only needed for triggering the bot on an issue.
+github_username: <your_github_username>
+```
+**Note**: This file **should not** be stored in upstream repository as it contains sensitive data.
+
 For possible advanced setup check [the documentation for a private repository](#private-repository).
+Also, see [requirements](#requirements) in case you want include PyPi releases.
 
 #### 3. Run release-bot
 At this point, release-bot is installed. At least two configuration files are set `release-conf.yaml` and `conf.yaml` (optionally `.pypirc`).
@@ -63,11 +79,12 @@ At this point, release-bot is installed. At least two configuration files are se
 You can scroll down and see debug information of running bot.
 
 #### 4. Make a new release
-- Create a PR named `0.0.1 release` in your upstream repository. You can select your own version number.
-- Once the PR is merged, wait for bot to make a new release (refresh interval is set in conf.yaml).  
+- Create an issue having `0.0.1 release` as a title in your upstream repository. You can select your own version numbers.
+- Wait for the bot to make a new PR based on this issue (refresh interval is set in `conf.yaml`).
+- Once the PR is merged bot will make a new release.  
 - Check release page of your upstream repository at GitHub and you should see new release `0.0.1`.
 
-Since now, feel free to create releases automatically just by creating PRs. 
+Since now, feel free to create releases automatically just by creating issues. 
 
 # Documentation 
 
