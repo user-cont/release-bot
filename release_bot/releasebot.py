@@ -279,6 +279,13 @@ class ReleaseBot:
                             # There's no way how to tell whether there's already such a fedora 'release'
                             # so try to do it only when we just did PyPi release
                             self.make_new_fedora_release()
+                except ReleaseException as exc:
+                    self.logger.error(exc)
+
+                # Moved out of the previous try-except block, because if it
+                # encounters ReleaseException while checking for PyPi sources
+                # it doesn't check for GitHub issues.
+                try:
                     if self.new_release.get('trigger_on_issue') and self.find_open_release_issues():
                         if self.new_release.get('labels') is not None:
                             self.github.put_labels_on_issue(self.new_pr['issue_number'],
@@ -286,6 +293,7 @@ class ReleaseBot:
                         self.make_release_pull_request()
                 except ReleaseException as exc:
                     self.logger.error(exc)
+                
 
                 self.github.add_comment(self.new_release.get('pr_id'))
                 self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
