@@ -328,8 +328,8 @@ class ReleaseBot:
 def main():
     CLI.parse_arguments()
     configuration.load_configuration()
+
     rb = ReleaseBot(configuration)
-    #rb.find_open_release_issues()
     rb.run()
 
 
