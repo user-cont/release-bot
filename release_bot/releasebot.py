@@ -85,16 +85,16 @@ class ReleaseBot:
                     version = ''
                     match = False
                     re_match = re.match(r'(.+) release', edge['node']['title'].lower())
-                    if (re_match):
+                    if re_match:
                         match = True
                         version = re_match[1].strip()
-                    if (edge['node']['title'].lower().strip() == "new major release"):
+                    elif edge['node']['title'].lower().strip() == "new major release":
                         match = True
                         version = str(last_version.next_major())
-                    elif (edge['node']['title'].lower().strip() == "new minor release"):
+                    elif edge['node']['title'].lower().strip() == "new minor release":
                         match = True
                         version = str(last_version.next_minor())
-                    elif (edge['node']['title'].lower().strip() == "new patch release"):
+                    elif edge['node']['title'].lower().strip() == "new patch release":
                         match = True
                         version = str(last_version.next_patch())
 
@@ -143,16 +143,16 @@ class ReleaseBot:
                 version = ''
                 match = False
                 re_match = re.match(r'(.+) release', edge['node']['title'].lower())
-                if (re_match):
+                if re_match:
                     match = True
                     version = re_match[1].strip()
-                if (edge['node']['title'].lower().strip() == "new major release"):
+                elif edge['node']['title'].lower().strip() == "new major release":
                     match = True
                     version = str(last_version.next_major())
-                elif (edge['node']['title'].lower().strip() == "new minor release"):
+                elif edge['node']['title'].lower().strip() == "new minor release":
                     match = True
                     version = str(last_version.next_minor())
-                elif (edge['node']['title'].lower().strip() == "new patch release"):
+                elif edge['node']['title'].lower().strip() == "new patch release":
                     match = True
                     version = str(last_version.next_patch())
 
