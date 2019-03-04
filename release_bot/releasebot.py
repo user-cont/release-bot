@@ -81,9 +81,24 @@ class ReleaseBot:
             else:
                 for edge in reversed(edges):
                     cursor = edge['cursor']
-                    match = re.match(r'(.+) release', edge['node']['title'].lower())
+                    last_version = Version(self.github.latest_release())
+                    version = ''
+                    match = False
+                    re_match = re.match(r'(.+) release', edge['node']['title'].lower())
+                    if (re_match):
+                        match = True
+                        version = re_match[1].strip()
+                    if (edge['node']['title'].lower().strip() == "new major release"):
+                        match = True
+                        version = str(last_version.next_major())
+                    elif (edge['node']['title'].lower().strip() == "new minor release"):
+                        match = True
+                        version = str(last_version.next_minor())
+                    elif (edge['node']['title'].lower().strip() == "new patch release"):
+                        match = True
+                        version = str(last_version.next_patch())
+
                     if match:
-                        version = match[1].strip()
                         if validate(version):
                             if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
                                                                      'COLLABORATOR']:
@@ -124,12 +139,28 @@ class ReleaseBot:
 
             for edge in reversed(edges):
                 cursor = edge['cursor']
-                match = re.match(r'(.+) release', edge['node']['title'].lower())
-                if match and validate(match[1]):
+                last_version = Version(self.github.latest_release())
+                version = ''
+                match = False
+                re_match = re.match(r'(.+) release', edge['node']['title'].lower())
+                if (re_match):
+                    match = True
+                    version = re_match[1].strip()
+                if (edge['node']['title'].lower().strip() == "new major release"):
+                    match = True
+                    version = str(last_version.next_major())
+                elif (edge['node']['title'].lower().strip() == "new minor release"):
+                    match = True
+                    version = str(last_version.next_minor())
+                elif (edge['node']['title'].lower().strip() == "new patch release"):
+                    match = True
+                    version = str(last_version.next_patch())
+
+                if match and validate(version):
                     merge_commit = edge['node']['mergeCommit']
-                    self.logger.info(f"Found merged release PR with version {match[1]}, "
+                    self.logger.info(f"Found merged release PR with version {version}, "
                                      f"commit id: {merge_commit['oid']}")
-                    new_release = {'version': match[1],
+                    new_release = {'version': version,
                                    'commitish': merge_commit['oid'],
                                    'pr_id': edge['node']['id'],
                                    'author_name': merge_commit['author']['name'],
@@ -297,8 +328,8 @@ class ReleaseBot:
 def main():
     CLI.parse_arguments()
     configuration.load_configuration()
-
     rb = ReleaseBot(configuration)
+    #rb.find_open_release_issues()
     rb.run()
 
 
