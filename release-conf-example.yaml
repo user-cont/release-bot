@@ -7,6 +7,8 @@ changelog:
 # if this is not set, person who merged the release PR will be used as an author
 author_name: John Doe
 author_email: johndoe@example.com
+# whether to release on PyPi. True by default
+pypi: true
 # whether to release on fedora. False by default
 fedora: false
 # list of fedora branches bot should release on. Master is always implied
