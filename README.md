@@ -5,7 +5,13 @@ Automate releases on Github and PyPi.
 ## Description
 
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for
-release pull requests. The PR must be named in this format `0.1.0 release`. No other format is supported yet.
+release pull requests. The PR must be named in one of the following formats:
+* `0.1.0 release`
+* `new major release` e.g. Changes Version 1.2.3 to 2.0.0
+* `new minor release` e.g. Changes Version 1.2.3 to 1.3.3
+* `new patch release` e.g. Changes Version 1.2.3 to 1.2.4
+
+No other format is supported yet.
 Once the PR is merged, bot will create a new Github release, PyPi and Fedora respectively.
 Changelog will be pulled from root of the
 repository and must be named `CHANGELOG.md`. Changelog for the new
@@ -14,7 +20,7 @@ Everything between this heading and the heading for previous version will be pul
 
 Alternatively, you can let the bot do the boring work, update `__version__`
 variable and fill changelog with commit messages from git log.
-You can trigger this action by creating an issue and name it the same as you would a release PR, e.g. `0.1.0 release`. 
+You can trigger this action by creating an issue and name it the same as you would do for a release PR, e.g. `0.1.0 release`, `new major release`, `new minor release`, `new patch release`.
 All you have to do after that is merge the PR that the bot will make.
 
 The bot works with
@@ -36,18 +42,18 @@ you have to solve them first before attempting the release again.
 ## Try it locally
 ```
 $ pip install release-bot
-``` 
+```
 Other possible installations are through
-[Docker](#docker-image), [OpenShift](#openshift-template).  
+[Docker](#docker-image), [OpenShift](#openshift-template).
 
-First interaction with release bot may be automated releases on Github. Let's do it. 
+First interaction with release bot may be automated releases on Github. Let's do it.
 
 #### 1. Create upstream repository or use existing one
 This is meant to be upstream repository where new releases will be published.
- 
+
 Within upstream repository create `release-conf.yaml` file which contains info on how to release the specific project.
 Copy and edit [release-conf.yaml](release-conf-example.yaml).
- 
+
 At the end of `release-conf.yaml` add this line of code:
 ```yaml
 # whether to allow bot to make PRs based on issues
@@ -58,7 +64,7 @@ For possible advanced setup check [the documentation for an upstream repository]
 #### 2. Create `conf.yaml`
 
 Create configuration file `conf.yaml`. You can use [one](conf.yaml) from this repository. You will need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
-Recommended permissions for access token are: `repo`, `delete_repo`, `user`. 
+Recommended permissions for access token are: `repo`, `delete_repo`, `user`.
 
 At the end of `conf.yaml` add this line of code:
 ```yaml
@@ -73,20 +79,20 @@ Also, see [requirements](#requirements) in case you want include PyPi releases.
 
 #### 3. Run release-bot
 At this point, release-bot is installed. At least two configuration files are set `release-conf.yaml` and `conf.yaml` (optionally `.pypirc`).
- 
- Launch bot by a command:  
-```$ release-bot -c <path_to_conf.yaml> --debug```  
+
+ Launch bot by a command:
+```$ release-bot -c <path_to_conf.yaml> --debug```
 You can scroll down and see debug information of running bot.
 
 #### 4. Make a new release
 - Create an issue having `0.0.1 release` as a title in your upstream repository. You can select your own version numbers.
 - Wait for the bot to make a new PR based on this issue (refresh interval is set in `conf.yaml`).
-- Once the PR is merged bot will make a new release.  
+- Once the PR is merged bot will make a new release.
 - Check release page of your upstream repository at GitHub and you should see new release `0.0.1`.
 
-Since now, feel free to create releases automatically just by creating issues. 
+Since now, feel free to create releases automatically just by creating issues.
 
-# Documentation 
+# Documentation
 
 ## Configuration
 There are two yaml configuration files:
@@ -132,7 +138,7 @@ You also have to have a `release-conf.yaml` file in the root of your upstream pr
 Here are possible options:
 
 | Option        | Meaning       | Required      |
-|---------------|---------------|---------------| 
+|---------------|---------------|---------------|
 | `changelog`   | List of changelog entries. If empty, changelog defaults to `$version release` | No |
 | `author_name`	| Author name for changelog. If not set, author of the merge commit is used	    | No |
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
@@ -158,7 +164,7 @@ To make it easier to run this, release-bot is available as an
  You can then create the final image like this:
 ```
 $ s2i build $CONFIGURATION_REPOSITORY_URL usercont/release-bot app-name
-``` 
+```
 
 where $CONFIGURATION_REPOSITORY_URL is link to repository with conf.yaml and .pypirc files.
 
