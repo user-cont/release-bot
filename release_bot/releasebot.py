@@ -299,10 +299,10 @@ class ReleaseBot:
                         # Try to do PyPi release regardless whether we just did github release
                         # for case that in previous iteration (of the 'while True' loop)
                         # we succeeded with github release, but failed with PyPi release
-                        #if self.make_new_pypi_release():
+                        if self.make_new_pypi_release():
                             # There's no way how to tell whether there's already such a fedora 'release'
                             # so try to do it only when we just did PyPi release
-                            #self.make_new_fedora_release()
+                            self.make_new_fedora_release()
                     if self.new_release.get('trigger_on_issue') and self.find_open_release_issues():
                         if self.new_release.get('labels') is not None:
                             self.github.put_labels_on_issue(self.new_pr['issue_number'],
