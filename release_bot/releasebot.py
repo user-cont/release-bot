@@ -66,6 +66,28 @@ class ReleaseBot:
         release_conf = self.conf.load_release_conf(conf)
         self.new_release.update(release_conf)
 
+    def process_version_from_title(self, title, latest_version):
+        match = False
+        version = ''
+        re_match = re.match(r'(.+) release', title)
+        if re_match:
+            keyword = re_match[1].strip()
+            if validate(keyword):
+                match = True
+                version = keyword
+            elif keyword == "new major":
+                match = True
+                version = str(latest_version.next_major())
+            elif keyword == "new minor":
+                match = True
+                version = str(latest_version.next_minor())
+            elif keyword == "new patch":
+                match = True
+                version = str(latest_version.next_patch())
+            else:
+                self.logger.warning(f"{version!r} is not a valid version")
+        return match, version
+
     def find_open_release_issues(self):
         """
         Looks for opened release issues on github
@@ -73,6 +95,7 @@ class ReleaseBot:
         """
         cursor = ''
         release_issues = {}
+        latest_version = Version(self.github.latest_release())
         while True:
             edges = self.github.walk_through_open_issues(start=cursor, direction='before')
             if not edges:
@@ -81,35 +104,18 @@ class ReleaseBot:
             else:
                 for edge in reversed(edges):
                     cursor = edge['cursor']
-                    last_version = Version(self.github.latest_release())
-                    version = ''
-                    match = False
-                    re_match = re.match(r'(.+) release', edge['node']['title'].lower())
-                    if re_match:
-                        match = True
-                        version = re_match[1].strip()
-                    elif edge['node']['title'].lower().strip() == "new major release":
-                        match = True
-                        version = str(last_version.next_major())
-                    elif edge['node']['title'].lower().strip() == "new minor release":
-                        match = True
-                        version = str(last_version.next_minor())
-                    elif edge['node']['title'].lower().strip() == "new patch release":
-                        match = True
-                        version = str(last_version.next_patch())
-
+                    title = edge['node']['title'].lower().strip()
+                    match, version = self.process_version_from_title(title, latest_version)
                     if match:
-                        if validate(version):
-                            if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
-                                                                     'COLLABORATOR']:
-                                release_issues[version] = edge['node']
-                                self.logger.info(f'Found new release issue with version: {version}')
-                            else:
-                                self.logger.warning(
-                                    f"Author association {edge['node']['authorAssociation']!r} "
-                                    f"not in ['MEMBER', 'OWNER', 'COLLABORATOR']")
+                        if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
+                                                                 'COLLABORATOR']:
+                            release_issues[version] = edge['node']
+                            self.logger.info(f'Found new release issue with version: {version}')
                         else:
-                            self.logger.warning(f"{version!r} is not a valid version")
+                            self.logger.warning(
+                                f"Author association {edge['node']['authorAssociation']!r} "
+                                f"not in ['MEMBER', 'OWNER', 'COLLABORATOR']")
+
         if len(release_issues) > 1:
             msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
             self.logger.error(msg)
@@ -131,6 +137,7 @@ class ReleaseBot:
         :return: bool, whether PR was found
         """
         cursor = ''
+        latest_version = Version(self.github.latest_release())
         while True:
             edges = self.github.walk_through_prs(start=cursor, direction='before', closed=True)
             if not edges:
@@ -139,24 +146,10 @@ class ReleaseBot:
 
             for edge in reversed(edges):
                 cursor = edge['cursor']
-                last_version = Version(self.github.latest_release())
-                version = ''
-                match = False
-                re_match = re.match(r'(.+) release', edge['node']['title'].lower())
-                if re_match:
-                    match = True
-                    version = re_match[1].strip()
-                elif edge['node']['title'].lower().strip() == "new major release":
-                    match = True
-                    version = str(last_version.next_major())
-                elif edge['node']['title'].lower().strip() == "new minor release":
-                    match = True
-                    version = str(last_version.next_minor())
-                elif edge['node']['title'].lower().strip() == "new patch release":
-                    match = True
-                    version = str(last_version.next_patch())
+                title = edge['node']['title'].lower().strip()
+                match, version = self.process_version_from_title(title, latest_version)
 
-                if match and validate(version):
+                if match:
                     merge_commit = edge['node']['mergeCommit']
                     self.logger.info(f"Found merged release PR with version {version}, "
                                      f"commit id: {merge_commit['oid']}")
@@ -306,10 +299,10 @@ class ReleaseBot:
                         # Try to do PyPi release regardless whether we just did github release
                         # for case that in previous iteration (of the 'while True' loop)
                         # we succeeded with github release, but failed with PyPi release
-                        if self.make_new_pypi_release():
+                        #if self.make_new_pypi_release():
                             # There's no way how to tell whether there's already such a fedora 'release'
                             # so try to do it only when we just did PyPi release
-                            self.make_new_fedora_release()
+                            #self.make_new_fedora_release()
                     if self.new_release.get('trigger_on_issue') and self.find_open_release_issues():
                         if self.new_release.get('labels') is not None:
                             self.github.put_labels_on_issue(self.new_pr['issue_number'],
