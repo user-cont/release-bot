@@ -67,6 +67,14 @@ class ReleaseBot:
         self.new_release.update(release_conf)
 
     def process_version_from_title(self, title, latest_version):
+        """
+        checks for a valid version keyword, and if found
+        returns the requested release version
+        :param title: the pr/issue title to check keyword for
+        :param latest_version: the current latest version with type Version()
+        :return match: true if it is a valid version
+        :return version: version string for requested latest release   
+        """
         match = False
         version = ''
         re_match = re.match(r'(.+) release', title)
