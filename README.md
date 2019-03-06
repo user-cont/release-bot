@@ -6,12 +6,12 @@ Automate releases on Github and PyPi.
 
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for
 release pull requests. The PR must be named in one of the following formats:
-* `0.1.0 release`
-* `new major release` e.g. Changes Version 1.2.3 to 2.0.0
-* `new minor release` e.g. Changes Version 1.2.3 to 1.3.3
-* `new patch release` e.g. Changes Version 1.2.3 to 1.2.4
+* `0.1.0 release` if you want to create the "0.1.0" upstream release
+* `new major release`, release-bot would then initiate a release from e.g. "1.2.3" to "2.0.0"
+* `new minor release` e.g. "1.2.3" to "1.3.0"
+* `new patch release` e.g. "1.2.3" to "1.2.4"
 
-No other format is supported yet.
+Release-bot now works with [SemVer](https://semver.org/) only.
 Once the PR is merged, bot will create a new Github release, PyPi and Fedora respectively.
 Changelog will be pulled from root of the
 repository and must be named `CHANGELOG.md`. Changelog for the new
