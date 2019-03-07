@@ -73,7 +73,7 @@ class ReleaseBot:
         :param title: the pr/issue title to check keyword for
         :param latest_version: the current latest version with type Version()
         :return match: true if it is a valid version
-        :return version: version string for requested latest release   
+        :return version: version string for requested latest release
         """
         match = False
         version = ''
