@@ -30,6 +30,7 @@ from release_bot.fedora import Fedora
 from release_bot.git import Git
 from release_bot.github import Github
 from release_bot.pypi import PyPi
+from release_bot.utils import process_version_from_title
 
 
 class ReleaseBot:
@@ -66,36 +67,6 @@ class ReleaseBot:
         release_conf = self.conf.load_release_conf(conf)
         self.new_release.update(release_conf)
 
-    def process_version_from_title(self, title, latest_version):
-        """
-        checks for a valid version keyword, and if found
-        returns the requested release version
-        :param title: the pr/issue title to check keyword for
-        :param latest_version: the current latest version with type Version()
-        :return match: true if it is a valid version
-        :return version: version string for requested latest release
-        """
-        match = False
-        version = ''
-        re_match = re.match(r'(.+) release', title)
-        if re_match:
-            keyword = re_match[1].strip()
-            if validate(keyword):
-                match = True
-                version = keyword
-            elif keyword == "new major":
-                match = True
-                version = str(latest_version.next_major())
-            elif keyword == "new minor":
-                match = True
-                version = str(latest_version.next_minor())
-            elif keyword == "new patch":
-                match = True
-                version = str(latest_version.next_patch())
-            else:
-                self.logger.warning(f"{version!r} is not a valid version")
-        return match, version
-
     def find_open_release_issues(self):
         """
         Looks for opened release issues on github
@@ -113,7 +84,7 @@ class ReleaseBot:
                 for edge in reversed(edges):
                     cursor = edge['cursor']
                     title = edge['node']['title'].lower().strip()
-                    match, version = self.process_version_from_title(title, latest_version)
+                    match, version = process_version_from_title(title, latest_version)
                     if match:
                         if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
                                                                  'COLLABORATOR']:
@@ -155,7 +126,7 @@ class ReleaseBot:
             for edge in reversed(edges):
                 cursor = edge['cursor']
                 title = edge['node']['title'].lower().strip()
-                match, version = self.process_version_from_title(title, latest_version)
+                match, version = process_version_from_title(title, latest_version)
 
                 if match:
                     merge_commit = edge['node']['mergeCommit']

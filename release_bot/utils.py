@@ -20,13 +20,44 @@ import os
 import re
 import subprocess
 import locale
-from semantic_version import validate
+from semantic_version import validate, Version
 
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 
 
 logger = logging.getLogger('release-bot')
+
+
+def process_version_from_title(title, latest_version):
+    """
+    checks for a valid version keyword, and if found
+    returns the requested release version
+    :param title: the pr/issue title to check keyword for
+    :param latest_version: the current latest version with type Version()
+    :return match: true if it is a valid version
+    :return version: version string for requested latest release
+    """
+    match = False
+    version = ''
+    re_match = re.match(r'(.+) release', title)
+    if re_match:
+        keyword = re_match[1].strip()
+        if validate(keyword):
+            match = True
+            version = keyword
+        elif keyword == "new major":
+            match = True
+            version = str(latest_version.next_major())
+        elif keyword == "new minor":
+            match = True
+            version = str(latest_version.next_minor())
+        elif keyword == "new patch":
+            match = True
+            version = str(latest_version.next_patch())
+        else:
+            logger.warning(f"{version!r} is not a valid version")
+    return match, version
 
 
 def parse_changelog(version, changelog_content):
