@@ -20,7 +20,7 @@ import os
 import re
 import subprocess
 import locale
-from semantic_version import validate, Version
+from semantic_version import validate
 
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
