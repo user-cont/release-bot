@@ -22,7 +22,6 @@ from tests.conftest import prepare_conf
 from .github_utils import GithubUtils, RELEASE_CONF
 
 
-@pytest.mark.skipif(not GithubUtils.github_api_status(), reason="Github api is down")
 @pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN'),
                     reason="missing GITHUB_TOKEN environment variable")
 class TestGithub:

@@ -143,16 +143,3 @@ class GithubUtils:
                             f'{response.text}')
         parsed = response.json()
         return len(parsed)
-
-    @staticmethod
-    def github_api_status():
-        """Checks status of Github API"""
-        url = f"https://status.github.com/api/status.json"
-        response = requests.get(url=url)
-
-        if response.status_code != 200:
-            return False
-        parsed = response.json()
-        if parsed['status'] != 'good':
-            return False
-        return True
