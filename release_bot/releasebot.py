@@ -30,6 +30,7 @@ from release_bot.fedora import Fedora
 from release_bot.git import Git
 from release_bot.github import Github
 from release_bot.pypi import PyPi
+from release_bot.utils import process_version_from_title
 
 
 class ReleaseBot:
@@ -73,6 +74,7 @@ class ReleaseBot:
         """
         cursor = ''
         release_issues = {}
+        latest_version = Version(self.github.latest_release())
         while True:
             edges = self.github.walk_through_open_issues(start=cursor, direction='before')
             if not edges:
@@ -81,20 +83,18 @@ class ReleaseBot:
             else:
                 for edge in reversed(edges):
                     cursor = edge['cursor']
-                    match = re.match(r'(.+) release', edge['node']['title'].lower())
+                    title = edge['node']['title'].lower().strip()
+                    match, version = process_version_from_title(title, latest_version)
                     if match:
-                        version = match[1].strip()
-                        if validate(version):
-                            if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
-                                                                     'COLLABORATOR']:
-                                release_issues[version] = edge['node']
-                                self.logger.info(f'Found new release issue with version: {version}')
-                            else:
-                                self.logger.warning(
-                                    f"Author association {edge['node']['authorAssociation']!r} "
-                                    f"not in ['MEMBER', 'OWNER', 'COLLABORATOR']")
+                        if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
+                                                                 'COLLABORATOR']:
+                            release_issues[version] = edge['node']
+                            self.logger.info(f'Found new release issue with version: {version}')
                         else:
-                            self.logger.warning(f"{version!r} is not a valid version")
+                            self.logger.warning(
+                                f"Author association {edge['node']['authorAssociation']!r} "
+                                f"not in ['MEMBER', 'OWNER', 'COLLABORATOR']")
+
         if len(release_issues) > 1:
             msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
             self.logger.error(msg)
@@ -116,6 +116,7 @@ class ReleaseBot:
         :return: bool, whether PR was found
         """
         cursor = ''
+        latest_version = Version(self.github.latest_release())
         while True:
             edges = self.github.walk_through_prs(start=cursor, direction='before', closed=True)
             if not edges:
@@ -124,12 +125,14 @@ class ReleaseBot:
 
             for edge in reversed(edges):
                 cursor = edge['cursor']
-                match = re.match(r'(.+) release', edge['node']['title'].lower())
-                if match and validate(match[1]):
+                title = edge['node']['title'].lower().strip()
+                match, version = process_version_from_title(title, latest_version)
+
+                if match:
                     merge_commit = edge['node']['mergeCommit']
-                    self.logger.info(f"Found merged release PR with version {match[1]}, "
+                    self.logger.info(f"Found merged release PR with version {version}, "
                                      f"commit id: {merge_commit['oid']}")
-                    new_release = {'version': match[1],
+                    new_release = {'version': version,
                                    'commitish': merge_commit['oid'],
                                    'pr_id': edge['node']['id'],
                                    'author_name': merge_commit['author']['name'],
