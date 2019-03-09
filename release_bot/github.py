@@ -432,7 +432,7 @@ class Github:
             # The bot first checks out the master branch and from master
             # it creates the new branch, checks out to it and then perform the release
             # This makes sure that the new release_pr branch has all the commits
-            # from the master branch for the lastest release.    
+            # from the master branch for the lastest release.
             repo.checkout('master')
             changelog = repo.get_log_since_last_release(new_pr['previous_version'])
             repo.checkout_new_branch(branch)
