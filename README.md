@@ -35,6 +35,8 @@ Once a Github release is complete, bot will upload this release to PyPI.
 Note that you have to setup your login details (see [Requirements](#requirements)).
 
 ## Try it locally
+
+### Install
 ```
 $ pip install release-bot
 ```
@@ -43,7 +45,25 @@ Other possible installations are through
 
 First interaction with release bot may be automated releases on Github. Let's do it.
 
-#### 1. Create upstream repository or use existing one
+### Configure the release bot
+Release bot can be configured in two ways, using `release-bot init` or manually
+
+#### Configuration using `release-bot init`
+Clone the upstream repository where new releases will be published
+and from the root dir of the repository run the following command:
+```shell
+release-bot init
+```
+Enter the required details when asked by the bot. All of the default choices provided by the init should be enough for the current trial. You will also need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
+Recommended permissions for access token are: `repo`, `delete_repo`, `user`.
+
+You can later on modify all the config files. For possible advanced setup check [the documentation for an upstream repository](#upstream-repository) and [gitchanelog](#GitChangeLog).
+
+After the init is completed **commit all of the changes and push it** to the upstream repo.
+
+#### Manual Configuration
+
+##### 1. Create upstream repository or use existing one
 This is meant to be upstream repository where new releases will be published.
 
 Within upstream repository create `release-conf.yaml` file which contains info on how to release the specific project.
@@ -54,9 +74,11 @@ At the end of `release-conf.yaml` add this line of code:
 # whether to allow bot to make PRs based on issues
 trigger_on_issue: true
 ```
-For possible advanced setup check [the documentation for an upstream repository](#upstream-repository).
+Then copy [.gitchangelog.rc](/gitchangelog/.gitchangelog.rc) and [markdown.tpl](/gitchangelog/.gitchangelog.rc) (which are the config files for the [gitchangelog](https://github.com/vaab/gitchangelog.git))
+to the root dir of the upstream repository.
+For possible advanced setup check [the documentation for an upstream repository](#upstream-repository) and [gitchanelog](#GitChangeLog).
 
-#### 2. Create `conf.yaml`
+##### 2. Create `conf.yaml`
 
 Create configuration file `conf.yaml`. You can use [one](conf.yaml) from this repository. You will need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
 Recommended permissions for access token are: `repo`, `delete_repo`, `user`.
@@ -66,20 +88,21 @@ At the end of `conf.yaml` add this line of code:
 # Name of the account that the github_token belongs to
 # Only needed for triggering the bot on an issue.
 github_username: <your_github_username>
+gitchangelog: true
 ```
 **Note**: This file **should not** be stored in upstream repository as it contains sensitive data.
 
 For possible advanced setup check [the documentation for a private repository](#private-repository).
 Also, see [requirements](#requirements) in case you want include PyPi releases.
 
-#### 3. Run release-bot
-At this point, release-bot is installed. At least two configuration files are set `release-conf.yaml` and `conf.yaml` (optionally `.pypirc`).
+### Run the release-bot
+At this point, release-bot is installed. At least four configuration files are set `release-conf.yaml`, `conf.yaml`, `.gitchangelog.rc`, `markdown.tpl` (optionally `.pypirc`).
 
  Launch bot by a command:
 ```$ release-bot -c <path_to_conf.yaml> --debug```
 You can scroll down and see debug information of running bot.
 
-#### 4. Make a new release
+### Make a new release
 - Create an issue having `0.0.1 release` as a title in your upstream repository. You can select your own version numbers.
 - Wait for the bot to make a new PR based on this issue (refresh interval is set in `conf.yaml`).
 - Once the PR is merged bot will make a new release.
@@ -94,6 +117,9 @@ There are two yaml configuration files:
  1. `conf.yaml` -- a config for the bot itself with some sensitive data (recommended to store in private repo)
  2. `release-conf.yaml` -- stored in upstream repository and contains info on how to release the specific project.
 
+There are two more files required if you use `gitchangelog` to genereate change logs:
+ 1. `.gitchangelog.rc` -- a config file used by the gitchangelog to specify the regex for converting commits and the output engine
+ 2.  `markdown.tpl` -- a template file used by pystache to genereate markdown
 
 ## Private repository
 You need to setup a git repository, where you'll store  the `conf.yaml` and `.pypirc` files.
@@ -114,6 +140,7 @@ Here are the `conf.yaml` configuration options:
 | `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
 | `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
 | `clone_url`                  | URL used to clone your Github repository. By default, `https` variant is used. | No |
+| `use_gitchangelog`           | Whether to use gitchanelog to generate change logs. False by default | No |
 
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
@@ -144,6 +171,13 @@ Here are possible options:
 | `labels`      | List of labels that bot will put on issues and PRs | No |
 
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.
+
+## GitChangeLog
+
+For using the [gitchangelog](https://github.com/vaab/gitchangelog) you must add the line `gitchanelog: true` to the conf.yaml, and add the files `.gitchangelog.rc` and `markdown.tpl` in the root of your upstream project repository. Sample config files: [.gitchangelog.rc](/gitchangelog/.gitchangelog.rc) and [template.tpl](/gitchangelog/template.tpl).
+
+`.gitchangelog.rc` sample is heavily commented and should be enough to make modification but for specific details you can refer to the original [repository](https://github.com/vaab/gitchangelog).
+The default template `markdown.tpl` is configured to create Markdown divided into sections (New, Changes, Fix, Others) based on the commits. The data sent to the output engine [pystache](https://github.com/defunkt/pystache) by the gitchangelog is in the following [format](https://github.com/vaab/gitchangelog/edit/master/README.rst#L331-L356). You can use it to create a custom template, please refer [mustache](http://mustache.github.io/).
 
 ## Requirements
 Are specified in `requirements.txt`.
@@ -214,7 +248,7 @@ $ aurman -S release-bot
 You can also install it by using the [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=release-bot) from the AUR repository.
 To build the package, download the PKGBUILD and exectute:
 ```
-$ makepkg -cs #c flag cleans the extra remaining source and compiled files. s flag installs the dependencies if you don't have it. 
+$ makepkg -cs #c flag cleans the extra remaining source and compiled files. s flag installs the dependencies if you don't have it.
 ```
 To install the package execute,
 ```
