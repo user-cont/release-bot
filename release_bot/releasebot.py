@@ -234,6 +234,8 @@ class ReleaseBot:
         except ReleaseException:
             release_handler(success=False)
             raise
+        finally:
+            self.git.checkout('master')
 
         return True
 
