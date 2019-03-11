@@ -429,6 +429,11 @@ class Github:
             name, email = self.get_user_contact()
             repo.set_credentials(name, email)
             repo.set_credential_store()
+            # The bot first checks out the master branch and from master
+            # it creates the new branch, checks out to it and then perform the release
+            # This makes sure that the new release_pr branch has all the commits
+            # from the master branch for the lastest release.
+            repo.checkout('master')
             changelog = repo.get_log_since_last_release(new_pr['previous_version'])
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr['version'])
@@ -445,6 +450,8 @@ class Github:
                 return True
         except GitException as exc:
             raise ReleaseException(exc)
+        finally:
+            repo.checkout('master')
         return False
 
     def pr_exists(self, name):
