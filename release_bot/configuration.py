@@ -114,6 +114,10 @@ class Configuration:
                 sys.exit(1)
 
         parsed_conf = yaml.safe_load(conf) or {}
+        # If pypi option is not specified in release-conf.yaml,
+        # it defaults to true.
+        if parsed_conf.get('pypi') is None:
+            parsed_conf['pypi'] = True
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:
             if item not in parsed_conf:

@@ -215,6 +215,12 @@ class ReleaseBot:
         return self.new_release
 
     def make_new_pypi_release(self):
+        if not self.new_release.get('pypi'):
+            self.logger.debug('Skipping PyPi release')
+            # return False because if we don't have any pypi release
+            # then we possibly cannot check for a new Fedora release.
+            return False
+
         def release_handler(success):
             result = "released" if success else "failed to release"
             msg = f"I just {result} version {self.new_release['version']} on PyPI"

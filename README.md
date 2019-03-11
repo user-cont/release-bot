@@ -142,6 +142,7 @@ Here are possible options:
 | `changelog`   | List of changelog entries. If empty, changelog defaults to `$version release` | No |
 | `author_name`	| Author name for changelog. If not set, author of the merge commit is used	    | No |
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
+| `pypi`      | Whether to release on pypi. True by default | No |
 | `fedora`      | Whether to release on fedora. False by default | No |
 | `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |
 | `trigger_on_issue`| Whether to allow bot to make PRs based on issues. False by default. | No |
