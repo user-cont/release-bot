@@ -96,6 +96,7 @@ class PyPi:
             self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)
             self.build_wheel(project_root)
-            self.upload(project_root)
+            if not self.conf.dry_run:
+                self.upload(project_root)
         else:
             raise ReleaseException("Cannot find project root for PyPi release:")

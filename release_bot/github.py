@@ -172,6 +172,9 @@ class Github:
         """Add self.comment to subject_id issue/PR"""
         if not subject_id or not self.comment:
             return
+        if self.conf.dry_run:
+            self.logger.info("I would add a comment to the pull request created.")
+            return
         comment = '\n'.join(self.comment)
         mutation = (f'mutation {{addComment(input:'
                     f'{{subjectId: "{subject_id}", body: "{comment}"}})' +
@@ -425,6 +428,11 @@ class Github:
         if self.branch_exists(branch):
             self.logger.warning(f'Branch {branch} already exists, aborting creating PR.')
             return False
+        if self.conf.dry_run:
+            msg = (f"I would make a new PR for release of version "
+                   f"{version} based on the issue.")
+            self.logger.info(msg)
+            return
         try:
             name, email = self.get_user_contact()
             repo.set_credentials(name, email)
@@ -518,11 +526,15 @@ class Github:
         :param labels: list of str
         :return: True on success, False on fail
         """
+        if self.conf.dry_run:
+            self.logger.info("I would add labels to issue #%s", number)
+            return
         payload = {'labels': labels}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")
         self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
-        response = self.do_request(method='PATCH', url=url, json_payload=payload, use_github_auth=True)
+        response = self.do_request(method='PATCH', url=url,
+                                   json_payload=payload, use_github_auth=True)
         if response.status_code == 200:
             self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
             return True

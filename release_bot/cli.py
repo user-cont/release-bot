@@ -31,6 +31,9 @@ class CLI:
                             default='')
         parser.add_argument("-v", "--version", help="display program version", action='version',
                             version=f"%(prog)s {configuration.version}")
+        parser.add_argument("-n", "--dry-run", default=False,
+                            help="Don’t change anything, just show what would be done.",
+                            action="store_true")
 
         args = parser.parse_args()
 
@@ -45,3 +48,4 @@ class CLI:
             configuration.logger.setLevel(logging.DEBUG)
         for key, value in vars(args).items():
             setattr(configuration, key, value)
+        configuration.dry_run = args.dry_run

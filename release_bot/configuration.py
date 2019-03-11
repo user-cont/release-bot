@@ -38,6 +38,7 @@ class Configuration:
         self.configuration = ''
         self.logger = None
         self.set_logging()
+        self.dry_run = False
         # configuration when bot is deployed as github app
         self.github_app_installation_id = ''
         self.github_app_id = ''
