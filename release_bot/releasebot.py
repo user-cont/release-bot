@@ -20,6 +20,7 @@ into various downstream services
 import logging
 import re
 import time
+from flask import Flask
 from semantic_version import Version, validate
 from sys import exit
 
@@ -32,6 +33,7 @@ from release_bot.pypi import PyPi
 from release_bot.utils import process_version_from_title
 from release_bot.new_release import NewRelease
 from release_bot.new_pr import NewPR
+from release_bot.webhooks import GithubWebhooksHandler
 
 
 class ReleaseBot:
@@ -52,6 +54,16 @@ class ReleaseBot:
         self.new_pr = NewPR()
         self.github.comment = []
         self.git.cleanup()
+
+    def create_flask_instance(self):
+        """Create flask instance for receiving Github webhooks"""
+        app = Flask(__name__)
+        app.add_url_rule('/webhook-handler/',  # route for github callbacks
+                         view_func=GithubWebhooksHandler.as_view('github_webhooks_handler',
+                                                                 release_bot=self,
+                                                                 conf=configuration),
+                         methods=['POST', ])
+        app.run(host='0.0.0.0', port=8080)
 
     def load_release_conf(self):
         """
@@ -289,7 +301,10 @@ def main():
     configuration.load_configuration()
 
     rb = ReleaseBot(configuration)
-    rb.run()
+    if configuration.webhook_handler:
+        rb.create_flask_instance()
+    else:
+        rb.run()
 
 
 if __name__ == '__main__':
