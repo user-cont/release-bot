@@ -31,7 +31,6 @@ class CLI:
                             default='')
         parser.add_argument("-v", "--version", help="display program version", action='version',
                             version=f"%(prog)s {configuration.version}")
-        parser.add_argument("-k", "--keytab", help="keytab file for fedora", default='')
 
         args = parser.parse_args()
 

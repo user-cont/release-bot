@@ -26,7 +26,6 @@ from sys import exit
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
-from release_bot.fedora import Fedora
 from release_bot.git import Git
 from release_bot.github import Github
 from release_bot.pypi import PyPi
@@ -41,7 +40,6 @@ class ReleaseBot:
         self.git = Git(url, self.conf)
         self.github = Github(configuration, self.git)
         self.pypi = PyPi(configuration, self.git)
-        self.fedora = Fedora(configuration)
         self.logger = configuration.logger
         # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
         #        get rid of them and replace them with individual variables
@@ -54,7 +52,6 @@ class ReleaseBot:
         self.new_release = {}
         self.new_pr = {}
         self.github.comment = []
-        self.fedora.progress_log = []
         self.git.cleanup()
 
     def load_release_conf(self):
@@ -217,8 +214,6 @@ class ReleaseBot:
     def make_new_pypi_release(self):
         if not self.new_release.get('pypi'):
             self.logger.debug('Skipping PyPi release')
-            # return False because if we don't have any pypi release
-            # then we possibly cannot check for a new Fedora release.
             return False
 
         def release_handler(success):
@@ -245,35 +240,6 @@ class ReleaseBot:
 
         return True
 
-    def make_new_fedora_release(self):
-        if not self.new_release.get('fedora'):
-            self.logger.debug('Skipping Fedora release')
-            return
-
-        self.logger.info("Triggering Fedora release")
-
-        def release_handler(success):
-            result = "released" if success else "failed to release"
-            msg = f"I just {result} on Fedora"
-            builds = ', '.join(self.fedora.builds)
-            bodhi_update_url = "https://bodhi.fedoraproject.org/updates/new"
-            if builds:
-                msg += f", successfully built for branches: {builds}."
-                msg += f" Follow this link to create bodhi update(s): {bodhi_update_url}"
-            level = logging.INFO if success else logging.ERROR
-            self.logger.log(level, msg)
-            self.github.comment.append(msg)
-
-        try:
-            name, email = self.github.get_user_contact()
-            self.new_release['commit_name'] = name
-            self.new_release['commit_email'] = email
-            success_ = self.fedora.release(self.new_release)
-            release_handler(success_)
-        except ReleaseException:
-            release_handler(success=False)
-            raise
-
     def run(self):
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
         try:
@@ -286,10 +252,7 @@ class ReleaseBot:
                         # Try to do PyPi release regardless whether we just did github release
                         # for case that in previous iteration (of the 'while True' loop)
                         # we succeeded with github release, but failed with PyPi release
-                        if self.make_new_pypi_release():
-                            # There's no way how to tell whether there's already such a fedora 'release'
-                            # so try to do it only when we just did PyPi release
-                            self.make_new_fedora_release()
+                        self.make_new_pypi_release()
                 except ReleaseException as exc:
                     self.logger.error(exc)
 

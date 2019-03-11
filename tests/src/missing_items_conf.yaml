@@ -3,6 +3,3 @@ changelog:
   - Another changelog entry
 author_name: John Doe
 author_email: johndoe@example.com
-fedora: false
-fedora_branches:
-  - f27

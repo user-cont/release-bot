@@ -9,11 +9,6 @@ author_name: John Doe
 author_email: johndoe@example.com
 # whether to release on PyPi. True by default
 pypi: true
-# whether to release on fedora. False by default
-fedora: false
-# list of fedora branches bot should release on. Master is always implied
-fedora_branches:
-  - f27
 # list of labels to be put on issues and PRs created by bot
 labels:
   - bot

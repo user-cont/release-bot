@@ -1,7 +1,3 @@
 changelog:
   - Example changelog entry
   - Another changelog entry
-fedora: True
-fedora_branches:
-  - f27
-  - f28

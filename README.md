@@ -12,7 +12,7 @@ release pull requests. The PR must be named in one of the following formats:
 * `new patch release` e.g. "1.2.3" to "1.2.4"
 
 Release-bot now works with [SemVer](https://semver.org/) only.
-Once the PR is merged, bot will create a new Github release, PyPi and Fedora respectively.
+Once the PR is merged, bot will create a new Github release and a PyPi release respectively.
 Changelog will be pulled from root of the
 repository and must be named `CHANGELOG.md`. Changelog for the new
 version must begin with version heading, i.e `# 0.1.0`.
@@ -33,11 +33,6 @@ A `release-conf.yaml` file is required. See [Configuration](#configuration) sect
 
 Once a Github release is complete, bot will upload this release to PyPI.
 Note that you have to setup your login details (see [Requirements](#requirements)).
-
-After PyPI release, if enabled in  `release-conf.yaml`,
-bot will try to release on Fedora dist-git, on `master` branch and branches specified in configuration.
-It should not create merge conflicts, but in case it does,
-you have to solve them first before attempting the release again.
 
 ## Try it locally
 ```
@@ -102,8 +97,6 @@ There are two yaml configuration files:
 
 ## Private repository
 You need to setup a git repository, where you'll store  the `conf.yaml` and `.pypirc` files.
-If you are releasing on Fedora, you will also need to add `id_rsa`
-(a private ssh key that you configured in FAS) and `fedora.keytab` (kerberos keytab for fedora).
 If this is not a local repository, make sure it's private so you prevent any private info leaking out.
 If the path to `conf.yaml` is not passed to bot with `-c/--configuration`,
 bot will try to find it in current working directory.
@@ -119,7 +112,6 @@ Here are the `conf.yaml` configuration options:
 | `github_app_installation_id` | Installation ID (a number) of the Github app. | No |
 | `github_app_id`              | ID (a number) of the Github app. | No |
 | `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
-| `fas_username`               | [FAS](https://fedoraproject.org/wiki/Account_System) username. Only need for releasing on Fedora| No |
 | `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
 
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
@@ -143,8 +135,6 @@ Here are possible options:
 | `author_name`	| Author name for changelog. If not set, author of the merge commit is used	    | No |
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
 | `pypi`      | Whether to release on pypi. True by default | No |
-| `fedora`      | Whether to release on fedora. False by default | No |
-| `fedora_branches`     | List of branches that you want to release on. Master is always implied | No |
 | `trigger_on_issue`| Whether to allow bot to make PRs based on issues. False by default. | No |
 | `labels`     | List of labels that bot will put on issues and PRs | No |
 
@@ -154,9 +144,6 @@ Sample config named [release-conf-example.yaml](release-conf-example.yaml) can b
 Are specified in `requirements.txt`.
 You have to setup your PyPI login details in `$HOME/.pypirc` as described in
 [PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
-If you are releasing to Fedora, you will need to have an active kerberos ticket while the bot runs
-or specify path to kerberos keytab file with `-k/--keytab`.
-Also, `fedpkg` requires that you have ssh key in your keyring, that you uploaded to FAS.
 
 ## Docker image
 To make it easier to run this, release-bot is available as an

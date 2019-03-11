@@ -36,8 +36,6 @@ class Configuration:
         self.refresh_interval = 3 * 60
         self.debug = False
         self.configuration = ''
-        self.keytab = ''
-        self.fas_username = ''
         self.logger = None
         self.set_logging()
         # configuration when bot is deployed as github app
@@ -109,7 +107,7 @@ class Configuration:
         if not conf:
             self.logger.error("No release-conf.yaml found in "
                               f"{self.repository_owner}/{self.repository_name} repository root!\n"
-                              "You have to add one for releasing to PyPi/Fedora")
+                              "You have to add one for releasing to PyPi")
             if self.REQUIRED_ITEMS['release-conf']:
                 sys.exit(1)
 
@@ -123,13 +121,8 @@ class Configuration:
             if item not in parsed_conf:
                 self.logger.error(f"Item {item!r} is required in release-conf!")
                 sys.exit(1)
-        for index, branch in enumerate(parsed_conf.get('fedora_branches', [])):
-            parsed_conf['fedora_branches'][index] = str(branch)
         for index, label in enumerate(parsed_conf.get('labels', [])):
             parsed_conf['labels'][index] = str(label)
-        if parsed_conf.get('fedora') and not self.fas_username:
-            self.logger.warning("Can't release to fedora if there is no FAS username, disabling")
-            parsed_conf['fedora'] = False
         if parsed_conf.get('trigger_on_issue') and not self.github_username:
             msg = "Can't trigger on issue if 'github_username' is not known, disabling"
             self.logger.warning(msg)

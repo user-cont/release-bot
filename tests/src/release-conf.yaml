@@ -3,11 +3,6 @@ changelog:
   - Another changelog entry
 author_name: John Smith
 author_email: jsmith@example.com
-fedora: True
-fedora_branches:
-  - f27
-  - f28
-  - 13
 labels:
   - bot
   - release-bot

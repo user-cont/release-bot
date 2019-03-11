@@ -59,8 +59,6 @@ class TestLoadReleaseConf:
                        'commitish': 'xxx',
                        'author_name': 'John Doe',
                        'author_email': 'jdoe@example.com',
-                       'fedora': False,
-                       'fedora_branches': [],
                        'changelog': [],
                        'tempdir': None}
         return new_release
@@ -125,15 +123,7 @@ class TestLoadReleaseConf:
         assert valid_new_release['author_name'] == author_name
         assert valid_new_release['author_email'] == author_email
 
-    def test_fedora_disabling(self, valid_conf, valid_new_release):
-        # fas_username is empty
-        release_conf = configuration.load_release_conf(valid_conf)
-        valid_new_release.update(release_conf)
-        assert valid_new_release['fedora'] is False
-
     def test_normal_use_case(self, valid_conf, valid_new_release):
-        # set fas_username because without it, fedora releasing will be disabled
-        configuration.fas_username = 'test'
         # test if all items in configuration are properly loaded
         release_conf = configuration.load_release_conf(valid_conf)
         valid_new_release.update(release_conf)
@@ -141,7 +131,4 @@ class TestLoadReleaseConf:
                                                   'Another changelog entry']
         assert valid_new_release['author_name'] == 'John Smith'
         assert valid_new_release['author_email'] == 'jsmith@example.com'
-        assert valid_new_release['fedora'] is True
-        # this assertion also tests if branches are correct data type
-        assert valid_new_release['fedora_branches'] == ['f27', 'f28', '13']
         assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']
