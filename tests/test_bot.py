@@ -99,7 +99,7 @@ class TestBot:
         self.release_bot.load_release_conf()
         conf = yaml.safe_load(RELEASE_CONF) or {}
         if conf.get('pypi') is None:
-        	conf['pypi'] = True
+            conf['pypi'] = True
         for key, value in conf.items():
             assert self.release_bot.new_release[key] == value
 

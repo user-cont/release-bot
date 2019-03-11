@@ -1,0 +1,17 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+*.src.rpm
+*.tar.gz
+*.egg-info/
+
+# Unit test / coverage reports
+.cache
+
+# PyCharm
+.idea/
+
+.pytest_cache/
+

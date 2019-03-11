@@ -1,4 +1,4 @@
-def test_targets = ["test_bot.py", "test_changelog.py", "test_fedora.py", "test_github.py", "test_load_release_conf.py", "test_pypi.py", "test_specfile.py"]
+def test_targets = ["test_bot.py", "test_changelog.py", "test_github.py", "test_load_release_conf.py", "test_pypi.py"]
 def tests = [:]
 
 def onmyduffynode(script){

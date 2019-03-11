@@ -29,6 +29,19 @@ from release_bot.exceptions import ReleaseException
 logger = logging.getLogger('release-bot')
 
 
+def set_git_credentials(repo_path, name, email):
+    """
+    Sets credentials fo git repo to keep git from resisting to commit
+    :param repo_path: path to git repository
+    :param name: committer name
+    :param email: committer email
+    :return: True on success False on fail
+    """
+    email = run_command(repo_path, f'git config user.email "{email}"', '', fail=False)
+    name = run_command(repo_path, f'git config user.name "{name}"', '', fail=False)
+    return email and name
+
+
 def process_version_from_title(title, latest_version):
     """
     checks for a valid version keyword, and if found

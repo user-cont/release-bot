@@ -25,9 +25,9 @@ from pathlib import Path
 
 from release_bot.configuration import configuration, Configuration
 from release_bot.exceptions import ReleaseException
-from release_bot.fedora import Fedora
 from release_bot.git import Git
 from release_bot.pypi import PyPi
+from release_bot.utils import set_git_credentials
 
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -69,7 +69,7 @@ class TestPypi:
         shutil.copy2(str(src / "setup.py"), path)
         shutil.copy2(str(src / "rlsbot_test.py"), path)
         self.run_cmd("git init .", work_directory=str(tmpdir))
-        Fedora.set_git_credentials(str(tmpdir), "Release Bot", "bot@example.com")
+        set_git_credentials(str(tmpdir), "Release Bot", "bot@example.com")
         self.run_cmd("git add .", work_directory=str(tmpdir))
         self.run_cmd("git commit -m 'initial commit'", work_directory=str(tmpdir))
         git_repo = Git(str(tmpdir), conf)
