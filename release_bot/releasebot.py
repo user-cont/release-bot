@@ -36,7 +36,11 @@ class ReleaseBot:
 
     def __init__(self, configuration):
         self.conf = configuration
-        url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
+        # If the user specifies an URL, use it. Otherwise use the default URL
+        if self.conf.clone_url:
+            url = self.conf.clone_url
+        else:
+            url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
         self.git = Git(url, self.conf)
         self.github = Github(configuration, self.git)
         self.pypi = PyPi(configuration, self.git)

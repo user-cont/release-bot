@@ -42,6 +42,7 @@ class Configuration:
         self.github_app_installation_id = ''
         self.github_app_id = ''
         self.github_app_cert_path = ''
+        self.clone_url = ''
 
     def set_logging(self,
                     logger_name="release-bot",
