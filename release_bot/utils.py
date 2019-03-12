@@ -252,3 +252,15 @@ def update_version(file, new_version):
             output.write('\n'.join(content) + '\n')
         configuration.logger.info('Version replaced.')
     return changed
+
+#parse setup.cfg and return name
+def parse_metadata(file):
+    """
+    Getting Metadata
+    :param file: file is the setup_cfg where the metadata is stored
+    :return: the name from metadata
+    """
+    with open(file,'r') as setup_cfg:
+        for line in setup_cfg:
+            if "name" in line:
+                pypi_project = line.split(" ")[2]

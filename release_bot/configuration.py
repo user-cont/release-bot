@@ -38,6 +38,8 @@ class Configuration:
         self.configuration = ''
         self.logger = None
         self.set_logging()
+        #when you need to have different name for pypi release
+        self.pypi_project = ''
         # configuration when bot is deployed as github app
         self.github_app_installation_id = ''
         self.github_app_id = ''
