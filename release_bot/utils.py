@@ -260,7 +260,8 @@ def parse_metadata(file):
     :param file: file is the setup_cfg where the metadata is stored
     :return: the name from metadata
     """
-    with open(file,'r') as setup_cfg:
+    with open(file, 'r') as setup_cfg:
         for line in setup_cfg:
             if "name" in line:
                 pypi_project = line.split(" ")[2]
+    return pypi_project
