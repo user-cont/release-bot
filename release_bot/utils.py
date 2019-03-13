@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import locale
+import configparser
 from semantic_version import validate
 
 from release_bot.configuration import configuration
@@ -253,15 +254,25 @@ def update_version(file, new_version):
         configuration.logger.info('Version replaced.')
     return changed
 
-#parse setup.cfg and return name
-def parse_metadata(file):
+
+def parse_setupcfg():
+
     """
-    Getting Metadata
-    :param file: file is the setup_cfg where the metadata is stored
-    :return: the name from metadata
+    Getting the data from the metadata section
+
+    :return the name from metadata or -1 for error handling
     """
-    with open(file, 'r') as setup_cfg:
-        for line in setup_cfg:
-            if "name" in line:
-                pypi_project = line.split(" ")[2]
-    return pypi_project
+
+    try:
+        pypi_config = configparser.ConfigParser()
+        pypi_config.read('setup.cfg')
+        metadata = pypi_config["metadata"]
+        metadata_dictionary = {} #It contains all the data from metadata section
+
+        for key in metadata:
+            metadata_dictionary[key] = metadata[key]
+
+        pypi_name = metadata_dictionary["name"]
+        return pypi_name
+    except:
+        return -1
