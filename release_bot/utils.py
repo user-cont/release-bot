@@ -274,5 +274,5 @@ def parse_setupcfg():
 
         pypi_name = metadata_dictionary["name"]
         return pypi_name
-    except:
+    except FileNotFoundError:
         return -1
