@@ -254,25 +254,14 @@ def update_version(file, new_version):
         configuration.logger.info('Version replaced.')
     return changed
 
-
 def parse_setupcfg():
 
     """
     Getting the data from the metadata section
-
-    :return the name from metadata or -1 for error handling
+    :return the metadata as a dictionary
     """
 
-    try:
-        pypi_config = configparser.ConfigParser()
-        pypi_config.read('setup.cfg')
-        metadata = pypi_config["metadata"]
-        metadata_dictionary = {} #It contains all the data from metadata section
-
-        for key in metadata:
-            metadata_dictionary[key] = metadata[key]
-
-        pypi_name = metadata_dictionary["name"]
-        return pypi_name
-    except FileNotFoundError:
-        return -1
+    pypi_config = configparser.ConfigParser()
+    pypi_config.read("setup.cfg")
+    metadata = pypi_config["metadata"]
+    return metadata
