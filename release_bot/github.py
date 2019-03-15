@@ -208,6 +208,7 @@ class Github:
                            isPrerelease
                            isDraft
                            name
+                           tagName
                         }
                        }
                      }
@@ -227,7 +228,7 @@ class Github:
             self.logger.debug("Latest github release is a Prerelease/Draft")
             return self.latest_release(cursor=edges[0]['cursor'])
 
-        return release["name"]
+        return release["tagName"]
 
     def walk_through_prs(self, start='', direction='after', which="last", closed=True):
         """
