@@ -207,7 +207,6 @@ class Github:
                          node {
                            isPrerelease
                            isDraft
-                           name
                            tagName
                         }
                        }
