@@ -298,14 +298,14 @@ class Github:
         :return: tuple (released, new_release) - released is bool, new_release contains info about
                  the new release
         """
-        payload = {"tag_name": new_release['version'],
-                   "target_commitish": new_release['commitish'],
-                   "name": new_release['version'],
+        payload = {"tag_name": new_release.version,
+                   "target_commitish": new_release.commitish,
+                   "name": new_release.version,
                    "prerelease": False,
                    "draft": False}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases")
-        self.logger.debug(f"About to release {new_release['version']} on Github")
+        self.logger.debug(f"About to release {new_release.version} on Github")
         response = self.do_request(method="POST", url=url, json_payload=payload, use_github_auth=True)
         if response.status_code != 201:
             msg = f"Failed to create new release on github:\n{response.text}"
