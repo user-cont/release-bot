@@ -39,7 +39,7 @@ Note that you have to setup your login details (see [Requirements](#requirements
 $ pip install release-bot
 ```
 Other possible installations are through
-[Docker](#docker-image), [OpenShift](#openshift-template).
+[Docker](#docker-image), [OpenShift](#openshift-template), [Arch User Repository](#arch-user-repository).
 
 First interaction with release bot may be automated releases on Github. Let's do it.
 
@@ -199,6 +199,22 @@ new version of this image is pushed to docker hub.
 You can change it by uncommenting lines with `#importPolicy:`
 and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
 Then the image will be pulled on a new release.
+
+## Arch User Repository
+For Arch or Arch based Linux distributions, you can install the bot from the [AUR Package](https://aur.archlinux.org/packages/release-bot).
+You can use your favourite AUR Helper to install the package. For instance:
+```
+$ aurman -S release-bot
+```
+You can also install it by using the [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=release-bot) from the AUR repository.
+To build the package, download the PKGBUILD and exectute:
+```
+$ makepkg -cs #c flag cleans the extra remaining source and compiled files. s flag installs the dependencies if you don't have it. 
+```
+To install the package execute,
+```
+$ sudo pacman -U release-bot-...tar.xz
+```
 
 
 # Contributing
