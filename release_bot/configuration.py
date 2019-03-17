@@ -96,6 +96,10 @@ class Configuration:
             if item not in file:
                 self.logger.error(f"Item {item!r} is required in configuration!")
                 sys.exit(1)
+        # if user hasn't specified clone_url, use default
+        if 'clone_url' not in file:
+            self.clone_url = (f'https://github.com/{self.repository_owner}'
+                              f'/{self.repository_name}.git')
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
     def load_release_conf(self, conf):
