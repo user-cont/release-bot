@@ -419,8 +419,8 @@ class Github:
         :param new_pr: dict with info about the new release
         :return: True on success, False on fail
         """
-        repo = new_pr['repo']
-        version = new_pr['version']
+        repo = new_pr.repo
+        version = new_pr.version
         branch = f'{version}-release'
         if self.branch_exists(branch):
             self.logger.warning(f'Branch {branch} already exists, aborting creating PR.')
@@ -434,19 +434,19 @@ class Github:
             # This makes sure that the new release_pr branch has all the commits
             # from the master branch for the lastest release.
             repo.checkout('master')
-            changelog = repo.get_log_since_last_release(new_pr['previous_version'])
+            changelog = repo.get_log_since_last_release(new_pr.previous_version)
             repo.checkout_new_branch(branch)
-            changed = look_for_version_files(repo.repo_path, new_pr['version'])
+            changed = look_for_version_files(repo.repo_path, new_pr.version)
             if insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',
-                                   new_pr['version'], changelog):
+                                   new_pr.version, changelog):
                 repo.add(['CHANGELOG.md'])
             if changed:
                 repo.add(changed)
             repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
-                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed,
-                                                labels=new_pr.get('labels'))
+                new_pr.pr_url = self.make_pr(branch, f'{version}', changelog, changed,
+                                                labels=new_pr.labels)
                 return True
         except GitException as exc:
             raise ReleaseException(exc)

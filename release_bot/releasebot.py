@@ -31,6 +31,7 @@ from release_bot.github import Github
 from release_bot.pypi import PyPi
 from release_bot.utils import process_version_from_title
 from release_bot.new_release import New_Release
+from release_bot.new_pr import New_PR
 
 
 class ReleaseBot:
@@ -44,14 +45,16 @@ class ReleaseBot:
         self.logger = configuration.logger
         # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
         #        get rid of them and replace them with individual variables
-        self.new_release = New_Release(configuration)
-        self.new_pr = {}
+        self.new_release = New_Release()
+        self.new_pr = New_PR()
 
     def cleanup(self):
         # if 'tempdir' in self.new_release:
         #     self.new_release['tempdir'].cleanup()
-        self.new_release = New_Release(self.conf)
-        self.new_pr = {}
+        # What is the use of the above statements? There is no reference of tempdir
+        # in the entire code.
+        self.new_release = New_Release()
+        self.new_pr = New_PR()
         self.github.comment = []
         self.git.cleanup()
 
@@ -99,10 +102,11 @@ class ReleaseBot:
             return False
         if len(release_issues) == 1:
             for version, node in release_issues.items():
-                self.new_pr = {'version': version,
+                new_pr = {'version': version,
                                'issue_id': node['id'],
                                'issue_number': node['number'],
                                'labels': self.new_release.labels}
+                self.new_pr.update_pr(new_pr)
                 return True
         else:
             return False
@@ -151,30 +155,30 @@ class ReleaseBot:
             :return:
             """
             result = 'made' if success else 'failed to make'
-            msg = f"I just {result} a PR request for a release version {self.new_pr['version']}"
+            msg = f"I just {result} a PR request for a release version {self.new_pr.version}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             if success:
-                msg += f"\n Here's a [link to the PR]({self.new_pr['pr_url']})"
+                msg += f"\n Here's a [link to the PR]({self.new_pr.pr_url})"
             comment_backup = self.github.comment.copy()
             self.github.comment = [msg]
-            self.github.add_comment(self.new_pr['issue_id'])
+            self.github.add_comment(self.new_pr.issue_id)
             self.github.comment = comment_backup
             if success:
-                self.github.close_issue(self.new_pr['issue_number'])
+                self.github.close_issue(self.new_pr.issue_number)
 
         latest_gh_str = self.github.latest_release()
-        self.new_pr['previous_version'] = latest_gh_str
-        if Version.coerce(latest_gh_str) >= Version.coerce(self.new_pr['version']):
+        self.new_pr.previous_version = latest_gh_str
+        if Version.coerce(latest_gh_str) >= Version.coerce(self.new_pr.version):
             msg = f"Version ({latest_gh_str}) is already released and this issue is ignored."
             self.logger.warning(msg)
             return False
-        msg = f"Making a new PR for release of version {self.new_pr['version']} based on an issue."
+        msg = f"Making a new PR for release of version {self.new_pr.version} based on an issue."
         self.logger.info(msg)
 
         try:
-            self.new_pr['repo'] = self.git
-            if not self.new_pr['repo']:
+            self.new_pr.repo = self.git
+            if not self.new_pr.repo:
                 raise ReleaseException("Couldn't clone repository!")
 
             if self.github.make_release_pr(self.new_pr):
@@ -263,7 +267,7 @@ class ReleaseBot:
                 try:
                     if self.new_release.trigger_on_issue and self.find_open_release_issues():
                         if self.new_release.labels is not None:
-                            self.github.put_labels_on_issue(self.new_pr['issue_number'],
+                            self.github.put_labels_on_issue(self.new_pr.issue_number,
                                                             self.new_release.labels)
                         self.make_release_pull_request()
                 except ReleaseException as exc:
