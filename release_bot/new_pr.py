@@ -18,7 +18,7 @@ This module provides functionality for automation of releasing projects
 into various downstream services
 """
 
-class New_PR:
+class NewPR:
 
     def __init__(self):
         self.version = None

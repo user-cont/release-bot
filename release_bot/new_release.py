@@ -18,7 +18,7 @@ This module provides functionality for automation of releasing projects
 into various downstream services
 """
 
-class New_Release:
+class NewRelease:
 
     def __init__(self):
         # Init to default values.

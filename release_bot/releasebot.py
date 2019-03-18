@@ -30,8 +30,8 @@ from release_bot.git import Git
 from release_bot.github import Github
 from release_bot.pypi import PyPi
 from release_bot.utils import process_version_from_title
-from release_bot.new_release import New_Release
-from release_bot.new_pr import New_PR
+from release_bot.new_release import NewRelease
+from release_bot.new_pr import NewPR
 
 
 class ReleaseBot:
@@ -45,16 +45,16 @@ class ReleaseBot:
         self.logger = configuration.logger
         # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
         #        get rid of them and replace them with individual variables
-        self.new_release = New_Release()
-        self.new_pr = New_PR()
+        self.new_release = NewRelease()
+        self.new_pr = NewPR()
 
     def cleanup(self):
         # if 'tempdir' in self.new_release:
         #     self.new_release['tempdir'].cleanup()
         # What is the use of the above statements? There is no reference of tempdir
         # in the entire code.
-        self.new_release = New_Release()
-        self.new_pr = New_PR()
+        self.new_release = NewRelease()
+        self.new_pr = NewPR()
         self.github.comment = []
         self.git.cleanup()
 
