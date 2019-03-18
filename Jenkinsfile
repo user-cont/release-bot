@@ -46,7 +46,7 @@ node('userspace-containerization'){
                 test_targets.each { test_target ->
                     tests["$test_target"] = {
                         stage("Test target: $test_target"){
-                            onmyduffynode "docker run -v /root:/usr/src/app:Z -e GITHUB_USER= -e GITHUB_TOKEN= release-bot-tests make test TEST_TARGET=tests/$test_target"
+                            onmyduffynode "docker run -v /root:/usr/src/app:Z -e GITHUB_TOKEN= release-bot-tests make test TEST_TARGET=tests/$test_target"
                         }
                     }
                 }
