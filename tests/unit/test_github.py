@@ -21,7 +21,7 @@ def mock_latest_release():
     data = {'data': {'repository': {'releases': {'edges': [{'cursor': 'trololollololl',
                                                             'node': {'isDraft': False,
                                                                      'isPrerelease': False,
-                                                                     'name': '0.6.0'}}]}}}}
+                                                                     'tagName': '0.6.0'}}]}}}}
 
     def no_release():
         def r(_):
@@ -39,7 +39,7 @@ def mock_latest_release():
         draft_data = {'data': {'repository': {'releases': {'edges': [{'cursor': 'trololollololl',
                                                                       'node': {'isDraft': True,
                                                                                'isPrerelease': False,
-                                                                               'name': '1.0.0'}}]}}}}
+                                                                               'tagName': '1.0.0'}}]}}}}
         flexmock(Github).should_receive("query_repository")\
             .and_return(MockedResponse(draft_data))\
             .and_return(MockedResponse(data))
@@ -49,7 +49,7 @@ def mock_latest_release():
         pre_data = {'data': {'repository': {'releases': {'edges': [{'cursor': 'trololollololl',
                                                                     'node': {'isDraft': False,
                                                                              'isPrerelease': True,
-                                                                             'name': '1.0.0'}}]}}}}
+                                                                             'tagName': '1.0.0'}}]}}}}
         flexmock(Github).should_receive("query_repository")\
             .and_return(MockedResponse(pre_data))\
             .and_return(MockedResponse(data))
