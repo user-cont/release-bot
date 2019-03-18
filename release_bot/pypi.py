@@ -45,8 +45,8 @@ class PyPi:
         setupcfg_metadata = setupcfg_parser()
         filedata = ''
         filedata += "from pathlib import Path \nfrom setuptools import setup \n\n"
-        filedata += f"setup({setupcfg_metadata}
-                    install_requires=Path('./requirements.txt').read_text() )"
+        filedata += f"setup({setupcfg_metadata} " \
+                    "install_requires=Path('./requirements.txt').read_text() )"
 
         with open("setup.py", 'w') as file:
             file.write(filedata)
