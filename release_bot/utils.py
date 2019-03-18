@@ -266,5 +266,5 @@ def setupcfg_parser():
     metadata = pypi_config["metadata"]
     metadata_string = ""
     for key in metadata:
-        metadata_string+= key + '=' + metadata[key] + ' , '
+        metadata_string += key + '=' + metadata[key] + ' , '
     return metadata_string

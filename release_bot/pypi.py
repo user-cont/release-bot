@@ -42,11 +42,13 @@ class PyPi:
         Make the setup.py
         """
 
+        setupcfg_metadata = setupcfg_parser()
         filedata = ''
         filedata += "from pathlib import Path \nfrom setuptools import setup \n\n"
-        filedata += f"setup({setupcfg_metadata} install_requires=Path('./requirements.txt').read_text() )"
+        filedata += f"setup({setupcfg_metadata}
+                    install_requires=Path('./requirements.txt').read_text() )"
 
-        with open("setup.py",'w') as file:
+        with open("setup.py", 'w') as file:
             file.write(filedata)
             file.close()
 
@@ -108,8 +110,8 @@ class PyPi:
         Release project on PyPi
         """
         project_root = self.git.repo_path
+        make_setuppy()#make the setupfile
         if os.path.isdir(project_root):
-            self.make_setuppy()#make the setupfile
             self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)
             self.build_wheel(project_root)
