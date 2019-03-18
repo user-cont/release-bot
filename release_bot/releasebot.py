@@ -49,10 +49,6 @@ class ReleaseBot:
         self.new_pr = NewPR()
 
     def cleanup(self):
-        # if 'tempdir' in self.new_release:
-        #     self.new_release['tempdir'].cleanup()
-        # What is the use of the above statements? There is no reference of tempdir
-        # in the entire code.
         self.new_release = NewRelease()
         self.new_pr = NewPR()
         self.github.comment = []
