@@ -254,14 +254,17 @@ def update_version(file, new_version):
         configuration.logger.info('Version replaced.')
     return changed
 
-def parse_setupcfg():
+def setupcfg_parser():
 
     """
     Getting the data from the metadata section
-    :return the metadata as a dictionary
+    :return the metadata as a string split by comma
     """
 
     pypi_config = configparser.ConfigParser()
     pypi_config.read("setup.cfg")
     metadata = pypi_config["metadata"]
-    return metadata
+    metadata_string = ""
+    for key in metadata:
+        metadata_string+= key + '=' + metadata[key] + ' , '
+    return metadata_string

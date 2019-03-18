@@ -19,6 +19,7 @@ import requests
 
 from release_bot.exceptions import ReleaseException
 from release_bot.utils import run_command
+from release_bot.utils import setupcfg_parser
 
 
 class PyPi:
@@ -31,9 +32,24 @@ class PyPi:
         :param configuration: instance of Configuration
         :param git: instance of Git
         """
-        self.conf = configuration
+        self.setupcfg_metadata = setupcfg_parser()
+        self.conf = configuration # i think it does not need that
         self.logger = configuration.logger
         self.git = git
+
+    def make_setuppy():
+        """
+        Make the setup.py
+        """
+
+        filedata = ''
+        filedata += "from pathlib import Path \nfrom setuptools import setup \n\n"
+        filedata += f"setup({setupcfg_metadata} install_requires=Path('./requirements.txt').read_text() )"
+
+        with open("setup.py",'w') as file:
+            file.write(filedata)
+            file.close()
+
 
     def latest_version(self):
         """Get latest version of the package from PyPi or 0.0.0"""
@@ -93,6 +109,7 @@ class PyPi:
         """
         project_root = self.git.repo_path
         if os.path.isdir(project_root):
+            self.make_setuppy()#make the setupfile
             self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)
             self.build_wheel(project_root)
