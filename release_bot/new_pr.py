@@ -29,8 +29,8 @@ class NewPR:
         self.previous_version = None
         self.repo = None
 
-    def update_pr(self, new_pr):
-        self.version = new_pr.get('version')
-        self.issue_id = new_pr.get('issue_id')
-        self.issue_number = new_pr.get('issue_number')
-        self.labels = new_pr.get('labels')
+    def update_new_pr_details(self, version, issue_id, issue_number, labels):
+        self.version = version
+        self.issue_id = issue_id
+        self.issue_number = issue_number
+        self.labels = labels

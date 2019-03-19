@@ -32,19 +32,19 @@ class NewRelease:
         self.commitish = None
         self.version = None
 
-    def update(self, release_conf):
+    def update(self, changelog, author_name, author_email, pypi, trigger_on_issue, labels):
         # Update release-conf data
-        self.changelog = release_conf.get('changelog')
-        self.author_name = release_conf.get('author_name')
-        self.author_email = release_conf.get('author_email')
-        self.pypi = release_conf.get('pypi')
-        self.trigger_on_issue = release_conf.get('trigger_on_issue')
-        self.labels = release_conf.get('labels')
+        self.changelog = changelog
+        self.author_name = author_name
+        self.author_email = author_email
+        self.pypi = pypi
+        self.trigger_on_issue = trigger_on_issue
+        self.labels = labels
 
-    def update_pr_data(self, release_conf):
+    def update_pr_details(self, version, author_name, author_email, pr_id, commitish):
         # Update attributes for making a PR
-        self.author_name = release_conf.get('author_name')
-        self.author_email = release_conf.get('author_email')
-        self.pr_id = release_conf.get('pr_id')
-        self.version = release_conf.get('version')
-        self.commitish = release_conf.get('commitish')
+        self.author_name = author_name
+        self.author_email = author_email
+        self.pr_id = pr_id
+        self.version = version
+        self.commitish = commitish

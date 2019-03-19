@@ -62,7 +62,14 @@ class ReleaseBot:
         # load release configuration from release-conf.yaml in repository
         conf = self.github.get_configuration()
         release_conf = self.conf.load_release_conf(conf)
-        self.new_release.update(release_conf)
+        self.new_release.update(
+            changelog=release_conf.get('changelog'),
+            author_name=release_conf.get('author_name'),
+            author_email=release_conf.get('author_email'),
+            pypi=release_conf.get('pypi'),
+            trigger_on_issue=release_conf.get('trigger_on_issue'),
+            labels=release_conf.get('labels')
+        )
 
     def find_open_release_issues(self):
         """
@@ -98,11 +105,12 @@ class ReleaseBot:
             return False
         if len(release_issues) == 1:
             for version, node in release_issues.items():
-                new_pr = {'version': version,
-                               'issue_id': node['id'],
-                               'issue_number': node['number'],
-                               'labels': self.new_release.labels}
-                self.new_pr.update_pr(new_pr)
+                self.new_pr.update_new_pr_details(
+                    version=version,
+                    issue_id=node['id'],
+                    issue_number=node['number'],
+                    labels=self.new_release.labels
+                )
                 return True
         else:
             return False
@@ -130,12 +138,13 @@ class ReleaseBot:
                     merge_commit = edge['node']['mergeCommit']
                     self.logger.info(f"Found merged release PR with version {version}, "
                                      f"commit id: {merge_commit['oid']}")
-                    new_release = {'version': version,
-                                   'commitish': merge_commit['oid'],
-                                   'pr_id': edge['node']['id'],
-                                   'author_name': merge_commit['author']['name'],
-                                   'author_email': merge_commit['author']['email']}
-                    self.new_release.update_pr_data(new_release)
+                    self.new_release.update_pr_details(
+                        version=version,
+                        commitish=merge_commit['oid'],
+                        pr_id=edge['node']['id'],
+                        author_email=merge_commit['author']['email'],
+                        author_name=merge_commit['author']['name']
+                    )
                     return True
 
     def make_release_pull_request(self):
