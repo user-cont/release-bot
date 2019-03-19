@@ -43,6 +43,7 @@ class Configuration:
         self.github_app_id = ''
         self.github_app_cert_path = ''
         self.clone_url = ''
+        self.webhook_handler = False
 
     def set_logging(self,
                     logger_name="release-bot",
