@@ -446,7 +446,7 @@ class Github:
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
                 new_pr.pr_url = self.make_pr(branch, f'{version}', changelog, changed,
-                                                labels=new_pr.labels)
+                                             labels=new_pr.labels)
                 return True
         except GitException as exc:
             raise ReleaseException(exc)
