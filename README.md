@@ -113,6 +113,7 @@ Here are the `conf.yaml` configuration options:
 | `github_app_id`              | ID (a number) of the Github app. | No |
 | `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
 | `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
+| `clone_url`                  | URL used to clone your Github repository. By default, `https` variant is used. | No |
 
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
@@ -123,6 +124,9 @@ so you can keep track of what changes were made by bot and what are your own.
 You can also create a Github app and use it as an authentication mechanism for
 the bot. For that you need to specify the three config values prefixed with
 `github_app`.
+
+**Note:** If the Upstream repository is a [Private Github repository](https://help.github.com/en/articles/setting-repository-visibility#about-repository-visibility), it is required to specify the SSH URL
+of the repository as the `clone_url` option in `conf.yaml`. This will allow the bot to authenticate using SSH, when fetching from the Upstream repository.
 
 ## Upstream repository
 

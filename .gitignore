@@ -10,8 +10,9 @@ __pycache__/
 # Unit test / coverage reports
 .cache
 
-# PyCharm
-.idea/
-
 .pytest_cache/
+
+# Editors and IDEs
+.idea/
+.vscode/
 

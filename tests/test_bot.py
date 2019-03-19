@@ -45,6 +45,7 @@ class TestBot:
         configuration.repository_name = self.g_utils.repo
         configuration.repository_owner = self.github_user
         configuration.github_username = self.github_user
+        configuration.clone_url = f'https://github.com/{self.github_user}/{self.g_utils.repo}.git'
         configuration.refresh_interval = 1
 
         self.release_bot = ReleaseBot(configuration)
