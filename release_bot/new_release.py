@@ -13,11 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-This module provides functionality for automation of releasing projects
-into various downstream services
-"""
-
 class NewRelease:
 
     def __init__(self):
