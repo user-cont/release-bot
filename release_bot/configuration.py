@@ -20,6 +20,7 @@ import yaml
 import sys
 
 from release_bot.version import __version__
+from release_bot.utils import setupcfg_parser
 
 
 class Configuration:
@@ -129,6 +130,14 @@ class Configuration:
             msg = "Can't trigger on issue if 'github_username' is not known, disabling"
             self.logger.warning(msg)
             parsed_conf['trigger_on_issue'] = False
+        if parsed_conf.get('pypi_project') is None:
+            msg = "There is no different name for pypi_project"
+            self.logger.warning(msg)
+            parsed_conf['pypi_project'] = self.repository_name
+            setattr(self, pypi_project, self.repository_name) # not sure if i handle correct the case when there is no name on release-conf.yml
+        else:
+            setattr(self, pypi_project, setupcfg_parser())
+
 
         return parsed_conf
 

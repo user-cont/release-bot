@@ -258,13 +258,12 @@ def setupcfg_parser():
 
     """
     Getting the data from the metadata section
-    :return the metadata as a string split by comma
+    :return the pypi_project name or None
     """
-
-    pypi_config = configparser.ConfigParser()
-    pypi_config.read("setup.cfg")
-    metadata = pypi_config["metadata"]
-    metadata_string = ""
-    for key in metadata:
-        metadata_string += key + '=' + metadata[key] + ' , '
-    return metadata_string
+    try:
+        pypi_config = configparser.ConfigParser()
+        pypi_config.read("setupdd.cfg")
+        metadata = pypi_config["metadata"]
+        return metadata["name"]
+    except:
+        return None
