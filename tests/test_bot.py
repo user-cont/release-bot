@@ -71,7 +71,14 @@ class TestBot:
     def open_pr(self):
         """Opens two release issues in a repository"""
         conf = yaml.safe_load(RELEASE_CONF) or {}
-        self.release_bot.new_release.update(conf)
+        self.release_bot.new_release.update(
+            changelog=conf.get('changelog'),
+            author_name=conf.get('author_name'),
+            author_email=conf.get('author_email'),
+            pypi=conf.get('pypi'),
+            trigger_on_issue=conf.get('trigger_on_issue'),
+            labels=conf.get('labels')
+        )
         self.g_utils.open_issue("0.0.1 release")
         self.release_bot.find_open_release_issues()
         self.release_bot.make_release_pull_request()
@@ -138,5 +145,5 @@ class TestBot:
         path = Path(self.release_bot.git.repo_path)
         assert list(path.glob(f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1-py3*.whl'))
         assert (path / f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz').is_file()
-        self.release_bot.new_release.update({'pypi': False})
+        self.release_bot.new_release.pypi = False
         assert not self.release_bot.make_new_pypi_release()
