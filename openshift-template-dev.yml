@@ -27,7 +27,7 @@ objects:
         - name : latest
           from :
             kind : DockerImage
-            name : usercont/release-bot:dev
+            name : ${DOCKER_IMAGE}
           importPolicy:
             scheduled: true
   - kind : BuildConfig
@@ -135,4 +135,8 @@ parameters :
   - name : CONFIGURATION_REPOSITORY
     description : Git repository with configuration
     value :
+    required : true
+  - name : DOCKER_IMAGE
+    description : DockerHub repository with release-bot development image
+    value : usercont/release-bot:dev
     required : true
