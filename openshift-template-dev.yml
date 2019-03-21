@@ -137,6 +137,6 @@ parameters :
     value :
     required : true
   - name : DOCKER_IMAGE
-    description : DockerHub repository with release-bot container dev code
-    value :
+    description : DockerHub repository with release-bot development image
+    value : usercont/release-bot:dev
     required : true
