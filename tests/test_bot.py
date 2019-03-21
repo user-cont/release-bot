@@ -109,13 +109,13 @@ class TestBot:
         if conf.get('pypi') is None:
             conf['pypi'] = True
         for key, value in conf.items():
-            assert self.release_bot.new_release[key] == value
+        	assert getattr(self.release_bot.new_release, key) == value
 
     def test_find_open_rls_issue(self, open_issue):
         """Tests if bot can find opened release issue"""
         assert self.release_bot.find_open_release_issues()
-        assert self.release_bot.new_pr['version'] == '0.0.1'
-        assert self.release_bot.new_pr['issue_number'] == open_issue
+        assert self.release_bot.new_pr.version == '0.0.1'
+        assert self.release_bot.new_pr.issue_number == open_issue
 
     def test_find_open_rls_issue_none(self):
         """Tests if bot can find opened release issue"""
