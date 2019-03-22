@@ -23,7 +23,7 @@ import locale
 import configparser
 from semantic_version import validate
 
-#from release_bot.configuration import configuration
+from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 
 
