@@ -254,15 +254,15 @@ def update_version(file, new_version):
         configuration.logger.info('Version replaced.')
     return changed
 
-def setupcfg_parser():
+def get_pypi_project_name_from_setup_cfg():
 
     """
-    Getting the data from the metadata section
+    Getting the name from the metadata section of setup.cfg
     :return the pypi_project name or None
     """
     try:
         pypi_config = configparser.ConfigParser()
-        pypi_config.read("setupdd.cfg")
+        pypi_config.read("setup.cfg")
         metadata = pypi_config["metadata"]
         return metadata["name"]
     except KeyError:

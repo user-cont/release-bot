@@ -38,10 +38,7 @@ class PyPi:
 
     def latest_version(self):
         """Get latest version of the package from PyPi or 0.0.0"""
-        if self.conf.pypi_project != None:
-            response = requests.get(url=f"{self.PYPI_URL}{self.conf.pypi_project}/json")
-        else:
-            response = requests.get(url=f"{self.PYPI_URL}{self.conf.repository_name}/json")
+        response = requests.get(url=f"{self.PYPI_URL}{self.conf.pypi_project}/json")
         if response.status_code == 200:
             return response.json()['info']['version']
         elif response.status_code == 404:

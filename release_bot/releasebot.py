@@ -39,7 +39,7 @@ class ReleaseBot:
         url = f'https://github.com/{self.conf.repository_owner}/{self.conf.repository_name}.git'
         self.git = Git(url, self.conf)
         self.github = Github(configuration, self.git)
-        self.pypi = PyPi(configuration, self.git) # i think it does not need that
+        self.pypi = PyPi(configuration, self.git)
         self.logger = configuration.logger
         # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
         #        get rid of them and replace them with individual variables

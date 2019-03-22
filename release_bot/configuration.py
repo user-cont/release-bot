@@ -20,7 +20,7 @@ import yaml
 import sys
 
 from release_bot.version import __version__
-from release_bot.utils import setupcfg_parser
+from release_bot.utils import get_pypi_project_name_from_setup_cfg
 
 
 class Configuration:
@@ -39,7 +39,7 @@ class Configuration:
         self.configuration = ''
         self.logger = None
         self.set_logging()
-        #when you need to have different name for pypi release
+        # when you need to have different name for pypi release
         self.pypi_project = ''
         # configuration when bot is deployed as github app
         self.github_app_installation_id = ''
@@ -130,13 +130,13 @@ class Configuration:
             msg = "Can't trigger on issue if 'github_username' is not known, disabling"
             self.logger.warning(msg)
             parsed_conf['trigger_on_issue'] = False
-        if parsed_conf.get('pypi_project') is None:
-            msg = "There is no different name for pypi_project"
+        get_pypi_project_name_from_setup_cfg()= pypi_name
+        if pypi_name is None:
+            msg = "pypi_project is not set, falling back to repository_name"
             self.logger.warning(msg)
-            parsed_conf['pypi_project'] = self.repository_name
-            setattr(self, self.pypi_project, self.repository_name)
+            self.pypi_project = self.repository_name
         else:
-            setattr(self, self.pypi_project, setupcfg_parser())
+            self.pypi_project = pypi_name
 
 
         return parsed_conf
