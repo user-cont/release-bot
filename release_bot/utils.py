@@ -265,5 +265,5 @@ def setupcfg_parser():
         pypi_config.read("setupdd.cfg")
         metadata = pypi_config["metadata"]
         return metadata["name"]
-    except:
+    except KeyError:
         return None

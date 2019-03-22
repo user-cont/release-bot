@@ -134,9 +134,9 @@ class Configuration:
             msg = "There is no different name for pypi_project"
             self.logger.warning(msg)
             parsed_conf['pypi_project'] = self.repository_name
-            setattr(self, pypi_project, self.repository_name) # not sure if i handle correct the case when there is no name on release-conf.yml
+            setattr(self, self.pypi_project, self.repository_name)
         else:
-            setattr(self, pypi_project, setupcfg_parser())
+            setattr(self, self.pypi_project, setupcfg_parser())
 
 
         return parsed_conf
