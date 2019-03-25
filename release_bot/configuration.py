@@ -130,13 +130,13 @@ class Configuration:
             msg = "Can't trigger on issue if 'github_username' is not known, disabling"
             self.logger.warning(msg)
             parsed_conf['trigger_on_issue'] = False
-        pypi_name = get_pypi_project_name_from_setup_cfg()
-        if pypi_name is None:
+        self.pypi_project = parsed_conf.get('pypi_project')
+        if parsed_conf.get('pypi_project') is None:
+            self.pypi_project = get_pypi_project_name_from_setup_cfg()
+        if self.pypi_project is None:
             msg = "pypi_project is not set, falling back to repository_name"
             self.logger.warning(msg)
             self.pypi_project = self.repository_name
-        else:
-            self.pypi_project = pypi_name
 
 
         return parsed_conf
