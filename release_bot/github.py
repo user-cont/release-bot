@@ -174,7 +174,7 @@ class Github:
             return
         if self.conf.dry_run:
             self.logger.info("I would add a comment to the pull request created.")
-            return
+            return "SKIPPED"
         comment = '\n'.join(self.comment)
         mutation = (f'mutation {{addComment(input:'
                     f'{{subjectId: "{subject_id}", body: "{comment}"}})' +
@@ -432,7 +432,7 @@ class Github:
             msg = (f"I would make a new PR for release of version "
                    f"{version} based on the issue.")
             self.logger.info(msg)
-            return
+            return False
         try:
             name, email = self.get_user_contact()
             repo.set_credentials(name, email)
@@ -528,7 +528,7 @@ class Github:
         """
         if self.conf.dry_run:
             self.logger.info("I would add labels to issue #%s", number)
-            return
+            return "SKIPPED"
         payload = {'labels': labels}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")

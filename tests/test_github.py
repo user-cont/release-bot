@@ -95,5 +95,8 @@ class TestGithub:
         number, graphql_id = open_issue_graphql
         comments_count = self.g_utils.count_comments(number)
         self.github.comment = "Test comment"
+        self.github.conf.dry_run = True
+        assert self.github.add_comment(graphql_id) == "SKIPPED"
+        self.github.conf.dry_run = False
         self.github.add_comment(graphql_id)
         assert self.g_utils.count_comments(number) == comments_count + 1
