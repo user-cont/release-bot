@@ -97,7 +97,7 @@ class PyPi:
             self.build_sdist(project_root)
             self.build_wheel(project_root)
             if self.conf.dry_run:
-                return "SKIPPED"
+                return False
             self.upload(project_root)
         else:
             raise ReleaseException("Cannot find project root for PyPi release:")

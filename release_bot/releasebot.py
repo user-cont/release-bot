@@ -225,7 +225,7 @@ class ReleaseBot:
         else:
             try:
                 if self.conf.dry_run:
-                    return "SKIPPED"
+                    return None
                 released, self.new_release = self.github.make_new_release(self.new_release)
                 if released:
                     release_handler(success=True)
@@ -257,8 +257,8 @@ class ReleaseBot:
         self.git.fetch_tags()
         self.git.checkout(self.new_release.version)
         try:
-            if self.pypi.release() == "SKIPPED":
-            	return "SKIPPED"
+            if self.pypi.release() == False:
+                return False
             release_handler(success=True)
         except ReleaseException:
             release_handler(success=False)

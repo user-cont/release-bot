@@ -96,7 +96,7 @@ class TestGithub:
         comments_count = self.g_utils.count_comments(number)
         self.github.comment = "Test comment"
         self.github.conf.dry_run = True
-        assert self.github.add_comment(graphql_id) == "SKIPPED"
+        assert self.github.add_comment(graphql_id) is None
         self.github.conf.dry_run = False
         self.github.add_comment(graphql_id)
         assert self.g_utils.count_comments(number) == comments_count + 1

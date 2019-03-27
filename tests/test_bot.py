@@ -141,7 +141,7 @@ class TestBot:
         assert self.release_bot.find_newest_release_pull_request()
         # Testing dry-run mode
         self.release_bot.conf.dry_run = True
-        assert self.release_bot.make_new_github_release() == "SKIPPED"
+        assert self.release_bot.make_new_github_release() is None
         self.release_bot.conf.dry_run = False
         self.release_bot.make_new_github_release()
         assert self.release_bot.github.latest_release() == "0.0.1"
@@ -151,7 +151,7 @@ class TestBot:
         self.release_bot.load_release_conf()
         # Testing dry-run mode
         self.release_bot.conf.dry_run = True
-        assert self.release_bot.make_new_pypi_release() == "SKIPPED"
+        assert not self.release_bot.make_new_pypi_release()
         self.release_bot.conf.dry_run = False
         assert self.release_bot.make_new_pypi_release()
         path = Path(self.release_bot.git.repo_path)
