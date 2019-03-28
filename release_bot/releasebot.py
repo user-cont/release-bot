@@ -189,14 +189,15 @@ class ReleaseBot:
             msg = f"Version ({latest_gh_str}) is already released and this issue is ignored."
             self.logger.warning(msg)
             return False
-        msg = f"Making a new PR for release of version {self.new_pr.version} based on an issue."
-        self.logger.info(msg)
+        msg = (f"Making a new PR for release of version "
+               f"{self.new_pr.version} based on the issue.")
+        if not self.conf.dry_run:
+            self.logger.info(msg)
 
         try:
             self.new_pr.repo = self.git
             if not self.new_pr.repo:
                 raise ReleaseException("Couldn't clone repository!")
-
             if self.github.make_release_pr(self.new_pr):
                 pr_handler(success=True)
                 return True
@@ -223,6 +224,8 @@ class ReleaseBot:
                 f"{self.new_release.version} has already been released on Github")
         else:
             try:
+                if self.conf.dry_run:
+                    return None
                 released, self.new_release = self.github.make_new_release(self.new_release)
                 if released:
                     release_handler(success=True)
@@ -239,7 +242,10 @@ class ReleaseBot:
 
         def release_handler(success):
             result = "released" if success else "failed to release"
-            msg = f"I just {result} version {self.new_release.version} on PyPI"
+            if self.conf.dry_run:
+                msg = f"I would have {result} version {self.new_release.version} on PyPI now."
+            else:
+                msg = f"I just {result} version {self.new_release.version} on PyPI"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
@@ -251,7 +257,8 @@ class ReleaseBot:
         self.git.fetch_tags()
         self.git.checkout(self.new_release.version)
         try:
-            self.pypi.release()
+            if self.pypi.release() == False:
+                return False
             release_handler(success=True)
         except ReleaseException:
             release_handler(success=False)
@@ -263,6 +270,8 @@ class ReleaseBot:
 
     def run(self):
         self.logger.info(f"release-bot v{configuration.version} reporting for duty!")
+        if self.conf.dry_run:
+            self.logger.info("Running in dry-run mode.")
         try:
             while True:
                 self.git.pull()
