@@ -23,8 +23,8 @@ import locale
 import configparser
 from semantic_version import validate
 
-from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
+from release_bot.configuration import configuration
 
 
 logger = logging.getLogger('release-bot')
@@ -254,7 +254,7 @@ def update_version(file, new_version):
         configuration.logger.info('Version replaced.')
     return changed
 
-def get_pypi_project_name_from_setup_cfg():
+def pypi_project_from_setup_cfg():
 
     """
     Getting the name from the metadata section of setup.cfg
