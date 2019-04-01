@@ -15,7 +15,8 @@
 """Tests utility functions"""
 
 from semantic_version import Version
-from release_bot.utils import process_version_from_title
+from release_bot.utils import (process_version_from_title,
+                               look_for_version_files)
 
 
 def test_process_version_from_title():
@@ -23,22 +24,41 @@ def test_process_version_from_title():
     latest_version = Version("0.0.1")
 
     title = '3.7.8 release'
-    match, version = process_version_from_title(title,latest_version)
+    match, version = process_version_from_title(title, latest_version)
     assert version == "3.7.8"
-    assert match == True
+    assert match is True
     title = 'new major release'
-    match, version = process_version_from_title(title,latest_version)
+    match, version = process_version_from_title(title, latest_version)
     assert version == "1.0.0"
-    assert match == True
+    assert match is True
     title = 'new minor release'
-    match, version = process_version_from_title(title,latest_version)
+    match, version = process_version_from_title(title, latest_version)
     assert version == "0.1.0"
-    assert match == True
+    assert match is True
     title = 'new patch release'
-    match, version = process_version_from_title(title,latest_version)
+    match, version = process_version_from_title(title, latest_version)
     assert version == "0.0.2"
-    assert match == True
+    assert match is True
     title = 'random release'
-    match, version = process_version_from_title(title,latest_version)
+    match, version = process_version_from_title(title, latest_version)
     assert version == ""
-    assert match == False
+    assert match is False
+
+
+def test_look_for_version_files(tmp_path):
+    """Test finding the correct files with all possible version variables"""
+    dir1 = tmp_path / "subdir"
+    dir1.mkdir()
+
+    file1 = dir1 / "__init__.py"
+    file1.write_text('__version__="1.2.3"')
+
+    assert look_for_version_files(str(dir1), "1.2.4") == ["__init__.py"]
+
+    file2 = dir1 / "setup.py"
+    file2.write_text('version="1.2.3"')
+
+    assert look_for_version_files(str(dir1), "1.2.4") == ["setup.py"]
+
+    assert look_for_version_files(str(dir1), "1.2.5") == ["setup.py",
+                                                          "__init__.py"]

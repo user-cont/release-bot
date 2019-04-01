@@ -201,6 +201,7 @@ def insert_in_changelog(changelog, version, log):
 def look_for_version_files(repo_directory, new_version):
     """
     Walks through repository and looks for suspects that may be hiding the __version__ variable
+    For setup.py and setup.cfg it also looks for the version variable
     :param repo_directory: repository path
     :param new_version: version to update to
     :return: list of changed files
@@ -208,9 +209,13 @@ def look_for_version_files(repo_directory, new_version):
     changed = []
     for root, _, files in os.walk(repo_directory):
         for file in files:
-            if file in ('setup.py', '__init__.py', 'version.py'):
+            if file in ('setup.py', 'setup.cfg', '__init__.py', 'version.py'):
                 filename = os.path.join(root, file)
-                success = update_version(filename, new_version)
+                if file in ('setup.py', 'setup.cfg'):
+                    success = update_version(filename, new_version, ("__version__", "version"))
+                else:
+                    success = update_version(filename, new_version, ("__version__"))
+
                 if success:
                     changed.append(filename.replace(repo_directory + '/', '', 1))
     if len(changed) > 1:
@@ -221,11 +226,12 @@ def look_for_version_files(repo_directory, new_version):
     return changed
 
 
-def update_version(file, new_version):
+def update_version(file, new_version, prefix):
     """
     Patches the file with new version
-    :param file: file containing __version__ variable
+    :param file: file containing variable starting with the prefix
     :param new_version: version to update the file with
+    :param prefix: the prefix (or a tuple of prefixes) a variable has to start with to be updated
     :return: True if file was changed, else False
     """
     with open(file, 'r') as input_file:
@@ -234,7 +240,7 @@ def update_version(file, new_version):
 
     changed = False
     for index, line in enumerate(content):
-        if line.startswith('__version__'):
+        if line.startswith(prefix):
             pieces = line.split('=', maxsplit=1)
             if len(pieces) == 2:
                 configuration.logger.info(f"Editing line with new version:\n{line}")
