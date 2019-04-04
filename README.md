@@ -39,7 +39,7 @@ Note that you have to setup your login details (see [Requirements](#requirements
 $ pip install release-bot
 ```
 Other possible installations are through
-[Docker](#docker-image), [OpenShift](#openshift-template).
+[Docker](#docker-image), [OpenShift](#openshift-template), [Arch User Repository](#arch-user-repository).
 
 First interaction with release bot may be automated releases on Github. Let's do it.
 
@@ -113,6 +113,7 @@ Here are the `conf.yaml` configuration options:
 | `github_app_id`              | ID (a number) of the Github app. | No |
 | `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
 | `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
+| `clone_url`                  | URL used to clone your Github repository. By default, `https` variant is used. | No |
 
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 
@@ -123,6 +124,9 @@ so you can keep track of what changes were made by bot and what are your own.
 You can also create a Github app and use it as an authentication mechanism for
 the bot. For that you need to specify the three config values prefixed with
 `github_app`.
+
+**Note:** If the Upstream repository is a [Private Github repository](https://help.github.com/en/articles/setting-repository-visibility#about-repository-visibility), it is required to specify the SSH URL
+of the repository as the `clone_url` option in `conf.yaml`. This will allow the bot to authenticate using SSH, when fetching from the Upstream repository.
 
 ## Upstream repository
 
@@ -200,6 +204,22 @@ new version of this image is pushed to docker hub.
 You can change it by uncommenting lines with `#importPolicy:`
 and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
 Then the image will be pulled on a new release.
+
+## Arch User Repository
+For Arch or Arch based Linux distributions, you can install the bot from the [AUR Package](https://aur.archlinux.org/packages/release-bot).
+You can use your favourite AUR Helper to install the package. For instance:
+```
+$ aurman -S release-bot
+```
+You can also install it by using the [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=release-bot) from the AUR repository.
+To build the package, download the PKGBUILD and exectute:
+```
+$ makepkg -cs #c flag cleans the extra remaining source and compiled files. s flag installs the dependencies if you don't have it. 
+```
+To install the package execute,
+```
+$ sudo pacman -U release-bot-...tar.xz
+```
 
 
 # Contributing

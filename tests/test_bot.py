@@ -45,6 +45,7 @@ class TestBot:
         configuration.repository_name = self.g_utils.repo
         configuration.repository_owner = self.github_user
         configuration.github_username = self.github_user
+        configuration.clone_url = f'https://github.com/{self.github_user}/{self.g_utils.repo}.git'
         configuration.refresh_interval = 1
 
         self.release_bot = ReleaseBot(configuration)
@@ -70,9 +71,20 @@ class TestBot:
     def open_pr(self):
         """Opens two release issues in a repository"""
         conf = yaml.safe_load(RELEASE_CONF) or {}
-        self.release_bot.new_release.update(conf)
+        self.release_bot.new_release.update(
+            changelog=conf.get('changelog'),
+            author_name=conf.get('author_name'),
+            author_email=conf.get('author_email'),
+            pypi=conf.get('pypi'),
+            trigger_on_issue=conf.get('trigger_on_issue'),
+            labels=conf.get('labels')
+        )
         self.g_utils.open_issue("0.0.1 release")
         self.release_bot.find_open_release_issues()
+        # Testing dry-run mode
+        self.release_bot.conf.dry_run = True
+        assert not self.release_bot.make_release_pull_request()
+        self.release_bot.conf.dry_run = False
         self.release_bot.make_release_pull_request()
         pr_number = self.release_bot.github.pr_exists("0.0.1 release")
         assert pr_number and self.g_utils.merge_pull_request(pr_number)
@@ -101,13 +113,13 @@ class TestBot:
         if conf.get('pypi') is None:
             conf['pypi'] = True
         for key, value in conf.items():
-            assert self.release_bot.new_release[key] == value
+        	assert getattr(self.release_bot.new_release, key) == value
 
     def test_find_open_rls_issue(self, open_issue):
         """Tests if bot can find opened release issue"""
         assert self.release_bot.find_open_release_issues()
-        assert self.release_bot.new_pr['version'] == '0.0.1'
-        assert self.release_bot.new_pr['issue_number'] == open_issue
+        assert self.release_bot.new_pr.version == '0.0.1'
+        assert self.release_bot.new_pr.issue_number == open_issue
 
     def test_find_open_rls_issue_none(self):
         """Tests if bot can find opened release issue"""
@@ -127,15 +139,23 @@ class TestBot:
     def test_github_release(self, open_pr_fixture):
         """Tests releasing on Github"""
         assert self.release_bot.find_newest_release_pull_request()
+        # Testing dry-run mode
+        self.release_bot.conf.dry_run = True
+        assert self.release_bot.make_new_github_release() is None
+        self.release_bot.conf.dry_run = False
         self.release_bot.make_new_github_release()
         assert self.release_bot.github.latest_release() == "0.0.1"
 
     def test_pypi_release(self, mock_upload, github_release):
         """Test PyPi release"""
         self.release_bot.load_release_conf()
+        # Testing dry-run mode
+        self.release_bot.conf.dry_run = True
+        assert not self.release_bot.make_new_pypi_release()
+        self.release_bot.conf.dry_run = False
         assert self.release_bot.make_new_pypi_release()
         path = Path(self.release_bot.git.repo_path)
         assert list(path.glob(f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1-py3*.whl'))
         assert (path / f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz').is_file()
-        self.release_bot.new_release.update({'pypi': False})
+        self.release_bot.new_release.pypi = False
         assert not self.release_bot.make_new_pypi_release()

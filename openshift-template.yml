@@ -88,6 +88,9 @@ objects:
           containers :
             - name : ${APP_NAME}
               image : ${APP_NAME}:latest
+              ports:
+                - containerPort: 8080
+                  protocol: "TCP"
               resources:
                 requests:
                   memory: "64Mi"
@@ -95,6 +98,34 @@ objects:
                 limits:
                   memory: "128Mi"
                   cpu: "100m"
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: release-bot
+      labels:
+         application: release-bot
+      annotations:
+        description: Exposes release-bot port for github webhook callbacks
+    spec:
+      ports:
+        - name: 8080-tcp
+          port: 8080
+          protocol: TCP
+          targetPort: 8080
+      selector:
+        deploymentconfig: ${APP_NAME}
+  - kind: Route
+    apiVersion: v1
+    metadata:
+      name: release-bot
+      labels:
+         application: release-bot
+      annotations:
+        description: Github webhook route to reach release-bot
+    spec:
+      to:
+        kind: Service
+        name: release-bot
 
 parameters :
   - name : APP_NAME

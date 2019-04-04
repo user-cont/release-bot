@@ -106,19 +106,19 @@ def update_spec(spec_path, new_release):
 
     # make changelog and get version
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
-    changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release['author_name']!s} "
-                 f"<{new_release['author_email']!s}> {new_release['version']}-1\n")
+    changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release.author_name!s} "
+                 f"<{new_release.author_email!s}> {new_release.version}-1\n")
     # add entries
-    if new_release.get('changelog'):
-        for item in new_release['changelog']:
+    if new_release.changelog:
+        for item in new_release.changelog:
             changelog += f"- {item}\n"
     else:
-        changelog += f"- {new_release['version']} release\n"
+        changelog += f"- {new_release.version} release\n"
     # change the version and add changelog in spec file
     with open(spec_path, 'r+') as spec_file:
         spec = spec_file.read()
         # replace version
-        spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + new_release['version'], spec)
+        spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + new_release.version, spec)
         # make release 1
         spec = re.sub(r'(Release:\s*)([0-9]*)(.*)', r'\g<1>1\g<3>', spec)
         # insert changelog
@@ -202,6 +202,7 @@ def insert_in_changelog(changelog, version, log):
 def look_for_version_files(repo_directory, new_version):
     """
     Walks through repository and looks for suspects that may be hiding the __version__ variable
+    For setup.py and setup.cfg it also looks for the version variable
     :param repo_directory: repository path
     :param new_version: version to update to
     :return: list of changed files
@@ -209,9 +210,13 @@ def look_for_version_files(repo_directory, new_version):
     changed = []
     for root, _, files in os.walk(repo_directory):
         for file in files:
-            if file in ('setup.py', '__init__.py', 'version.py'):
+            if file in ('setup.py', 'setup.cfg', '__init__.py', 'version.py'):
                 filename = os.path.join(root, file)
-                success = update_version(filename, new_version)
+                if file in ('setup.py', 'setup.cfg'):
+                    success = update_version(filename, new_version, ("__version__", "version"))
+                else:
+                    success = update_version(filename, new_version, ("__version__"))
+
                 if success:
                     changed.append(filename.replace(repo_directory + '/', '', 1))
     if len(changed) > 1:
@@ -222,11 +227,12 @@ def look_for_version_files(repo_directory, new_version):
     return changed
 
 
-def update_version(file, new_version):
+def update_version(file, new_version, prefix):
     """
     Patches the file with new version
-    :param file: file containing __version__ variable
+    :param file: file containing variable starting with the prefix
     :param new_version: version to update the file with
+    :param prefix: the prefix (or a tuple of prefixes) a variable has to start with to be updated
     :return: True if file was changed, else False
     """
     with open(file, 'r') as input_file:
@@ -235,7 +241,7 @@ def update_version(file, new_version):
 
     changed = False
     for index, line in enumerate(content):
-        if line.startswith('__version__'):
+        if line.startswith(prefix):
             pieces = line.split('=', maxsplit=1)
             if len(pieces) == 2:
                 configuration.logger.info(f"Editing line with new version:\n{line}")

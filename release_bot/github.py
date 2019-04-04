@@ -172,6 +172,9 @@ class Github:
         """Add self.comment to subject_id issue/PR"""
         if not subject_id or not self.comment:
             return
+        if self.conf.dry_run:
+            self.logger.info("I would add a comment to the pull request created.")
+            return None
         comment = '\n'.join(self.comment)
         mutation = (f'mutation {{addComment(input:'
                     f'{{subjectId: "{subject_id}", body: "{comment}"}})' +
@@ -207,7 +210,7 @@ class Github:
                          node {
                            isPrerelease
                            isDraft
-                           name
+                           tagName
                         }
                        }
                      }
@@ -227,7 +230,7 @@ class Github:
             self.logger.debug("Latest github release is a Prerelease/Draft")
             return self.latest_release(cursor=edges[0]['cursor'])
 
-        return release["name"]
+        return release["tagName"]
 
     def walk_through_prs(self, start='', direction='after', which="last", closed=True):
         """
@@ -298,14 +301,14 @@ class Github:
         :return: tuple (released, new_release) - released is bool, new_release contains info about
                  the new release
         """
-        payload = {"tag_name": new_release['version'],
-                   "target_commitish": new_release['commitish'],
-                   "name": new_release['version'],
+        payload = {"tag_name": new_release.version,
+                   "target_commitish": new_release.commitish,
+                   "name": new_release.version,
                    "prerelease": False,
                    "draft": False}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases")
-        self.logger.debug(f"About to release {new_release['version']} on Github")
+        self.logger.debug(f"About to release {new_release.version} on Github")
         response = self.do_request(method="POST", url=url, json_payload=payload, use_github_auth=True)
         if response.status_code != 201:
             msg = f"Failed to create new release on github:\n{response.text}"
@@ -419,11 +422,16 @@ class Github:
         :param new_pr: dict with info about the new release
         :return: True on success, False on fail
         """
-        repo = new_pr['repo']
-        version = new_pr['version']
+        repo = new_pr.repo
+        version = new_pr.version
         branch = f'{version}-release'
         if self.branch_exists(branch):
             self.logger.warning(f'Branch {branch} already exists, aborting creating PR.')
+            return False
+        if self.conf.dry_run:
+            msg = (f"I would make a new PR for release of version "
+                   f"{version} based on the issue.")
+            self.logger.info(msg)
             return False
         try:
             name, email = self.get_user_contact()
@@ -434,19 +442,19 @@ class Github:
             # This makes sure that the new release_pr branch has all the commits
             # from the master branch for the lastest release.
             repo.checkout('master')
-            changelog = repo.get_log_since_last_release(new_pr['previous_version'])
+            changelog = repo.get_log_since_last_release(new_pr.previous_version)
             repo.checkout_new_branch(branch)
-            changed = look_for_version_files(repo.repo_path, new_pr['version'])
+            changed = look_for_version_files(repo.repo_path, new_pr.version)
             if insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',
-                                   new_pr['version'], changelog):
+                                   new_pr.version, changelog):
                 repo.add(['CHANGELOG.md'])
             if changed:
                 repo.add(changed)
             repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
-                new_pr['pr_url'] = self.make_pr(branch, f'{version}', changelog, changed,
-                                                labels=new_pr.get('labels'))
+                new_pr.pr_url = self.make_pr(branch, f'{version}', changelog, changed,
+                                             labels=new_pr.labels)
                 return True
         except GitException as exc:
             raise ReleaseException(exc)
@@ -518,11 +526,15 @@ class Github:
         :param labels: list of str
         :return: True on success, False on fail
         """
+        if self.conf.dry_run:
+            self.logger.info("I would add labels to issue #%s", number)
+            return False
         payload = {'labels': labels}
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/issues/{number}")
         self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
-        response = self.do_request(method='PATCH', url=url, json_payload=payload, use_github_auth=True)
+        response = self.do_request(method='PATCH', url=url,
+                                   json_payload=payload, use_github_auth=True)
         if response.status_code == 200:
             self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
             return True

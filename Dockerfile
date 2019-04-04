@@ -1,5 +1,7 @@
 FROM registry.fedoraproject.org/fedora:29
 
+EXPOSE 8080
+
 ENV STI_SCRIPTS_URL=image:///usr/libexec/s2i \
     STI_SCRIPTS_PATH=/usr/libexec/s2i \
     # The $HOME is not set by default, but some applications needs this variable

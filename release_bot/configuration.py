@@ -40,10 +40,15 @@ class Configuration:
         self.configuration = ''
         self.logger = None
         self.set_logging()
+        self.dry_run = False
         # configuration when bot is deployed as github app
         self.github_app_installation_id = ''
         self.github_app_id = ''
         self.github_app_cert_path = ''
+
+        self.clone_url = ''
+        self.webhook_handler = False
+
         # when you need to have different name for pypi release
         self.pypi_project = ''
 
@@ -115,6 +120,10 @@ class Configuration:
             if item not in file:
                 self.logger.error(f"Item {item!r} is required in configuration!")
                 sys.exit(1)
+        # if user hasn't specified clone_url, use default
+        if 'clone_url' not in file:
+            self.clone_url = (f'https://github.com/{self.repository_owner}'
+                              f'/{self.repository_name}.git')
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
     def load_release_conf(self, conf):
