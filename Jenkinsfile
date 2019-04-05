@@ -24,6 +24,7 @@ node('userspace-containerization'){
         try{
             stage ("Allocate node"){
                 env.CICO_API_KEY = readFile("${env.HOME}/duffy.key").trim()
+                env.GITHUB_TOKEN = readFile("${env.HOME}/github.token").trim()
                 duffy_rtn=sh(
                             script: "cico --debug node get --arch x86_64 -f value -c hostname -c comment",
                             returnStdout: true
@@ -46,7 +47,7 @@ node('userspace-containerization'){
                 test_targets.each { test_target ->
                     tests["$test_target"] = {
                         stage("Test target: $test_target"){
-                            onmyduffynode "docker run -v /root:/usr/src/app:Z -e GITHUB_TOKEN= release-bot-tests make test TEST_TARGET=tests/$test_target"
+                            onmyduffynode "docker run -v /root:/usr/src/app:Z -e GITHUB_TOKEN=${GITHUB_TOKEN} release-bot-tests make test TEST_TARGET=tests/$test_target"
                         }
                     }
                 }
