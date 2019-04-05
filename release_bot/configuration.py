@@ -21,7 +21,6 @@ import sys
 import configparser
 
 from release_bot.version import __version__
-#from release_bot.utils import pypi_project_from_setup_cfg
 
 class Configuration:
     # note that required items need to reference strings as their length is checked
@@ -53,19 +52,17 @@ class Configuration:
         self.pypi_project = ''
 
 
-    def pypi_project_from_setup_cfg():
+    def pypi_project_from_setup_cfg(self):
 
         """
         Getting the name from the metadata section of setup.cfg
         :return the pypi_project name or None
         """
-        try:
-            pypi_config = configparser.ConfigParser()
-            pypi_config.read("setup.cfg")
-            metadata = pypi_config["metadata"]
-            return metadata["name"]
-        except KeyError:
-            return None
+        pypi_config = configparser.ConfigParser()
+        pypi_config.read("setup.cfg")
+        metadata = pypi_config["metadata"]
+        return metadata.get("name",None)
+
 
 
     def set_logging(self,
