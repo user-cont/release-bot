@@ -60,5 +60,5 @@ def test_look_for_version_files(tmp_path):
 
     assert look_for_version_files(str(dir1), "1.2.4") == ["setup.py"]
 
-    assert look_for_version_files(str(dir1), "1.2.5") == ["setup.py",
-                                                          "__init__.py"]
+    assert set(look_for_version_files(str(dir1), "1.2.5")) == {"setup.py",
+                                                          "__init__.py"}
