@@ -16,9 +16,10 @@
 
 import logging
 from pathlib import Path
+import configparser
 import yaml
 import sys
-import configparser
+
 
 from release_bot.version import __version__
 
@@ -58,10 +59,12 @@ class Configuration:
         Getting the name from the metadata section of setup.cfg
         :return the pypi_project name or None
         """
+
         pypi_config = configparser.ConfigParser()
         pypi_config.read("setup.cfg")
         metadata = pypi_config["metadata"]
-        return metadata.get("name",None)
+
+        return metadata.get("name", None)
 
 
 
