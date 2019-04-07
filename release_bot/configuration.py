@@ -52,7 +52,6 @@ class Configuration:
         # when you need to have different name for pypi release
         self.pypi_project = ''
 
-
     def pypi_project_from_setup_cfg(self):
 
         """
@@ -61,11 +60,15 @@ class Configuration:
         """
 
         pypi_config = configparser.ConfigParser()
-        pypi_config.read("setup.cfg")
-        metadata = pypi_config["metadata"]
+        pypi_config = pypi_config.read("setup.cfg")
 
-        return metadata.get("name", None)
-
+        if not pypi_config:
+            return None
+        else:
+            pypi_config = configparser.ConfigParser()
+            pypi_config.read("setup.cfg")
+            metadata = pypi_config["metadata"]
+            return metadata.get("name", None)
 
 
     def set_logging(self,
