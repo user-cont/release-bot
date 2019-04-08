@@ -146,4 +146,4 @@ class TestLoadReleaseConf:
         assert configuration.pypi_project == "release-botos"
 
         release_conf = configuration.load_release_conf(valid_conf)
-        assert configuration.pypi_project == "release-bot"
+        assert configuration.pypi_project == "random_repo"

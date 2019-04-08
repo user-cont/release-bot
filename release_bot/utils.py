@@ -24,7 +24,6 @@ import configparser
 from semantic_version import validate
 
 from release_bot.exceptions import ReleaseException
-from release_bot.configuration import configuration
 
 
 logger = logging.getLogger('release-bot')
@@ -149,9 +148,9 @@ def run_command(work_directory, cmd, error_message, fail=True):
         cwd=work_directory,
         universal_newlines=True)
 
-    configuration.logger.debug(f"{shell.args}\n{shell.stdout}")
+    logger.debug(f"{shell.args}\n{shell.stdout}")
     if shell.returncode != 0:
-        configuration.logger.error(f"{error_message}\n{shell.stderr}")
+        logger.error(f"{error_message}\n{shell.stderr}")
         if fail:
             raise ReleaseException(f"{shell.args!r} failed with {error_message!r}")
         return False
@@ -195,7 +194,7 @@ def insert_in_changelog(changelog, version, log):
             file.write(content + original)
             return True
     except FileNotFoundError as exc:
-        configuration.logger.warning(f"No CHANGELOG.md present in repository\n{exc}")
+        logger.warning(f"No CHANGELOG.md present in repository\n{exc}")
     return False
 
 
@@ -220,9 +219,9 @@ def look_for_version_files(repo_directory, new_version):
                 if success:
                     changed.append(filename.replace(repo_directory + '/', '', 1))
     if len(changed) > 1:
-        configuration.logger.error('Multiple version files found. Aborting version update.')
+        logger.error('Multiple version files found. Aborting version update.')
     elif not changed:
-        configuration.logger.error('No version files found. Aborting version update.')
+        logger.error('No version files found. Aborting version update.')
 
     return changed
 
@@ -244,34 +243,39 @@ def update_version(file, new_version, prefix):
         if line.startswith(prefix):
             pieces = line.split('=', maxsplit=1)
             if len(pieces) == 2:
-                configuration.logger.info(f"Editing line with new version:\n{line}")
+                logger.info(f"Editing line with new version:\n{line}")
                 old_version = (pieces[1].strip())[1:-1]  # strip whitespace and ' or "
                 if validate(old_version):
-                    configuration.logger.info(f"Replacing version {old_version} with {new_version}")
+                    logger.info(f"Replacing version {old_version} with {new_version}")
                     content[index] = f"{pieces[0].strip()} = '{new_version}'"
                     changed = True if content != content_original else False
                     break
                 else:
-                    configuration.logger.warning(f"Failed to validate version, aborting")
+                    logger.warning(f"Failed to validate version, aborting")
                     return False
     if changed:
         with open(file, 'w') as output:
             output.write('\n'.join(content) + '\n')
-        configuration.logger.info('Version replaced.')
+        logger.info('Version replaced.')
     return changed
 
 
-def get_pypi_project_from_setup_cfg():
+def get_pypi_project_from_setup_cfg(path=None):
     """
     Get the name of PyPI project from the metadata section of setup.cfg
+    :param path: str, path to setup.cfg
     :return str or None, PyPI project name
     """
+    path = path or "setup.cfg"
 
     pypi_config = configparser.ConfigParser()
-    pypi_config.read("setup.cfg")
+    pypi_config.read(path)
 
     if len(pypi_config) > 0:
-        metadata = pypi_config["metadata"]
-        return metadata.get("name", None)
+        try:
+            metadata = pypi_config["metadata"]
+            return metadata.get("name", None)
+        except KeyError:
+            return None
 
     return None
