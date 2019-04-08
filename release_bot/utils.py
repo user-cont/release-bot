@@ -259,3 +259,19 @@ def update_version(file, new_version, prefix):
             output.write('\n'.join(content) + '\n')
         configuration.logger.info('Version replaced.')
     return changed
+
+
+def get_pypi_project_from_setup_cfg():
+    """
+    Get the name of PyPI project from the metadata section of setup.cfg
+    :return str or None, PyPI project name
+    """
+
+    pypi_config = configparser.ConfigParser()
+    pypi_config.read("setup.cfg")
+
+    if len(pypi_config) > 0:
+        metadata = pypi_config["metadata"]
+        return metadata.get("name", None)
+
+    return None

@@ -87,6 +87,14 @@ class TestLoadReleaseConf:
         """
         return (Path(__file__).parent / "src/release-conf.yaml").read_text()
 
+    @pytest.fixture
+    def different_pypi_name_conf(self):
+        """
+        Emulates configuration with different pypi project name
+        :return:
+        """
+        return (Path(__file__).parent / "src/different-pypi-name.yaml").read_text()
+
     def test_empty_conf(self, empty_conf):
         # if there are any required items, this test must fail
         if configuration.REQUIRED_ITEMS['release-conf']:
@@ -132,3 +140,10 @@ class TestLoadReleaseConf:
         assert valid_new_release['author_name'] == 'John Smith'
         assert valid_new_release['author_email'] == 'jsmith@example.com'
         assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']
+
+    def test_different_pypi_name(self, valid_conf, different_pypi_name_conf):
+        release_conf = configuration.load_release_conf(different_pypi_name_conf)
+        assert configuration.pypi_project == "release-botos"
+
+        release_conf = configuration.load_release_conf(valid_conf)
+        assert configuration.pypi_project == "release-bot"

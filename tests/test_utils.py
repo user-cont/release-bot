@@ -17,6 +17,7 @@
 from semantic_version import Version
 from release_bot.utils import (process_version_from_title,
                                look_for_version_files)
+from release_bot.utils import get_pypi_project_from_setup_cfg
 
 
 def test_process_version_from_title():
@@ -62,3 +63,7 @@ def test_look_for_version_files(tmp_path):
 
     assert set(look_for_version_files(str(dir1), "1.2.5")) == {"setup.py",
                                                           "__init__.py"}
+
+
+def test_get_pypi_project_name():
+    assert get_pypi_project_from_setup_cfg() == "release-bot"

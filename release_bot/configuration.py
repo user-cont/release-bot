@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,18 +16,17 @@
 
 import logging
 from pathlib import Path
-import configparser
 import yaml
 import sys
 
-
+from release_bot.utils import get_pypi_project_from_setup_cfg
 from release_bot.version import __version__
+
 
 class Configuration:
     # note that required items need to reference strings as their length is checked
     REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
                       "release-conf": []}
-
 
     def __init__(self):
         self.version = __version__
@@ -41,7 +40,7 @@ class Configuration:
         self.logger = None
         self.set_logging()
         self.dry_run = False
-        # when you need to have different name for pypi release
+        # used when PyPI project name != repository name
         self.pypi_project = ''
         # configuration when bot is deployed as github app
         self.github_app_installation_id = ''
@@ -49,26 +48,6 @@ class Configuration:
         self.github_app_cert_path = ''
         self.clone_url = ''
         self.webhook_handler = False
-        # when you need to have different name for pypi release
-        self.pypi_project = ''
-
-    def pypi_project_from_setup_cfg(self):
-
-        """
-        Getting the name from the metadata section of setup.cfg
-        :return the pypi_project name or None
-        """
-
-        pypi_config = configparser.ConfigParser()
-        pypi_config = pypi_config.read("setup.cfg")
-
-        if not pypi_config:
-            return None
-        else:
-            pypi_config = configparser.ConfigParser()
-            pypi_config.read("setup.cfg")
-            metadata = pypi_config["metadata"]
-            return metadata.get("name", None)
 
     def set_logging(self,
                     logger_name="release-bot",
@@ -145,8 +124,8 @@ class Configuration:
         parsed_conf = yaml.safe_load(conf) or {}
         # If pypi option is not specified in release-conf.yaml,
         # it defaults to true.
-        if parsed_conf.get('pypi') is None:
-            parsed_conf['pypi'] = True
+        parsed_conf['pypi'] = parsed_conf.get('pypi') or True
+
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:
             if item not in parsed_conf:
@@ -159,14 +138,14 @@ class Configuration:
             self.logger.warning(msg)
             parsed_conf['trigger_on_issue'] = False
 
-        self.pypi_project = parsed_conf.get('pypi_project')
-        if self.pypi_project is None:
-            self.pypi_project = self.pypi_project_from_setup_cfg()
-            if self.pypi_project is None:
-                msg = "pypi_project is not set, falling back to repository_name"
-                self.logger.warning(msg)
-                self.pypi_project = self.repository_name
+        # Try to get name from release-conf.yaml first, if it fails try to parse setup.cfg
+        self.pypi_project = parsed_conf.get('pypi_project') or get_pypi_project_from_setup_cfg()
 
+        # Set pypi_project to repository name by default
+        if self.pypi_project is None:
+            msg = "pypi_project is not set, falling back to repository_name"
+            self.logger.warning(msg)
+            self.pypi_project = self.repository_name
 
         return parsed_conf
 
