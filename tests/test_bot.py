@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """ Tests parts of bot workflow"""
 import os
+import warnings
 from pathlib import Path
 import pytest
 import yaml
@@ -55,7 +56,11 @@ class TestBot:
         call.
         """
         if self.g_utils.repo:
-            self.g_utils.delete_repo()
+            try:
+                self.g_utils.delete_repo()
+            except Exception as ex:
+                # no need to fail the test, just warn
+                warnings.warn(f"Could not delete repository {self.g_utils.repo}: {ex!r}")
 
     @pytest.fixture()
     def open_issue(self):
@@ -113,7 +118,7 @@ class TestBot:
         if conf.get('pypi') is None:
             conf['pypi'] = True
         for key, value in conf.items():
-        	assert getattr(self.release_bot.new_release, key) == value
+            assert getattr(self.release_bot.new_release, key) == value
 
     def test_find_open_rls_issue(self, open_issue):
         """Tests if bot can find opened release issue"""
