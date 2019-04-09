@@ -13,16 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
-
 from pathlib import Path
-from release_bot.configuration import configuration
+
+import pytest
+from flexmock import flexmock
+
+from release_bot.configuration import configuration, Configuration
 
 
 class TestLoadLocalConf:
     """ This class contains tests for loading the release-bot
     configuration from conf.yaml"""
-
 
     def setup_method(self):
         """ Setup any state tied to the execution of the given method in a
@@ -51,11 +52,12 @@ class TestLoadLocalConf:
         """Return a non-existing configutation file"""
         return ""
 
-    def test_non_existing_conf(self, non_existing_conf):
+    def test_non_existing_conf(self):
         """Test if missing conf.yaml generates an error"""
-        configuration.configuration = non_existing_conf
+        flexmock(Path, is_file=lambda: False)
+        c = Configuration()
         with pytest.raises(SystemExit) as error:
-            configuration.load_configuration()
+            c.load_configuration()
         assert error.type == SystemExit
         assert error.value.code == 1    
 

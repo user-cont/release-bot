@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from pathlib import Path
+
 import pytest
 
 from release_bot.configuration import configuration, Configuration

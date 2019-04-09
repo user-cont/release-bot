@@ -111,6 +111,10 @@ class TestBot:
         """Mocks upload to PyPi"""
         flexmock(self.release_bot.pypi, upload=True)
 
+    @pytest.fixture()
+    def mock_get_latest_version(self):
+        flexmock(self.release_bot.pypi, latest_version=lambda: "0.0.0")
+
     def test_load_release_conf(self):
         """Tests loading release configuration from repository"""
         self.release_bot.load_release_conf()
@@ -151,7 +155,7 @@ class TestBot:
         self.release_bot.make_new_github_release()
         assert self.release_bot.github.latest_release() == "0.0.1"
 
-    def test_pypi_release(self, mock_upload, github_release):
+    def test_pypi_release(self, mock_upload, github_release, mock_get_latest_version):
         """Test PyPi release"""
         self.release_bot.load_release_conf()
         # Testing dry-run mode

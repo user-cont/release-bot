@@ -271,7 +271,7 @@ def get_pypi_project_from_setup_cfg(path=None):
     pypi_config = configparser.ConfigParser()
     pypi_config.read(path)
 
-    if len(pypi_config) > 0:
+    if pypi_config:
         try:
             metadata = pypi_config["metadata"]
             return metadata.get("name", None)
