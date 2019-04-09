@@ -141,8 +141,7 @@ class TestLoadReleaseConf:
         assert valid_new_release['author_email'] == 'jsmith@example.com'
         assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']
 
-    @pytest.mark.parametrize("config_file", (valid_conf, different_pypi_name_conf))
-    def test_pypi_name(self, config_file):
+    def test_different_pypi_name(self, different_pypi_name_conf):
         c = Configuration()
-        c.load_release_conf(config_file)
+        c.load_release_conf(different_pypi_name_conf)
         assert c.pypi_project == "release-botos"
