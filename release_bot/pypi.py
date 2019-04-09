@@ -35,9 +35,10 @@ class PyPi:
         self.logger = configuration.logger
         self.git = git
 
+
     def latest_version(self):
         """Get latest version of the package from PyPi or 0.0.0"""
-        response = requests.get(url=f"{self.PYPI_URL}{self.conf.repository_name}/json")
+        response = requests.get(url=f"{self.PYPI_URL}{self.conf.pypi_project}/json")
         if response.status_code == 200:
             return response.json()['info']['version']
         elif response.status_code == 404:

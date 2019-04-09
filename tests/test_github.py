@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests bot communication with Github"""
 import os
+import warnings
+
 import pytest
 
 from release_bot.git import Git
@@ -52,7 +54,11 @@ class TestGithub:
         call.
         """
         if self.g_utils.repo:
-            self.g_utils.delete_repo()
+            try:
+                self.g_utils.delete_repo()
+            except Exception as ex:
+                # no need to fail the test, just warn
+                warnings.warn(f"Could not delete repository {self.g_utils.repo}: {ex!r}")
         self.g_utils.repo = None
 
     @pytest.fixture()

@@ -19,6 +19,7 @@ from pathlib import Path
 import yaml
 import sys
 
+from release_bot.utils import get_pypi_project_from_setup_cfg
 from release_bot.version import __version__
 
 
@@ -39,6 +40,8 @@ class Configuration:
         self.logger = None
         self.set_logging()
         self.dry_run = False
+        # used when PyPI project name != repository name
+        self.pypi_project = ''
         # configuration when bot is deployed as github app
         self.github_app_installation_id = ''
         self.github_app_id = ''
@@ -121,8 +124,8 @@ class Configuration:
         parsed_conf = yaml.safe_load(conf) or {}
         # If pypi option is not specified in release-conf.yaml,
         # it defaults to true.
-        if parsed_conf.get('pypi') is None:
-            parsed_conf['pypi'] = True
+        parsed_conf.setdefault('pypi', True)
+
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:
             if item not in parsed_conf:
@@ -134,6 +137,15 @@ class Configuration:
             msg = "Can't trigger on issue if 'github_username' is not known, disabling"
             self.logger.warning(msg)
             parsed_conf['trigger_on_issue'] = False
+
+        # HEADS UP: pypi_project is set as self's attribute, not returned in parsed_conf
+        # Try to get name from release-conf.yaml first, if it fails try to parse setup.cfg
+        self.pypi_project = parsed_conf.get('pypi_project') or get_pypi_project_from_setup_cfg()
+        if self.pypi_project is None:
+            msg = "pypi_project is not set, falling back to repository_name"
+            self.logger.warning(msg)
+            # Set pypi_project to repository name by default
+            self.pypi_project = self.repository_name
 
         return parsed_conf
 

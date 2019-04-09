@@ -1,0 +1,10 @@
+changelog:
+  - Example changelog entry
+  - Another changelog entry
+author_name: John Smith
+author_email: jsmith@example.com
+labels:
+  - bot
+  - release-bot
+  - user-cont
+pypi_project: release-botos
