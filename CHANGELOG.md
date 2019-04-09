@@ -1,3 +1,30 @@
+# 0.7.0
+
+**We would like to thank all GSoC applicants for their contribution to this project during the application period!**
+
+# Breaking changes
+
+* **Releasing to Fedora is now deprecated.** We removed Fedora functionality in favor of the new project [packit](https://packit.dev/).
+
+# New features
+
+* Dry-run mode! Now you can try release process without making actual changes. Thanks to @Aniket-Pradhan.
+* You can now use new issue titles, when you are making new release: 
+  * `new major release`
+  * `new minor release`
+  * `new patch release` , Thanks to @shresthagrawal.
+* Release bot can now handle Github webhooks. Thanks to @marusinm. 
+* You can now specify name of your PyPI project in configuration, in case it is different than repo name. Thanks to @Aniket-Pradhan.
+* Releasing to PyPI is now *optional*. Thanks to @Elias999.
+* You can explicitly specify `clone_url` in Release bot configuration file. Thanks to @Z0Marlin. 
+* Support also for `version` variable (besides the `__version__`). Thanks to @Toaster192.
+
+# Fixes and docs
+* Tutorial on how to make your first release with release-bot locally. Thanks to @marusinm.
+* Contribution guide is now more newcomers-friendly. Thanks to @Z0Marlin.
+* Support for installing release-bot from arch user repository. Thanks to @Aniket-Pradhan.
+* Release-bot now checks for tag instead of release name, when checking latest release. Thanks to @shresthagrawal.
+
 # 0.6.1
 
 * Bot ignores 'python_versions' in release-conf and builds an sdist and a py3 wheel.
