@@ -48,23 +48,23 @@ def test_process_version_from_title():
     assert match is False
 
 
-def test_look_for_version_files(tmp_path):
+def test_look_for_version_files(tmpdir):
     """Test finding the correct files with all possible version variables"""
-    dir1 = tmp_path / "subdir"
+    dir1 = tmpdir / "subdir"
     dir1.mkdir()
 
     file1 = dir1 / "__init__.py"
-    file1.write_text('__version__="1.2.3"')
+    file1.write_text('__version__="1.2.3"', "utf-8")
 
     assert look_for_version_files(str(dir1), "1.2.4") == ["__init__.py"]
 
     file2 = dir1 / "setup.py"
-    file2.write_text('version="1.2.3"')
+    file2.write_text('version="1.2.3"', "utf-8")
 
     assert look_for_version_files(str(dir1), "1.2.4") == ["setup.py"]
 
-    assert set(look_for_version_files(str(dir1), "1.2.5")) == {"setup.py",
-                                                          "__init__.py"}
+    assert set(look_for_version_files(str(dir1), "1.2.5")) == \
+        {"setup.py", "__init__.py"}
 
 
 def test_get_pypi_project_name():
