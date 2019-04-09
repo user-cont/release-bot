@@ -1,58 +1,29 @@
 # 0.7.0
 
-* fix last two test failures
-* address codacy warning
-* Unparametrize test_different_pypi_name() again
-* dont bail when you cannot delete the temp gh repo
-* parametrize test_different_pypi_name
-* fix test_look_for_version_files
-* use setdefault() with pypi project name
-* Fix cyclic dependency with logger
-* add test case for custom PyPI name
-* Initial work on: PyPI name can be different than repository name
-* [test_utils.py] fix test_look_for_version_files()
-* Add support for using the version variable
-* Updated return values to be more consistent.
-* Add dry-run tests.
-* Added dry-run argument.
-* Update tests.
-* set default value for docker image
-* In openshift-template-dev add container repository into variable.
-* Update tests.
-* implementation of github webhooks handling
-* Fix Codacy issues.
-* Removed the extra comments.
-* Changed function definitions to include individual variables.
-* Updated contributing guidelines
-* Removed previously left over code
-* Updated class names.
-* Added New_PR class. Updated it's references
-* Added New_Release class. Updated it's references.
-* Update readme.
-* Remove `GITHUB_USER` env variable
-* Added test for loading conf.yaml
-* Moved checking of clone_url to `configuration.py`
-* Modify unit test for git to check for tag name
-* Return tag_name instead of release_name
-* Update README
-* Add new configuration option to specify clone url.
-* delete s2i check for pypi configuration
-* Remove fedora functionality from release-bot.
-* Remove trailing whitespace
-* Add the comments for checkout master branch before release_pr
-* Modify make_release_pr() to check for master before branching and return to master after
-* Modify make_new_pypi_release() to checkout master branch in the end
-* Added condition to check if user wants to release for PyPi or not.
-* remove check for github_api_status
-* Remove unwanted library Version
-* Add tests for version_from_title
-* Remove trailing whitespace
-* Update README.md and Add function documentation
-* Add different version formats user-cont#12
-* Removed the extra white-space.
-* Fixed a bug introduced in #162
-* Update guide to use trigger_on_issue
-* Document how to try release-bot locally
+**We would like to thank all GSoC applicants for their contribution to this project during the application period!**
+
+# Breaking changes
+
+* **Releasing to Fedora is now deprecated.** We removed Fedora functionality in favor of the new project [packit](https://packit.dev/).
+
+# New features
+
+* Dry-run mode! Now you can try release process without making actual changes. Thanks to @Aniket-Pradhan.
+* You can now use new issue titles, when you are making new release: 
+  * `new major release`
+  * `new minor release`
+  * `new patch release` , Thanks to @shresthagrawal.
+* Release bot can now handle Github webhooks. Thanks to @marusinm. 
+* You can now specify name of your PyPI project in configuration, in case it is different than repo name. Thanks to @Aniket-Pradhan.
+* Releasing to PyPI is now *optional*. Thanks to @Elias999.
+* You can explicitly specify `clone_url` in Release bot configuration file. Thanks to @Z0Marlin. 
+* Support also for `version` variable (besides the `__version__`). Thanks to @Toaster192.
+
+# Fixes and docs
+* Tutorial on how to make your first release with release-bot locally. Thanks to @marusinm.
+* Contribution guide is now more newcomers-friendly. Thanks to @Z0Marlin.
+* Support for installing release-bot from arch user repository. Thanks to @Aniket-Pradhan.
+* Release-bot now checks for tag instead of release name, when checking latest release. Thanks to @shresthagrawal.
 
 # 0.6.1
 
