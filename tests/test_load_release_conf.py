@@ -16,7 +16,7 @@
 from pathlib import Path
 import pytest
 
-from release_bot.configuration import configuration
+from release_bot.configuration import configuration, Configuration
 
 
 class TestLoadReleaseConf:
@@ -141,9 +141,8 @@ class TestLoadReleaseConf:
         assert valid_new_release['author_email'] == 'jsmith@example.com'
         assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']
 
-    def test_different_pypi_name(self, valid_conf, different_pypi_name_conf):
-        release_conf = configuration.load_release_conf(different_pypi_name_conf)
-        assert configuration.pypi_project == "release-botos"
-
-        release_conf = configuration.load_release_conf(valid_conf)
-        assert configuration.pypi_project == "random_repo"
+    @pytest.mark.parametrize("config_file", (valid_conf, different_pypi_name_conf))
+    def test_pypi_name(self, config_file):
+        c = Configuration()
+        c.load_release_conf(config_file)
+        assert c.pypi_project == "release-botos"
