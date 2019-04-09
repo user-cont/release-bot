@@ -124,7 +124,7 @@ class Configuration:
         parsed_conf = yaml.safe_load(conf) or {}
         # If pypi option is not specified in release-conf.yaml,
         # it defaults to true.
-        parsed_conf['pypi'] = parsed_conf.get('pypi') or True
+        parsed_conf.setdefault('pypi', True)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:
