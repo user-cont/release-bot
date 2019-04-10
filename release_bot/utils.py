@@ -53,7 +53,7 @@ def process_version_from_title(title, latest_version):
     """
     match = False
     version = ''
-    re_match = re.match(r'(.+) release', title)
+    re_match = re.match(r'(.+) release$', title)
     if re_match:
         keyword = re_match[1].strip()
         if validate(keyword):
@@ -69,7 +69,7 @@ def process_version_from_title(title, latest_version):
             match = True
             version = str(latest_version.next_patch())
         else:
-            logger.warning(f"{version!r} is not a valid version")
+            logger.info(f"No valid version in {title!r}")
     return match, version
 
 
