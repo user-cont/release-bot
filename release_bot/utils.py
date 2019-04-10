@@ -69,7 +69,7 @@ def process_version_from_title(title, latest_version):
             match = True
             version = str(latest_version.next_patch())
         else:
-            logger.info(f"{title!r} is not a valid version")
+            logger.info(f"No valid version in {title!r}")
     return match, version
 
 
