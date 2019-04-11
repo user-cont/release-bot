@@ -140,12 +140,13 @@ class Configuration:
 
         # HEADS UP: pypi_project is set as self's attribute, not returned in parsed_conf
         # Try to get name from release-conf.yaml first, if it fails try to parse setup.cfg
-        self.pypi_project = parsed_conf.get('pypi_project') or get_pypi_project_from_setup_cfg()
-        if self.pypi_project is None:
-            msg = "pypi_project is not set, falling back to repository_name"
-            self.logger.warning(msg)
-            # Set pypi_project to repository name by default
-            self.pypi_project = self.repository_name
+        if parsed_conf.get('pypi'):
+            self.pypi_project = parsed_conf.get('pypi_project') or get_pypi_project_from_setup_cfg()
+            if self.pypi_project is None:
+                msg = "pypi_project is not set, falling back to repository_name"
+                self.logger.warning(msg)
+                # Set pypi_project to repository name by default
+                self.pypi_project = self.repository_name
 
         return parsed_conf
 
