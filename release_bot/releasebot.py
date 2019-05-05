@@ -315,8 +315,8 @@ def main():
     else:
         CLI.get_configuration(args)
         configuration.load_configuration()
-    	rb = ReleaseBot(configuration)
-    	if configuration.webhook_handler:
+        rb = ReleaseBot(configuration)
+        if configuration.webhook_handler:
             rb.create_flask_instance()
         else:
             rb.run()
