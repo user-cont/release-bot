@@ -310,7 +310,7 @@ class ReleaseBot:
 def main():
     args = CLI.parse_arguments()
     if args.subcommand == "run_init":
-        ingitit_repo = Init()
+        init_repo = Init()
         init_repo.run(args.silent)
     else:
         CLI.get_configuration(args)
