@@ -13,18 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import shlex
 import datetime
+import locale
 import logging
 import os
 import re
+import shlex
 import subprocess
-import locale
-import configparser
+
 from semantic_version import validate
 
 from release_bot.exceptions import ReleaseException
-
 
 logger = logging.getLogger('release-bot')
 
@@ -258,24 +257,3 @@ def update_version(file, new_version, prefix):
             output.write('\n'.join(content) + '\n')
         logger.info('Version replaced.')
     return changed
-
-
-def get_pypi_project_from_setup_cfg(path=None):
-    """
-    Get the name of PyPI project from the metadata section of setup.cfg
-    :param path: str, path to setup.cfg
-    :return str or None, PyPI project name
-    """
-    path = path or "setup.cfg"
-
-    pypi_config = configparser.ConfigParser()
-    pypi_config.read(path)
-
-    if pypi_config:
-        try:
-            metadata = pypi_config["metadata"]
-            return metadata.get("name", None)
-        except KeyError:
-            return None
-
-    return None

@@ -541,24 +541,24 @@ class Github:
         self.logger.error(f'Failed to put labels on issue #{number}')
         return False
 
-    def get_configuration(self):
+    def get_file(self, name):
         """
-        Fetches release-conf.yaml via Github API
-        :return: release-conf.yaml contents or False in case of error
+        Fetches a specific file via Github API
+        :return: file content or None in case of error
         """
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/contents/release-conf.yaml")
-        self.logger.debug(f'Fetching release-conf.yaml')
+               f"{self.conf.repository_name}/contents/{name}")
+        self.logger.debug(f'Fetching {name}')
         response = self.do_request(url=url, method='GET')
         if response.status_code != 200:
-            self.logger.error(f'Failed to fetch release-conf.yaml')
-            return False
+            self.logger.error(f'Failed to fetch {name}')
+            return None
 
         parsed = response.json()
         download_url = parsed['download_url']
         response = requests.get(url=download_url)
         if response.status_code != 200:
-            self.logger.error(f'Failed to fetch release-conf.yaml')
-            return False
+            self.logger.error(f'Failed to fetch {name}')
+            return None
 
         return response.text
