@@ -18,21 +18,21 @@ This module provides functionality for automation of releasing projects
 into various downstream services
 """
 import logging
-import re
 import time
-from flask import Flask
-from semantic_version import Version, validate
 from sys import exit
+
+from flask import Flask
+from semantic_version import Version
 
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 from release_bot.git import Git
 from release_bot.github import Github
+from release_bot.new_pr import NewPR
+from release_bot.new_release import NewRelease
 from release_bot.pypi import PyPi
 from release_bot.utils import process_version_from_title
-from release_bot.new_release import NewRelease
-from release_bot.new_pr import NewPR
 from release_bot.webhooks import GithubWebhooksHandler
 
 
@@ -71,8 +71,11 @@ class ReleaseBot:
         :return:
         """
         # load release configuration from release-conf.yaml in repository
-        conf = self.github.get_configuration()
+        conf = self.github.get_file("release-conf.yaml")
         release_conf = self.conf.load_release_conf(conf)
+        setup_cfg = self.github.get_file("setup.cfg")
+        self.conf.set_pypi_project(release_conf, setup_cfg)
+
         self.new_release.update(
             changelog=release_conf.get('changelog'),
             author_name=release_conf.get('author_name'),
@@ -252,7 +255,9 @@ class ReleaseBot:
 
         latest_pypi = self.pypi.latest_version()
         if Version.coerce(latest_pypi) >= Version.coerce(self.new_release.version):
-            self.logger.info(f"{self.new_release.version} has already been released on PyPi")
+            msg = f"{self.conf.pypi_project}-{self.new_release.version} " \
+                f"or higher version has already been released on PyPi"
+            self.logger.info(msg)
             return False
         self.git.fetch_tags()
         self.git.checkout(self.new_release.version)

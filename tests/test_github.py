@@ -76,9 +76,9 @@ class TestGithub:
 
         return number, response['data']['repository']['issue']['id']
 
-    def test_get_configuration(self):
+    def test_get_file(self):
         """Tests fetching release-conf from Github"""
-        assert self.github.get_configuration() == RELEASE_CONF
+        assert self.github.get_file("release-conf.yaml") == RELEASE_CONF
 
     def test_close_issue(self, open_issue):
         """Tests closing issue"""

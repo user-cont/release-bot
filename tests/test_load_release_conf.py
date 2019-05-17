@@ -142,7 +142,13 @@ class TestLoadReleaseConf:
         assert valid_new_release['author_email'] == 'jsmith@example.com'
         assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']
 
-    def test_different_pypi_name(self, different_pypi_name_conf):
-        c = Configuration()
-        c.load_release_conf(different_pypi_name_conf)
-        assert c.pypi_project == "release-botos"
+    def test_set_pypi_name_from_release_conf(self, different_pypi_name_conf):
+        parsed_conf = configuration.load_release_conf(different_pypi_name_conf)
+        configuration.set_pypi_project(parsed_conf)
+        assert configuration.pypi_project == "release-botos"
+
+    def test_set_pypi_name_from_setup_cfg(self, valid_conf):
+        parsed_conf = configuration.load_release_conf(valid_conf)
+        setup_cfg = Path(__file__).parent.joinpath("src/test-setup.cfg").read_text()
+        configuration.set_pypi_project(parsed_conf, setup_cfg)
+        assert configuration.pypi_project == "release-botos"

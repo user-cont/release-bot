@@ -14,12 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import configparser
 import logging
-from pathlib import Path
-import yaml
 import sys
+from pathlib import Path
 
-from release_bot.utils import get_pypi_project_from_setup_cfg
+import yaml
+
 from release_bot.version import __version__
 
 
@@ -138,17 +139,43 @@ class Configuration:
             self.logger.warning(msg)
             parsed_conf['trigger_on_issue'] = False
 
-        # HEADS UP: pypi_project is set as self's attribute, not returned in parsed_conf
-        # Try to get name from release-conf.yaml first, if it fails try to parse setup.cfg
+        return parsed_conf
+
+    def set_pypi_project(self, parsed_conf, setup_cfg=None):
+        """
+        Set pypi_project attribute either from release-conf.yaml or from setup.cfg.
+        Fall back to repository_name if neither file specifies it.
+        :param parsed_conf: parsed release-conf.yaml content, load_release_conf() result
+        :param setup_cfg: setup.cfg content
+        """
         if parsed_conf.get('pypi'):
-            self.pypi_project = parsed_conf.get('pypi_project') or get_pypi_project_from_setup_cfg()
+            self.pypi_project = parsed_conf.get('pypi_project') or \
+                                self.get_pypi_project_from_setup_cfg(setup_cfg)
             if self.pypi_project is None:
                 msg = "pypi_project is not set, falling back to repository_name"
                 self.logger.warning(msg)
-                # Set pypi_project to repository name by default
                 self.pypi_project = self.repository_name
 
-        return parsed_conf
+    @staticmethod
+    def get_pypi_project_from_setup_cfg(setup_cfg):
+        """
+        Get the name of PyPI project from the metadata section of setup.cfg
+        :param setup_cfg: str, setup.cfg content
+        :return str or None, PyPI project name
+        """
+        if not setup_cfg:
+            return None
+
+        pypi_config = configparser.ConfigParser()
+        pypi_config.read_string(setup_cfg)
+        if pypi_config:
+            try:
+                metadata = pypi_config["metadata"]
+                return metadata.get("name", None)
+            except KeyError:
+                return None
+
+        return None
 
 
 configuration = Configuration()
