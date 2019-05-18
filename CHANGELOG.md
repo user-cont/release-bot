@@ -1,3 +1,7 @@
+# 0.7.1
+
+* Few bug fixes and base image update.
+
 # 0.7.0
 
 **We would like to thank all GSoC applicants for their contribution to this project during the application period!**
