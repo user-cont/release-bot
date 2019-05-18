@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:29
+FROM registry.fedoraproject.org/fedora:30
 
 EXPOSE 8080
 
