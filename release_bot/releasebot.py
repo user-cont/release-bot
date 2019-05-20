@@ -45,8 +45,6 @@ class ReleaseBot:
         self.github = Github(configuration, self.git)
         self.pypi = PyPi(configuration, self.git)
         self.logger = configuration.logger
-        # FIXME: it's cumbersome to work with these dicts - it's unclear how the content changes;
-        #        get rid of them and replace them with individual variables
         self.new_release = NewRelease()
         self.new_pr = NewPR()
 
@@ -202,8 +200,7 @@ class ReleaseBot:
             self.new_pr.repo = self.git
             if not self.new_pr.repo:
                 raise ReleaseException("Couldn't clone repository!")
-            gitchangelog = self.new_release.get('gitchangelog')
-            if self.github.make_release_pr(self.new_pr, gitchangelog):
+            if self.github.make_release_pr(self.new_pr, self.conf.gitchangelog):
                 pr_handler(success=True)
                 return True
         except ReleaseException:

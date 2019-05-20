@@ -140,7 +140,7 @@ Here are the `conf.yaml` configuration options:
 | `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
 | `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
 | `clone_url`                  | URL used to clone your Github repository. By default, `https` variant is used. | No |
-| `use_gitchangelog`           | Whether to use gitchanelog to generate change logs. False by default | No |
+| `gitchangelog`               | Whether to use gitchangelog to generate change logs. False by default. | No |
 
 Sample config named [conf.yaml](conf.yaml) can be found in this repository.
 

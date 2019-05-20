@@ -50,6 +50,7 @@ class Configuration:
         self.github_app_cert_path = ''
         self.clone_url = ''
         self.webhook_handler = False
+        self.gitchangelog = False
 
     def set_logging(self,
                     logger_name="release-bot",
@@ -127,7 +128,6 @@ class Configuration:
         # If pypi option is not specified in release-conf.yaml,
         # it defaults to true.
         parsed_conf.setdefault('pypi', True)
-        parsed_conf.setdefault('gitchangelog', False)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:

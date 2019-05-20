@@ -420,6 +420,7 @@ class Github:
         Makes the steps to prepare new branch for the release PR,
         like generating changelog and updating version
         :param new_pr: dict with info about the new release
+        :param gitchangelog: bool, use gitchangelog
         :return: True on success, False on fail
         """
         repo = new_pr.repo
@@ -440,9 +441,9 @@ class Github:
             # The bot first checks out the master branch and from master
             # it creates the new branch, checks out to it and then perform the release
             # This makes sure that the new release_pr branch has all the commits
-            # from the master branch for the lastest release.
+            # from the master branch for the latest release.
             repo.checkout('master')
-            changelog = repo.get_log_since_last_release(new_pr['previous_version'], gitchangelog)
+            changelog = repo.get_log_since_last_release(new_pr.previous_version, gitchangelog)
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr.version)
             if insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',
