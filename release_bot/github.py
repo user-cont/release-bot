@@ -419,7 +419,7 @@ class Github:
         """
         Makes the steps to prepare new branch for the release PR,
         like generating changelog and updating version
-        :param new_pr: dict with info about the new release
+        :param new_pr: object of class new_pr with info about the new release
         :param gitchangelog: bool, use gitchangelog
         :return: True on success, False on fail
         """
