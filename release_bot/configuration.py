@@ -39,6 +39,7 @@ class Configuration:
         self.debug = False
         self.configuration = ''
         self.logger = None
+        self.init = False
         self.set_logging()
         self.dry_run = False
         # used when PyPI project name != repository name
@@ -126,6 +127,7 @@ class Configuration:
         # If pypi option is not specified in release-conf.yaml,
         # it defaults to true.
         parsed_conf.setdefault('pypi', True)
+        parsed_conf.setdefault('gitchangelog', False)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:

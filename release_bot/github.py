@@ -415,7 +415,7 @@ class Github:
                    f"PR on github:\n{response.text}")
             raise ReleaseException(msg)
 
-    def make_release_pr(self, new_pr):
+    def make_release_pr(self, new_pr, gitchangelog):
         """
         Makes the steps to prepare new branch for the release PR,
         like generating changelog and updating version
@@ -442,7 +442,7 @@ class Github:
             # This makes sure that the new release_pr branch has all the commits
             # from the master branch for the lastest release.
             repo.checkout('master')
-            changelog = repo.get_log_since_last_release(new_pr.previous_version)
+            changelog = repo.get_log_since_last_release(new_pr['previous_version'], gitchangelog)
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr.version)
             if insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',

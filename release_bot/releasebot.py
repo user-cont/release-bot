@@ -34,6 +34,7 @@ from release_bot.new_release import NewRelease
 from release_bot.pypi import PyPi
 from release_bot.utils import process_version_from_title
 from release_bot.webhooks import GithubWebhooksHandler
+from release_bot.init_repo import Init
 
 
 class ReleaseBot:
@@ -201,7 +202,8 @@ class ReleaseBot:
             self.new_pr.repo = self.git
             if not self.new_pr.repo:
                 raise ReleaseException("Couldn't clone repository!")
-            if self.github.make_release_pr(self.new_pr):
+            gitchangelog = self.new_release.get('gitchangelog')
+            if self.github.make_release_pr(self.new_pr, gitchangelog):
                 pr_handler(success=True)
                 return True
         except ReleaseException:
@@ -311,14 +313,18 @@ class ReleaseBot:
 
 
 def main():
-    CLI.parse_arguments()
-    configuration.load_configuration()
-
-    rb = ReleaseBot(configuration)
-    if configuration.webhook_handler:
-        rb.create_flask_instance()
+    args = CLI.parse_arguments()
+    if args.subcommand == "run_init":
+        init_repo = Init()
+        init_repo.run(args.silent)
     else:
-        rb.run()
+        CLI.get_configuration(args)
+        configuration.load_configuration()
+        rb = ReleaseBot(configuration)
+        if configuration.webhook_handler:
+            rb.create_flask_instance()
+        else:
+            rb.run()
 
 
 if __name__ == '__main__':

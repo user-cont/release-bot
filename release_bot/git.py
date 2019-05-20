@@ -47,13 +47,17 @@ class Git:
             raise GitException(f"Can't clone repository {url}")
         return temp_directory
 
-    def get_log_since_last_release(self, latest_version):
+    def get_log_since_last_release(self, latest_version, gitchangelog):
         """
-        Utilizes git log to get log since last release, excluding merge commits
+        Utilizes [GitChangeLog](https://github.com/vaab/gitchangelog/) to get
+        log since latest release according to the template provided.
         :param latest_version: previous version
         :return: changelog or placeholder
         """
-        cmd = f'git log {latest_version}... --no-merges --format=\'* %s\''
+        if gitchangelog:
+            cmd = f'gitchangelog ^{latest_version} HEAD'
+        else:
+            cmd = f'git log {latest_version}... --no-merges --format=\'* %s\''
         success, changelog = run_command_get_output(self.repo_path, cmd)
         return changelog if success and changelog else 'No changelog provided'
 
