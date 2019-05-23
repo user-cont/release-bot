@@ -43,13 +43,18 @@ class TestLoadLocalConf:
         return Path(__file__).parent / "src/conf_with_clone_url.yaml"
 
     @pytest.fixture
+    def conf_with_gitchangelog(self):
+        """Returns a valid configuration with clone_url option"""
+        return Path(__file__).parent / "src/conf_with_gitchangelog.yaml"
+
+    @pytest.fixture
     def sample_conf(self):
         """Return a sample configuration file"""
         return Path(__file__).parent / "src/sample_conf.yaml"
 
     @pytest.fixture
     def non_existing_conf(self):
-        """Return a non-existing configutation file"""
+        """Return a non-existing configuration file"""
         return ""
 
     def test_non_existing_conf(self):
@@ -74,7 +79,7 @@ class TestLoadLocalConf:
         assert configuration.clone_url == 'https://github.com/repo_owner/random_repo.git'
 
     def test_missing_required_items(self, sample_conf):
-        """Tests if missing requied items generate an error"""
+        """Tests if missing required items generate an error"""
         old_value = configuration.REQUIRED_ITEMS['conf']
         configuration.REQUIRED_ITEMS['conf'] = ['test-key']
         configuration.configuration = sample_conf
@@ -83,3 +88,8 @@ class TestLoadLocalConf:
         configuration.REQUIRED_ITEMS['conf'] = old_value
         assert error.type == SystemExit
         assert error.value.code == 1
+
+    def test_conf_with_gitchangelog(self, conf_with_gitchangelog):
+        configuration.configuration = conf_with_gitchangelog
+        configuration.load_configuration()
+        assert configuration.gitchangelog

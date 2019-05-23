@@ -57,10 +57,10 @@ class Init:
             'github_token': '<your_github_token>',
             'refresh_interval': '180',
             'github_username': '<your_github_username>',
+            'gitchangelog': False,
         }
         self.release_conf = {
             'trigger_on_issue': True,
-            'gitchangelog': True,
             'author_email': '<your_email>',
             'author_name': '<your_name>',
             'labels': []
@@ -72,7 +72,7 @@ class Init:
         """
         self.create_conf(silent)
         self.append_to_gitignore()
-        if self.release_conf['gitchangelog']:
+        if self.conf['gitchangelog']:
             self.create_template()
             self.create_gitchangelog_rc()
         if silent:
@@ -86,7 +86,6 @@ Please commit all of the changes made to the repo and
 from shell run 'release-bot -c conf.yaml'"""
 
         print(conclude)
-
 
     def create_conf(self, silent):
         """
@@ -120,9 +119,9 @@ from shell run 'release-bot -c conf.yaml'"""
             gitchangelog = input(
                 'Would you like to use gitchangelog to generate next-gen changelogs? (Y/n):'
                 )
-            self.release_conf['gitchangelog'] = bool(
+            self.conf['gitchangelog'] = bool(
                 gitchangelog.lower() == 'y' or gitchangelog == ''
-                )
+            )
 
         self.create_yaml(self.conf, 'conf.yaml')
         self.create_yaml(self.release_conf, 'release-conf.yaml')

@@ -52,6 +52,7 @@ class Git:
         Utilizes [GitChangeLog](https://github.com/vaab/gitchangelog/) to get
         log since latest release according to the template provided.
         :param latest_version: previous version
+        :param gitchangelog: bool, use gitchangelog
         :return: changelog or placeholder
         """
         if gitchangelog:
