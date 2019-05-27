@@ -17,6 +17,7 @@
 This module initializes a repo to be used by ReleaseBot
 """
 import os
+import re
 import yaml
 
 from release_bot.utils import run_command_get_output
@@ -94,7 +95,14 @@ from shell run 'release-bot -c conf.yaml'"""
         cwd = os.getcwd()
         self.release_conf['author_email'] = run_command_get_output(cwd, f'git config user.email')[1].strip()
         self.release_conf['author_name'] = run_command_get_output(cwd, f'git config user.name')[1].strip()
-
+        if self.release_conf['author_email'] == "":
+            print("WARNING: your e-mail ID from git config is not set."+
+                  "\nPlease set it using 'git config user.email \"email@example.com\"'")
+        elif not re.match(r"[^@]+@[^@]+\.[^@]+", self.release_conf["author_email"]):
+            print("WARNING: your e-mail ID from git config is not a valid e-mail address.")
+        if self.release_conf['author_name'] == "":
+            print("WARNING: your username from git config is not set." +
+                  "\nPlease set it using 'git config user.name \"John Doe\"'")
         if not silent:
             self.conf['repository_name'] = input('Please enter the repository name:')
             self.conf['repository_owner'] = input('Please enter the repository owner:')
