@@ -67,6 +67,15 @@ class Init:
             'labels': []
         }
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if exc_type is KeyboardInterrupt:
+            print("\nOperation aborted by user.")
+            return True
+        return exc_type is None
+
     def run(self, silent):
         """
         Performs all the init tasks
