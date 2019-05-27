@@ -101,10 +101,12 @@ from shell run 'release-bot -c conf.yaml'"""
             print("""For details on how to get github token checkout
     'https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/'""")
             self.conf['github_token'] = input('Please enter your valid github token:')
-            refresh_interval = input("""In how many seconds would you like the
+            refresh_interval = "dummy"
+            while not (refresh_interval.isdigit() or refresh_interval == ""):
+                refresh_interval = input("""In how many seconds would you like the
     bot to check for updates (Default 180):""")
             if refresh_interval:
-                self.conf['refresh_interval'] = int(refresh_interval)
+                self.conf['refresh_interval'] = refresh_interval
             else:
                 self.conf['refresh_interval'] = 180
             is_owner_user = input('Are you the owner of the repo? (Y/n):')
