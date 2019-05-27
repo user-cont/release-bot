@@ -92,8 +92,8 @@ from shell run 'release-bot -c conf.yaml'"""
         Create the release-conf.yaml and conf.yaml
         """
         cwd = os.getcwd()
-        self.release_conf['author_email'] = run_command_get_output(cwd, f'git config user.email')[1]
-        self.release_conf['author_name'] = run_command_get_output(cwd, f'git config user.name')[1]
+        self.release_conf['author_email'] = run_command_get_output(cwd, f'git config user.email')[1].strip()
+        self.release_conf['author_name'] = run_command_get_output(cwd, f'git config user.name')[1].strip()
 
         if not silent:
             self.conf['repository_name'] = input('Please enter the repository name:')
