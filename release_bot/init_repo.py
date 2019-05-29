@@ -123,7 +123,7 @@ from shell run 'release-bot -c conf.yaml'"""
                 refresh_interval = input("""In how many seconds would you like the
     bot to check for updates (Default 180):""")
             if refresh_interval:
-                self.conf['refresh_interval'] = refresh_interval
+                self.conf['refresh_interval'] = int(refresh_interval)
             else:
                 self.conf['refresh_interval'] = 180
             is_owner_user = input('Are you the owner of the repo? (Y/n):')
