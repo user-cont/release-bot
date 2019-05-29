@@ -313,7 +313,8 @@ def main():
     args = CLI.parse_arguments()
     if args.subcommand == "run_init":
         init_repo = Init()
-        init_repo.run(args.silent)
+        with Init() as init_repo:
+            init_repo.run(args.silent)
     else:
         CLI.get_configuration(args)
         configuration.load_configuration()

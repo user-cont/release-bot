@@ -17,6 +17,7 @@
 This module initializes a repo to be used by ReleaseBot
 """
 import os
+import re
 import yaml
 
 from release_bot.utils import run_command_get_output
@@ -66,6 +67,15 @@ class Init:
             'labels': []
         }
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if exc_type is KeyboardInterrupt:
+            print("\nOperation aborted by user.")
+            return True
+        return exc_type is None
+
     def run(self, silent):
         """
         Performs all the init tasks
@@ -94,14 +104,23 @@ from shell run 'release-bot -c conf.yaml'"""
         cwd = os.getcwd()
         self.release_conf['author_email'] = run_command_get_output(cwd, f'git config user.email')[1].strip()
         self.release_conf['author_name'] = run_command_get_output(cwd, f'git config user.name')[1].strip()
-
+        if self.release_conf['author_email'] == "":
+            print("WARNING: your e-mail ID from git config is not set."+
+                  "\nPlease set it using 'git config user.email \"email@example.com\"'")
+        elif not re.match(r"[^@]+@[^@]+\.[^@]+", self.release_conf["author_email"]):
+            print("WARNING: your e-mail ID from git config is not a valid e-mail address.")
+        if self.release_conf['author_name'] == "":
+            print("WARNING: your username from git config is not set." +
+                  "\nPlease set it using 'git config user.name \"John Doe\"'")
         if not silent:
             self.conf['repository_name'] = input('Please enter the repository name:')
             self.conf['repository_owner'] = input('Please enter the repository owner:')
             print("""For details on how to get github token checkout
     'https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/'""")
             self.conf['github_token'] = input('Please enter your valid github token:')
-            refresh_interval = input("""In how many seconds would you like the
+            refresh_interval = "dummy"
+            while not (refresh_interval.isdigit() or refresh_interval == ""):
+                refresh_interval = input("""In how many seconds would you like the
     bot to check for updates (Default 180):""")
             if refresh_interval:
                 self.conf['refresh_interval'] = int(refresh_interval)
