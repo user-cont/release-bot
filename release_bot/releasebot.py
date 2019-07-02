@@ -47,6 +47,7 @@ class ReleaseBot:
         self.logger = configuration.logger
         self.new_release = NewRelease()
         self.new_pr = NewPR()
+        self.project = configuration.project
 
     def cleanup(self):
         self.new_release = NewRelease()
@@ -155,6 +156,7 @@ class ReleaseBot:
                         version=version,
                         commitish=merge_commit['oid'],
                         pr_id=edge['node']['id'],
+                        pr_number=edge['node']['number'],
                         author_email=merge_commit['author']['email'],
                         author_name=merge_commit['author']['name']
                     )
@@ -180,7 +182,7 @@ class ReleaseBot:
                 msg += f"\n Here's a [link to the PR]({self.new_pr.pr_url})"
             comment_backup = self.github.comment.copy()
             self.github.comment = [msg]
-            self.github.add_comment(self.new_pr.issue_id)
+            self.project.issue_comment(self.new_pr.issue_number, msg)
             self.github.comment = comment_backup
             if success:
                 self.github.close_issue(self.new_pr.issue_number)
@@ -302,7 +304,10 @@ class ReleaseBot:
                 except ReleaseException as exc:
                     self.logger.error(exc)
 
-                self.github.add_comment(self.new_release.pr_id)
+                msg = ''.join(self.github.comment)
+                self.project.pr_comment(self.new_release.pr_number, msg)
+                self.github.comment = []  # clean up
+
                 self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
                 time.sleep(self.conf.refresh_interval)
         finally:

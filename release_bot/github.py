@@ -168,27 +168,6 @@ class Github:
                       f'name: "{self.conf.repository_name}") {{{query}}}}}')
         return self.do_request(query=repo_query)
 
-    def add_comment(self, subject_id):
-        """Add self.comment to subject_id issue/PR"""
-        if not subject_id or not self.comment:
-            return
-        if self.conf.dry_run:
-            self.logger.info("I would add a comment to the pull request created.")
-            return None
-        comment = '\n'.join(self.comment)
-        mutation = (f'mutation {{addComment(input:'
-                    f'{{subjectId: "{subject_id}", body: "{comment}"}})' +
-                    '''{
-                         subject {
-                           id
-                         }
-                       }}''')
-        response = self.do_request(query=mutation, use_github_auth=True).json()
-        self.detect_api_errors(response)
-        self.logger.debug(f'Comment added to PR: {comment}')
-        self.comment = []  # clean up
-        return response
-
     @staticmethod
     def detect_api_errors(response):
         """This function looks for errors in API response"""
