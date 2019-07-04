@@ -304,7 +304,7 @@ class ReleaseBot:
                 except ReleaseException as exc:
                     self.logger.error(exc)
 
-                msg = ''.join(self.github.comment)
+                msg = '\n'.join(self.github.comment)
                 self.project.pr_comment(self.new_release.pr_number, msg)
                 self.github.comment = []  # clean up
 

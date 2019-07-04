@@ -7,4 +7,3 @@ PyJWT
 flask
 gitchangelog
 pystache
-ogr

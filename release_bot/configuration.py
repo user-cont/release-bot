@@ -22,6 +22,7 @@ from pathlib import Path
 import yaml
 from ogr.services.github import GithubService
 from ogr.services.pagure import PagureService
+from ogr.factory import get_project
 
 from release_bot.version import __version__
 
@@ -53,6 +54,8 @@ class Configuration:
         self.github_app_id = ''
         self.github_app_cert_path = ''
         self.clone_url = ''
+        # used for different pagure forges pagure.io by default
+        self.pagure_instance_url = 'pagure.io'
         self.webhook_handler = False
         self.gitchangelog = False
         self.project = None
@@ -187,52 +190,15 @@ class Configuration:
 
     def get_project(self):
         """
-        Create ogr lib project instance based on provided configuration.
+        Create ogr project instance based on provided configuration.
         Project instance is used for manipulating with Github/Pagure repo.
         :return: ogr Github/Pagure project instance or None
         """
-        if self.github_token != '' and self.github_username != '':
-            return self.get_github_project(username=self.github_username,
-                                           repository=self.repository_name,
-                                           token=self.github_token)
-        elif self.pagure_token != '' and self.pagure_username != '':
-            return self.get_pagure_project(username=self.pagure_username,
-                                           repository=self.repository_name,
-                                           token=self.pagure_token)
-        return None
-
-    @staticmethod
-    def get_github_project(username, repository, token):
-        """
-        Create project's instance for communication with Github repository
-        :param username: str
-        :param repository: str, username or organisation
-        :param token: str, github token
-        :return: project instance
-        """
-        service = GithubService(token=token)
-        github_project = service.get_project(
-            repo=repository,
-            namespace=username
-        )
-        return github_project
-
-    @staticmethod
-    def get_pagure_project(username, repository, token):
-        """
-        Create project's instance for communication with Pagure repository
-        :param username: str
-        :param repository: str, username
-        :param token: str, pagure project token
-        :return: project instance
-        """
-        service = PagureService(token=token, instance_url="https://pagure.io")
-        pagure_project = service.get_project(
-            repo=repository,
-            username=username,
-            namespace=None
-        )
-        return pagure_project
+        return get_project(url=self.clone_url,
+                           custom_instances=[
+                               GithubService(token=self.github_token),
+                               PagureService(token=self.pagure_token,
+                                             instance_url=self.pagure_instance_url)])
 
 
 configuration = Configuration()
