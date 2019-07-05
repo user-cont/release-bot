@@ -20,9 +20,7 @@ import sys
 from pathlib import Path
 
 import yaml
-from ogr import GithubService
-from ogr import PagureService
-from ogr import get_project
+from ogr import GithubService, PagureService, get_project
 
 from release_bot.version import __version__
 

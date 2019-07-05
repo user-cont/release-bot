@@ -23,6 +23,7 @@ from sys import exit
 
 from flask import Flask
 from semantic_version import Version
+from ogr import GithubService, PagureService
 
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
@@ -48,6 +49,7 @@ class ReleaseBot:
         self.new_release = NewRelease()
         self.new_pr = NewPR()
         self.project = configuration.project
+        self.git_service = self.which_service()  # Github/Pagure
 
     def cleanup(self):
         self.new_release = NewRelease()
@@ -84,6 +86,17 @@ class ReleaseBot:
             trigger_on_issue=release_conf.get('trigger_on_issue'),
             labels=release_conf.get('labels')
         )
+
+    def which_service(self):
+        """
+        Returns name one of the current git forges Github/Pagure/Gitlab
+
+        :return: str
+        """
+        if type(self.project.service) == GithubService:
+            return "Github"
+        elif type(self.project.service) == PagureService:
+            return "Pagure"
 
     def find_open_release_issues(self):
         """
@@ -213,7 +226,7 @@ class ReleaseBot:
     def make_new_github_release(self):
         def release_handler(success):
             result = "released" if success else "failed to release"
-            msg = f"I just {result} version {self.new_release.version} on Github"
+            msg = f"I just {result} version {self.new_release.version} on {self.git_service}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
@@ -221,11 +234,11 @@ class ReleaseBot:
         try:
             latest_release = self.github.latest_release()
         except ReleaseException as exc:
-            raise ReleaseException(f"Failed getting latest Github release (zip).\n{exc}")
+            raise ReleaseException(f"Failed getting latest {self.git_service} release (zip).\n{exc}")
 
         if Version.coerce(latest_release) >= Version.coerce(self.new_release.version):
             self.logger.info(
-                f"{self.new_release.version} has already been released on Github")
+                f"{self.new_release.version} has already been released on {self.git_service}")
         else:
             try:
                 if self.conf.dry_run:
