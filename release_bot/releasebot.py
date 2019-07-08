@@ -23,6 +23,7 @@ from sys import exit
 
 from flask import Flask
 from semantic_version import Version
+from ogr import GithubService, PagureService
 
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
@@ -47,6 +48,8 @@ class ReleaseBot:
         self.logger = configuration.logger
         self.new_release = NewRelease()
         self.new_pr = NewPR()
+        self.project = configuration.project
+        self.git_service = self.which_service()  # Github/Pagure
 
     def cleanup(self):
         self.new_release = NewRelease()
@@ -83,6 +86,18 @@ class ReleaseBot:
             trigger_on_issue=release_conf.get('trigger_on_issue'),
             labels=release_conf.get('labels')
         )
+
+    def which_service(self):
+        """
+        Returns name one of the current git forges Github/Pagure/Gitlab
+
+        :return: str
+        """
+        if isinstance(self.project.service, GithubService):
+            return "Github"
+        elif isinstance(self.project.service, PagureService):
+            return "Pagure"
+        return None
 
     def find_open_release_issues(self):
         """
@@ -155,6 +170,7 @@ class ReleaseBot:
                         version=version,
                         commitish=merge_commit['oid'],
                         pr_id=edge['node']['id'],
+                        pr_number=edge['node']['number'],
                         author_email=merge_commit['author']['email'],
                         author_name=merge_commit['author']['name']
                     )
@@ -180,7 +196,7 @@ class ReleaseBot:
                 msg += f"\n Here's a [link to the PR]({self.new_pr.pr_url})"
             comment_backup = self.github.comment.copy()
             self.github.comment = [msg]
-            self.github.add_comment(self.new_pr.issue_id)
+            self.project.issue_comment(self.new_pr.issue_number, msg)
             self.github.comment = comment_backup
             if success:
                 self.github.close_issue(self.new_pr.issue_number)
@@ -211,7 +227,7 @@ class ReleaseBot:
     def make_new_github_release(self):
         def release_handler(success):
             result = "released" if success else "failed to release"
-            msg = f"I just {result} version {self.new_release.version} on Github"
+            msg = f"I just {result} version {self.new_release.version} on {self.git_service}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
@@ -219,11 +235,11 @@ class ReleaseBot:
         try:
             latest_release = self.github.latest_release()
         except ReleaseException as exc:
-            raise ReleaseException(f"Failed getting latest Github release (zip).\n{exc}")
+            raise ReleaseException(f"Failed getting latest {self.git_service} release (zip).\n{exc}")
 
         if Version.coerce(latest_release) >= Version.coerce(self.new_release.version):
             self.logger.info(
-                f"{self.new_release.version} has already been released on Github")
+                f"{self.new_release.version} has already been released on {self.git_service}")
         else:
             try:
                 if self.conf.dry_run:
@@ -302,7 +318,10 @@ class ReleaseBot:
                 except ReleaseException as exc:
                     self.logger.error(exc)
 
-                self.github.add_comment(self.new_release.pr_id)
+                msg = '\n'.join(self.github.comment)
+                self.project.pr_comment(self.new_release.pr_number, msg)
+                self.github.comment = []  # clean up
+
                 self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
                 time.sleep(self.conf.refresh_interval)
         finally:

@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from ogr import GithubService, PagureService, get_project
 
 from release_bot.version import __version__
 
@@ -35,6 +36,8 @@ class Configuration:
         self.repository_owner = ''
         self.github_token = ''
         self.github_username = ''
+        self.pagure_token = ''
+        self.pagure_username = ''
         self.refresh_interval = 3 * 60
         self.debug = False
         self.configuration = ''
@@ -49,8 +52,11 @@ class Configuration:
         self.github_app_id = ''
         self.github_app_cert_path = ''
         self.clone_url = ''
+        # used for different pagure forges pagure.io by default
+        self.pagure_instance_url = 'pagure.io'
         self.webhook_handler = False
         self.gitchangelog = False
+        self.project = None
 
     def set_logging(self,
                     logger_name="release-bot",
@@ -108,6 +114,7 @@ class Configuration:
         if 'clone_url' not in file:
             self.clone_url = (f'https://github.com/{self.repository_owner}'
                               f'/{self.repository_name}.git')
+        self.project = self.get_project()
         self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
 
     def load_release_conf(self, conf):
@@ -178,6 +185,18 @@ class Configuration:
                 return None
 
         return None
+
+    def get_project(self):
+        """
+        Create ogr project instance based on provided configuration.
+        Project instance is used for manipulating with Github/Pagure repo.
+        :return: ogr Github/Pagure project instance or None
+        """
+        return get_project(url=self.clone_url,
+                           custom_instances=[
+                               GithubService(token=self.github_token),
+                               PagureService(token=self.pagure_token,
+                                             instance_url=self.pagure_instance_url)])
 
 
 configuration = Configuration()

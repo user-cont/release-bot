@@ -48,6 +48,7 @@ class TestBot:
         configuration.github_username = self.github_user
         configuration.clone_url = f'https://github.com/{self.github_user}/{self.g_utils.repo}.git'
         configuration.refresh_interval = 1
+        configuration.project = configuration.get_project()
 
         self.release_bot = ReleaseBot(configuration)
 
@@ -123,6 +124,10 @@ class TestBot:
             conf['pypi'] = True
         for key, value in conf.items():
             assert getattr(self.release_bot.new_release, key) == value
+
+    def test_git_service(self):
+        git_service = self.release_bot.git_service
+        assert git_service == "Github"
 
     def test_find_open_rls_issue(self, open_issue):
         """Tests if bot can find opened release issue"""

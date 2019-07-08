@@ -96,13 +96,3 @@ class TestGithub:
         """Tests if branch doesn't exist"""
         assert not self.github.branch_exists('not-master')
 
-    def test_add_comment(self, open_issue_graphql):
-        """Tests adding comment on issue"""
-        number, graphql_id = open_issue_graphql
-        comments_count = self.g_utils.count_comments(number)
-        self.github.comment = "Test comment"
-        self.github.conf.dry_run = True
-        assert self.github.add_comment(graphql_id) is None
-        self.github.conf.dry_run = False
-        self.github.add_comment(graphql_id)
-        assert self.g_utils.count_comments(number) == comments_count + 1

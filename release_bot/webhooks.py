@@ -88,4 +88,7 @@ class GithubWebhooksHandler(View):
                 self.release_bot.make_new_pypi_release()
         except ReleaseException as exc:
             self.logger.error(exc)
-        self.release_bot.github.add_comment(self.release_bot.new_release.get('pr_id'))
+
+        msg = ''.join(self.release_bot.github.comment)
+        self.release_bot.project.pr_comment(self.release_bot.new_release.pr_number, msg)
+        self.release_bot.github.comment = []  # clean up

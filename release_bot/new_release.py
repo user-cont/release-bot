@@ -24,6 +24,7 @@ class NewRelease:
         self.trigger_on_issue = None
         self.labels = None
         self.pr_id = None
+        self.pr_number = None
         self.commitish = None
         self.version = None
 
@@ -36,10 +37,11 @@ class NewRelease:
         self.trigger_on_issue = trigger_on_issue
         self.labels = labels
 
-    def update_pr_details(self, version, author_name, author_email, pr_id, commitish):
+    def update_pr_details(self, version, author_name, author_email, pr_id, pr_number, commitish):
         # Update attributes for making a PR
         self.author_name = author_name
         self.author_email = author_email
         self.pr_id = pr_id
+        self.pr_number = pr_number
         self.version = version
         self.commitish = commitish
