@@ -93,10 +93,11 @@ class ReleaseBot:
 
         :return: str
         """
-        if type(self.project.service) == GithubService:
+        if isinstance(self.project.service, GithubService):
             return "Github"
-        elif type(self.project.service) == PagureService:
+        elif isinstance(self.project.service, PagureService):
             return "Pagure"
+        return None
 
     def find_open_release_issues(self):
         """
