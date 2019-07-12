@@ -27,7 +27,7 @@ from release_bot.version import __version__
 
 class Configuration:
     # note that required items need to reference strings as their length is checked
-    REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'github_token'],
+    REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'clone_url'],
                       "release-conf": []}
 
     def __init__(self):
@@ -53,7 +53,7 @@ class Configuration:
         self.github_app_cert_path = ''
         self.clone_url = ''
         # used for different pagure forges pagure.io by default
-        self.pagure_instance_url = 'pagure.io'
+        self.pagure_instance_url = 'https://pagure.io'
         self.webhook_handler = False
         self.gitchangelog = False
         self.project = None
@@ -143,10 +143,13 @@ class Configuration:
                 sys.exit(1)
         for index, label in enumerate(parsed_conf.get('labels', [])):
             parsed_conf['labels'][index] = str(label)
-        if parsed_conf.get('trigger_on_issue') and not self.github_username:
-            msg = "Can't trigger on issue if 'github_username' is not known, disabling"
-            self.logger.warning(msg)
-            parsed_conf['trigger_on_issue'] = False
+
+        if parsed_conf.get('trigger_on_issue'):
+            if not self.github_username and not self.pagure_username:
+                msg = ("Can't trigger on issue if "
+                       "'github_username/pagure_username' is not known, disabling")
+                self.logger.warning(msg)
+                parsed_conf['trigger_on_issue'] = False
 
         return parsed_conf
 
