@@ -74,9 +74,9 @@ class ReleaseBot:
         :return:
         """
         # load release configuration from release-conf.yaml in repository
-        conf = self.github.get_file("release-conf.yaml", self.which_service())
+        conf = self.github.get_file("release-conf.yaml")
         release_conf = self.conf.load_release_conf(conf)
-        setup_cfg = self.github.get_file("setup.cfg", self.which_service())
+        setup_cfg = self.github.get_file("setup.cfg")
         self.conf.set_pypi_project(release_conf, setup_cfg)
 
         self.new_release.update(
@@ -108,7 +108,7 @@ class ReleaseBot:
         release_issues = {}
         latest_version = Version(self.github.latest_release())
         opened_issues = self.project.get_issue_list(IssueStatus.open)
-        if len(opened_issues) == 0:
+        if not opened_issues:
             self.logger.debug(f'No more open issues found')
         else:
             for issue in opened_issues:

@@ -27,7 +27,7 @@ from release_bot.version import __version__
 
 class Configuration:
     # note that required items need to reference strings as their length is checked
-    REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner', 'clone_url'],
+    REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner'],
                       "release-conf": []}
 
     def __init__(self):

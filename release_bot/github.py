@@ -100,6 +100,7 @@ class Github:
         """
         self.conf = configuration
         self.logger = configuration.logger
+        self.project = configuration.project
         self.session = requests.Session()
         self.session.headers.update({'Authorization': f'token {configuration.github_token}'})
         self.github_app_session = None
@@ -511,25 +512,17 @@ class Github:
         self.logger.error(f'Failed to put labels on issue #{number}')
         return False
 
-    def get_file(self, name, service):
+    def get_file(self, name):
         """
         Fetches a specific file via Github API
         @:param: str, name of the file
-        @:param: str, Github/Pagure
         :return: file content or None in case of error
         """
-        file_url = ""
-        if service == 'Github':
-            file_url = (f"https://raw.githubusercontent.com/"
-                        f"{self.conf.repository_owner}/{self.conf.repository_name}/master/{name}")
-        if service == 'Pagure':
-            file_url = (f"https://pagure.io/"
-                        f"{self.conf.repository_name}/raw/master/f/{name}")
-
-        self.logger.debug(f'Fetching {file_url}')
-        response = requests.get(url=file_url)
-        if response.status_code != 200:
-            self.logger.error(f'Failed to fetch {file_url}')
+        self.logger.debug(f'Fetching {name}')
+        try:
+            file = self.project.get_file_content(path=name)
+        except FileNotFoundError:
+            self.logger.error(f'Failed to fetch {name}')
             return None
 
-        return response.text
+        return file

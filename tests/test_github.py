@@ -78,7 +78,7 @@ class TestGithub:
 
     def test_get_file(self):
         """Tests fetching release-conf from Github"""
-        assert self.github.get_file("release-conf.yaml", "Github") == RELEASE_CONF
+        assert self.github.get_file("release-conf.yaml") == RELEASE_CONF
 
     def test_latest_rls_not_existing(self):
         """Tests version number when there is no latest release"""
