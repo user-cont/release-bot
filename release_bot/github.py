@@ -101,6 +101,7 @@ class Github:
         """
         self.conf = configuration
         self.logger = configuration.logger
+        self.project = configuration.project
         self.session = requests.Session()
         self.session.headers.update({'Authorization': f'token {configuration.github_token}'})
         self.github_app_session = None
@@ -175,41 +176,22 @@ class Github:
         if msg:
             raise ReleaseException(msg)
 
-    def latest_release(self, cursor=''):
+    def latest_release(self):
         """
-        Get the latest project release number on Github. Ignores drafts and pre releases
+        Get the latest project release number on Github
 
         :return: Release number or 0.0.0
         """
-        query = (f"releases(last: 1 " +
-                 (f'before:"{cursor}"' if cursor else '') +
-                 '''){
-                        edges{
-                         cursor
-                         node {
-                           isPrerelease
-                           isDraft
-                           tagName
-                        }
-                       }
-                     }
-                 ''')
-        response = self.query_repository(query).json()
-        self.detect_api_errors(response)
-
-        # check for empty response
-        edges = response['data']['repository']['releases']['edges']
-        if not edges:
+        releases = self.project.get_releases()
+        if not releases:
             self.logger.debug("There is no github release")
             return '0.0.0'
 
-        release = edges[0]['node']
-        # check for pre-release / draft
-        if release['isPrerelease'] or release['isDraft']:
-            self.logger.debug("Latest github release is a Prerelease/Draft")
-            return self.latest_release(cursor=edges[0]['cursor'])
-
-        return release["tagName"]
+        release_versions = [release.title for release in releases]
+        # sort version numbers as [ '0.0.1', '0.0.2', '0.1.1', ....]
+        release_versions.sort(key=lambda s: [int(num) for num in s.split('.')])
+        latest_release = release_versions[-1]
+        return latest_release
 
     def walk_through_prs(self, start='', direction='after', which="last", closed=True):
         """

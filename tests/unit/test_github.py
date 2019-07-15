@@ -2,70 +2,44 @@
 Unit tests for github module
 """
 
-import pytest
 from flexmock import flexmock
+from ogr.abstract import Release, GitTag
 
 from release_bot.github import Github
-from tests.conftest import prepare_conf
+from release_bot.git import Git
+from release_bot.configuration import configuration
 
 
-class MockedResponse(object):
-    def __init__(self, q):
-        self.q = q
+def test_latest_release():
+    mocked_releases = [
+        Release(title='0.0.1',
+                body='',
+                tag_name='',
+                url='',
+                created_at='',
+                tarball_url='',
+                git_tag=GitTag(name='0.0.1', commit_sha='123')
+                ),
+        Release(title='0.0.2',
+                body='',
+                tag_name='',
+                url='',
+                created_at='',
+                tarball_url='',
+                git_tag=GitTag(name='0.0.2', commit_sha='123')
+                )
+    ]
 
-    def json(self):
-        return self.q
+    git = flexmock(Git)
+    c = flexmock(configuration)
+    c.project = flexmock(get_releases=lambda: mocked_releases)
+    github = Github(c, git)
 
+    obtained_release = github.latest_release()
+    assert obtained_release == '0.0.2'
 
-def mock_latest_release():
-    data = {'data': {'repository': {'releases': {'edges': [{'cursor': 'trololollololl',
-                                                            'node': {'isDraft': False,
-                                                                     'isPrerelease': False,
-                                                                     'tagName': '0.6.0'}}]}}}}
-
-    def no_release():
-        def r(_):
-            return MockedResponse({'data': {'repository': {'releases': {'edges': []}}}})
-        flexmock(Github, query_repository=r)
-        return "0.0.0"
-
-    def good_release():
-        def r(_):
-            return MockedResponse(data)
-        flexmock(Github, query_repository=r)
-        return "0.6.0"
-
-    def draft_release():
-        draft_data = {'data': {'repository': {'releases': {'edges': [{'cursor': 'trololollololl',
-                                                                      'node': {'isDraft': True,
-                                                                               'isPrerelease': False,
-                                                                               'tagName': '1.0.0'}}]}}}}
-        flexmock(Github).should_receive("query_repository")\
-            .and_return(MockedResponse(draft_data))\
-            .and_return(MockedResponse(data))
-        return "0.6.0"
-
-    def pre_release():
-        pre_data = {'data': {'repository': {'releases': {'edges': [{'cursor': 'trololollololl',
-                                                                    'node': {'isDraft': False,
-                                                                             'isPrerelease': True,
-                                                                             'tagName': '1.0.0'}}]}}}}
-        flexmock(Github).should_receive("query_repository")\
-            .and_return(MockedResponse(pre_data))\
-            .and_return(MockedResponse(data))
-        return "0.6.0"
-
-    return (
-        no_release,
-        good_release,
-        draft_release,
-        pre_release
-    )
-
-
-@pytest.mark.parametrize("expected_f", mock_latest_release())
-def test_latest_release(expected_f):
-    expected = expected_f()
-    co = prepare_conf()
-    g = Github(co, None)
-    assert g.latest_release() == expected
+    mocked_releases = []
+    c.project = flexmock(get_releases=lambda: mocked_releases)
+    github = Github(c, git)
+    obtained_release = github.latest_release()
+    assert obtained_release == '0.0.0'
