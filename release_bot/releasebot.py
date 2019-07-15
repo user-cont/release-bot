@@ -114,9 +114,8 @@ class ReleaseBot:
             for issue in opened_issues:
                 match, version = process_version_from_title(issue.title, latest_version)
                 if match:
-                    allowed_users = self.project.who_can_close_issue()
-                    if (self.conf.github_username in allowed_users
-                            or self.conf.pagure_username in allowed_users):
+                    if (self.project.can_close_issue(self.conf.github_username, issue)
+                            or self.project.can_close_issue(self.conf.pagure_username, issue)):
                         release_issues[version] = issue
                         self.logger.info(f'Found new release issue with version: {version}')
                     else:
@@ -135,7 +134,8 @@ class ReleaseBot:
             if self.which_service() == "Github":
                 labels = self.new_release.labels
             else:
-                labels = None  # Pagure can't put labels on issue
+                # Putting labels on Pagure issues is not implemented yet inside ogr-lib
+                labels = None
 
             for version, issue in release_issues.items():
                 self.new_pr.update_new_pr_details(
