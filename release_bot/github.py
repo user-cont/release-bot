@@ -252,30 +252,6 @@ class Github:
             self.detect_api_errors(response)
             return response['data']['repository']['pullRequests']['edges']
 
-    def walk_through_open_issues(self, start='', direction='after', which="last"):
-        """
-        Searches open issues for a release trigger
-
-        :return: edges from API query response
-        """
-        while True:
-            query = (f"issues(states: OPEN {which}: 5 " +
-                     (f'{direction}: "{start}"' if start else '') +
-                     '''){
-                  edges {
-                    cursor
-                    node {
-                      id
-                      number
-                      title
-                      authorAssociation
-                    }
-                  }
-                }''')
-            response = self.query_repository(query).json()
-            self.detect_api_errors(response)
-            return response['data']['repository']['issues']['edges']
-
     def make_new_release(self, new_release):
         """
         Makes new release to Github.
