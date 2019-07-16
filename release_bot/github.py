@@ -22,6 +22,7 @@ from release_bot.utils import insert_in_changelog, parse_changelog, look_for_ver
 
 import jwt
 import requests
+from semantic_version import Version
 
 
 logger = logging.getLogger('release-bot')
@@ -188,10 +189,8 @@ class Github:
             return '0.0.0'
 
         release_versions = [release.title for release in releases]
-        # sort version numbers as [ '0.0.1', '0.0.2', '0.1.1', ....]
-        release_versions.sort(key=lambda s: [int(num) for num in s.split('.')])
-        latest_release = release_versions[-1]
-        return latest_release
+        release_versions.sort(key=Version)
+        return release_versions[-1]
 
     def walk_through_prs(self, start='', direction='after', which="last", closed=True):
         """
