@@ -100,6 +100,18 @@ class ReleaseBot:
             return "Pagure"
         return None
 
+    def which_username(self):
+        """
+        Returns Github/Pagure username based on current project service
+
+        :return: str
+        """
+        if self.which_service() == "Github":
+            return self.conf.github_username
+        elif self.which_service() == "Pagure":
+            return self.conf.pagure_username
+        return None
+
     def find_open_release_issues(self):
         """
         Looks for opened release issues on github
@@ -114,17 +126,12 @@ class ReleaseBot:
             for issue in opened_issues:
                 match, version = process_version_from_title(issue.title, latest_version)
                 if match:
-                    if (self.project.can_close_issue(self.conf.github_username, issue)
-                            or self.project.can_close_issue(self.conf.pagure_username, issue)):
+                    if self.project.can_close_issue(self.which_username(), issue):
                         release_issues[version] = issue
                         self.logger.info(f'Found new release issue with version: {version}')
                     else:
-                        if self.which_service() == "Github":
-                            self.logger.warning(f"User {self.conf.github_username } "
-                                                f"has no permission to modify issue")
-                        else:
-                            self.logger.warning(f"User {self.conf.pagure_username} "
-                                                f"has no permission to modify issue")
+                        self.logger.warning(f"User {self.which_username()} "
+                                            f"has no permission to modify issue")
 
         if len(release_issues) > 1:
             msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
