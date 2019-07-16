@@ -24,6 +24,7 @@ from sys import exit
 from flask import Flask
 from semantic_version import Version
 from ogr import GithubService, PagureService
+from ogr.abstract import IssueStatus
 
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
@@ -99,45 +100,56 @@ class ReleaseBot:
             return "Pagure"
         return None
 
+    def which_username(self):
+        """
+        Returns Github/Pagure username based on current project service
+
+        :return: str
+        """
+        if self.which_service() == "Github":
+            return self.conf.github_username
+        elif self.which_service() == "Pagure":
+            return self.conf.pagure_username
+        return None
+
     def find_open_release_issues(self):
         """
         Looks for opened release issues on github
         :return: True on found, False if not found
         """
-        cursor = ''
         release_issues = {}
         latest_version = Version(self.github.latest_release())
-        while True:
-            edges = self.github.walk_through_open_issues(start=cursor, direction='before')
-            if not edges:
-                self.logger.debug(f'No more open issues found')
-                break
-            else:
-                for edge in reversed(edges):
-                    cursor = edge['cursor']
-                    title = edge['node']['title'].lower().strip()
-                    match, version = process_version_from_title(title, latest_version)
-                    if match:
-                        if edge['node']['authorAssociation'] in ['MEMBER', 'OWNER',
-                                                                 'COLLABORATOR']:
-                            release_issues[version] = edge['node']
-                            self.logger.info(f'Found new release issue with version: {version}')
-                        else:
-                            self.logger.warning(
-                                f"Author association {edge['node']['authorAssociation']!r} "
-                                f"not in ['MEMBER', 'OWNER', 'COLLABORATOR']")
+        opened_issues = self.project.get_issue_list(IssueStatus.open)
+        if not opened_issues:
+            self.logger.debug(f'No more open issues found')
+        else:
+            for issue in opened_issues:
+                match, version = process_version_from_title(issue.title, latest_version)
+                if match:
+                    if self.project.can_close_issue(self.which_username(), issue):
+                        release_issues[version] = issue
+                        self.logger.info(f'Found new release issue with version: {version}')
+                    else:
+                        self.logger.warning(f"User {self.which_username()} "
+                                            f"has no permission to modify issue")
 
         if len(release_issues) > 1:
             msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
             self.logger.error(msg)
             return False
         if len(release_issues) == 1:
-            for version, node in release_issues.items():
+            if self.which_service() == "Github":
+                labels = self.new_release.labels
+            else:
+                # Putting labels on Pagure issues is not implemented yet inside ogr-lib
+                labels = None
+
+            for version, issue in release_issues.items():
                 self.new_pr.update_new_pr_details(
                     version=version,
-                    issue_id=node['id'],
-                    issue_number=node['number'],
-                    labels=self.new_release.labels
+                    issue_id=None,
+                    issue_number=issue.id,
+                    labels=labels
                 )
                 return True
         else:
@@ -199,7 +211,8 @@ class ReleaseBot:
             self.project.issue_comment(self.new_pr.issue_number, msg)
             self.github.comment = comment_backup
             if success:
-                self.github.close_issue(self.new_pr.issue_number)
+                self.project.issue_close(self.new_pr.issue_number)
+                self.logger.debug(f'Closed issue #{self.new_pr.issue_number}')
 
         latest_gh_str = self.github.latest_release()
         self.new_pr.previous_version = latest_gh_str
@@ -312,8 +325,8 @@ class ReleaseBot:
                 try:
                     if self.new_release.trigger_on_issue and self.find_open_release_issues():
                         if self.new_release.labels is not None:
-                            self.github.put_labels_on_issue(self.new_pr.issue_number,
-                                                            self.new_release.labels)
+                            self.project.add_issue_labels(self.new_pr.issue_number,
+                                                          self.new_release.labels)
                         self.make_release_pull_request()
                 except ReleaseException as exc:
                     self.logger.error(exc)

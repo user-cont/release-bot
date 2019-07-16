@@ -129,6 +129,15 @@ class TestBot:
         git_service = self.release_bot.git_service
         assert git_service == "Github"
 
+    def test_which_service(self):
+        git_service = self.release_bot.which_service()
+        assert git_service == "Github"
+
+    def test_which_username(self):
+        git_username = self.release_bot.which_username()
+        assert git_username == self.github_user
+        assert git_username == self.release_bot.conf.github_username
+
     def test_find_open_rls_issue(self, open_issue):
         """Tests if bot can find opened release issue"""
         assert self.release_bot.find_open_release_issues()

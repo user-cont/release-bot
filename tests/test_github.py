@@ -43,7 +43,9 @@ class TestGithub:
         # set conf
         configuration.repository_name = self.g_utils.repo
         configuration.github_username = self.g_utils.github_user
+        configuration.clone_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}.git"
         configuration.refresh_interval = 1
+        configuration.project = configuration.get_project()
 
         repo_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}"
         git = Git(repo_url, configuration)
@@ -79,10 +81,6 @@ class TestGithub:
     def test_get_file(self):
         """Tests fetching release-conf from Github"""
         assert self.github.get_file("release-conf.yaml") == RELEASE_CONF
-
-    def test_close_issue(self, open_issue):
-        """Tests closing issue"""
-        assert self.github.close_issue(open_issue)
 
     def test_latest_rls_not_existing(self):
         """Tests version number when there is no latest release"""

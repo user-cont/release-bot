@@ -23,7 +23,6 @@ from release_bot.utils import insert_in_changelog, parse_changelog, look_for_ver
 import jwt
 import requests
 
-
 logger = logging.getLogger('release-bot')
 
 
@@ -37,12 +36,12 @@ class JWTAuth(requests.auth.AuthBase):
     def generate_token(self):
         # Generate the JWT
         payload = {
-          # issued at time
-          'iat': int(time.time()),
-          # JWT expiration time (10 minute maximum)
-          'exp': int(time.time()) + self.expiration,
-          # GitHub App's identifier
-          'iss': self.iss
+            # issued at time
+            'iat': int(time.time()),
+            # JWT expiration time (10 minute maximum)
+            'exp': int(time.time()) + self.expiration,
+            # GitHub App's identifier
+            'iss': self.iss
         }
 
         tok = jwt.encode(payload, self.key, algorithm='RS256')
@@ -101,6 +100,7 @@ class Github:
         """
         self.conf = configuration
         self.logger = configuration.logger
+        self.project = configuration.project
         self.session = requests.Session()
         self.session.headers.update({'Authorization': f'token {configuration.github_token}'})
         self.github_app_session = None
@@ -116,7 +116,8 @@ class Github:
         self.logger.debug("github app token obtained")
         self.github_app_session.headers.update({'Authorization': f'token {token}'})
 
-    def do_request(self, query=None, method=None, json_payload=None, url=None, use_github_auth=False):
+    def do_request(self, query=None, method=None, json_payload=None, url=None,
+                   use_github_auth=False):
         """
         a single wrapper to make any type of request:
 
@@ -136,21 +137,25 @@ class Github:
         if query:
             self.logger.debug(f'query = {query}')
             if use_github_auth and self.github_app_session:
-                response = self.github_app_session.post(url=self.API_ENDPOINT, json={'query': query})
+                response = self.github_app_session.post(url=self.API_ENDPOINT,
+                                                        json={'query': query})
             else:
                 response = self.session.post(url=self.API_ENDPOINT, json={'query': query})
             if response.status_code == 401 and self.github_app_session:
                 self.update_github_app_token()
-                response = self.github_app_session.post(url=self.API_ENDPOINT, json={'query': query})
+                response = self.github_app_session.post(url=self.API_ENDPOINT,
+                                                        json={'query': query})
         elif method and url:
             self.logger.debug(f'{method} {url}')
             if use_github_auth and self.github_app_session:
-                response = self.github_app_session.request(method=method, url=url, json=json_payload)
+                response = self.github_app_session.request(method=method, url=url,
+                                                           json=json_payload)
             else:
                 response = self.session.request(method=method, url=url, json=json_payload)
             if response.status_code == 401 and self.github_app_session:
                 self.update_github_app_token()
-                response = self.github_app_session.request(method=method, url=url, json=json_payload)
+                response = self.github_app_session.request(method=method, url=url,
+                                                           json=json_payload)
             if not response.ok:
                 self.logger.error(f"error message: {response.content}")
         else:
@@ -247,30 +252,6 @@ class Github:
             self.detect_api_errors(response)
             return response['data']['repository']['pullRequests']['edges']
 
-    def walk_through_open_issues(self, start='', direction='after', which="last"):
-        """
-        Searches open issues for a release trigger
-
-        :return: edges from API query response
-        """
-        while True:
-            query = (f"issues(states: OPEN {which}: 5 " +
-                     (f'{direction}: "{start}"' if start else '') +
-                     '''){
-                  edges {
-                    cursor
-                    node {
-                      id
-                      number
-                      title
-                      authorAssociation
-                    }
-                  }
-                }''')
-            response = self.query_repository(query).json()
-            self.detect_api_errors(response)
-            return response['data']['repository']['issues']['edges']
-
     def make_new_release(self, new_release):
         """
         Makes new release to Github.
@@ -288,7 +269,8 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases")
         self.logger.debug(f"About to release {new_release.version} on Github")
-        response = self.do_request(method="POST", url=url, json_payload=payload, use_github_auth=True)
+        response = self.do_request(method="POST", url=url, json_payload=payload,
+                                   use_github_auth=True)
         if response.status_code != 201:
             msg = f"Failed to create new release on github:\n{response.text}"
             raise ReleaseException(msg)
@@ -320,7 +302,8 @@ class Github:
 
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/releases/{latest_release['id']}")
-        response = self.do_request(method="POST", url=url, json_payload={'body': changelog}, use_github_auth=True)
+        response = self.do_request(method="POST", url=url, json_payload={'body': changelog},
+                                   use_github_auth=True)
         if response.status_code != 200:
             self.logger.error((f"Something went wrong during changelog "
                                f"update for {new_version}:\n{response.text}"))
@@ -379,7 +362,8 @@ class Github:
         url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
                f"{self.conf.repository_name}/pulls")
         self.logger.debug(f'Attempting a PR for {branch} branch')
-        response = self.do_request(method="POST", url=url, json_payload=payload, use_github_auth=True)
+        response = self.do_request(method="POST", url=url, json_payload=payload,
+                                   use_github_auth=True)
         if response.status_code == 201:
             parsed = response.json()
             self.logger.info(f"Created PR: {parsed['html_url']}")
@@ -482,23 +466,6 @@ class Github:
             email = 'bot@releasebot.bot'
         return name, email
 
-    def close_issue(self, number):
-        """
-        Close an github issue
-        :param number: number of the issue in repository
-        :return: True on success, False on fail
-        """
-        payload = {'state': 'closed'}
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/issues/{number}")
-        self.logger.debug(f'Attempting to close issue #{number}')
-        response = self.do_request(method='PATCH', url=url, json_payload=payload, use_github_auth=True)
-        if response.status_code == 200:
-            self.logger.debug(f'Closed issue #{number}')
-            return True
-        self.logger.error(f'Failed to close issue #{number}')
-        return False
-
     def put_labels_on_issue(self, number, labels):
         """
         Put labels on Github issue or PR
@@ -524,21 +491,14 @@ class Github:
     def get_file(self, name):
         """
         Fetches a specific file via Github API
+        @:param: str, name of the file
         :return: file content or None in case of error
         """
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/contents/{name}")
         self.logger.debug(f'Fetching {name}')
-        response = self.do_request(url=url, method='GET')
-        if response.status_code != 200:
+        try:
+            file = self.project.get_file_content(path=name)
+        except FileNotFoundError:
             self.logger.error(f'Failed to fetch {name}')
             return None
 
-        parsed = response.json()
-        download_url = parsed['download_url']
-        response = requests.get(url=download_url)
-        if response.status_code != 200:
-            self.logger.error(f'Failed to fetch {name}')
-            return None
-
-        return response.text
+        return file
