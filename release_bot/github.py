@@ -18,11 +18,16 @@ import time
 import re
 
 from release_bot.exceptions import ReleaseException, GitException
-from release_bot.utils import insert_in_changelog, parse_changelog, look_for_version_files
-
+from release_bot.utils import (
+    insert_in_changelog,
+    parse_changelog,
+    look_for_version_files,
+    which_service,
+)
 import jwt
 import requests
 from semantic_version import Version
+from ogr.abstract import PRStatus
 
 logger = logging.getLogger('release-bot')
 
@@ -196,41 +201,24 @@ class Github:
         release_versions.sort(key=Version)
         return release_versions[-1]
 
-    def walk_through_prs(self, start='', direction='after', which="last", closed=True):
+    def walk_through_prs(self, pr_status):
         """
         Searches merged pull requests
 
-        :param start: A cursor to start at
-        :param direction: Direction to go from cursor, can be 'after' or 'before'
-        :param which: Indicates which part of the result list
-                      should be returned, can be 'first' or 'last'
-        :param closed: filters PRs by state (closed/open). True by default
-        :return: edges from API query response
+        :param pr_status: ogr.abstract.PRStatus
+        :return: list of merged prs
         """
-        state = 'MERGED' if closed else 'OPEN'
-        while True:
-            query = (f"pullRequests(states: {state} {which}: 5 " +
-                     (f'{direction}: "{start}"' if start else '') +
-                     '''){
-                  edges {
-                    cursor
-                    node {
-                      id
-                      title
-                      number
-                      mergeCommit {
-                        oid
-                        author {
-                            name
-                            email
-                        }
-                      }
-                    }
-                  }
-                }''')
-            response = self.query_repository(query).json()
-            self.detect_api_errors(response)
-            return response['data']['repository']['pullRequests']['edges']
+        if pr_status == PRStatus.open:
+            return self.project.get_pr_list(PRStatus.open)
+        else:
+            if which_service(self.project) == 'Github':
+                # Github returns merged PRs when PRStatus.closed is used
+                return self.project.get_pr_list(PRStatus.closed)
+            elif which_service(self.project) == 'Pagure':
+                # Pagure returns merged PRs when PRStatus.merged is used
+                return self.project.get_pr_list(PRStatus.merged)
+
+        return []
 
     def make_new_release(self, new_release):
         """
@@ -334,28 +322,23 @@ class Github:
         for file in changed_version_files:
             message += f'* {file}\n'
 
-        payload = {'title': f'{version} release',
-                   'head': branch,
-                   'base': base,
-                   'body': message,
-                   'maintainer_can_modify': True}
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/pulls")
-        self.logger.debug(f'Attempting a PR for {branch} branch')
-        response = self.do_request(method="POST", url=url, json_payload=payload,
-                                   use_github_auth=True)
-        if response.status_code == 201:
-            parsed = response.json()
-            self.logger.info(f"Created PR: {parsed['html_url']}")
+        try:
+            new_pr = self.project.pr_create(
+                title=f'{version} release',
+                body=message,
+                target_branch=base,
+                source_branch=branch
+            )
 
-            # put labels on PR
-            if labels is not None:
-                self.put_labels_on_issue(parsed['number'], labels)
-
-            return parsed['html_url']
-        else:
+            self.logger.info(f"Created PR: {new_pr}")
+            # TODO: waiting for merging this functionality into ogr
+            # if which_service(self.project) == "Github":
+            #     # ogr-lib implements labeling only for Github labels
+            #     self.project.add_pr_labels(labels=labels)
+            return new_pr.url
+        except Exception as ex:
             msg = (f"Something went wrong with creating "
-                   f"PR on github:\n{response.text}")
+                   f"PR on {which_service(self.project)}")
             raise ReleaseException(msg)
 
     def make_release_pr(self, new_pr, gitchangelog):
@@ -397,7 +380,10 @@ class Github:
             repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
-                new_pr.pr_url = self.make_pr(branch, f'{version}', changelog, changed,
+                new_pr.pr_url = self.make_pr(branch=branch,
+                                             version=f'{version}',
+                                             log=changelog,
+                                             changed_version_files=changed,
                                              labels=new_pr.labels)
                 return True
         except GitException as exc:
@@ -412,18 +398,16 @@ class Github:
         :param name: name of the PR
         :return: PR number if exists, False if not
         """
-        cursor = ''
-        while True:
-            edges = self.walk_through_prs(start=cursor, direction='before', closed=False)
-            if not edges:
-                self.logger.debug(f"No open PR's found")
-                return False
+        merged_prs = self.walk_through_prs(PRStatus.open)
 
-            for edge in reversed(edges):
-                cursor = edge['cursor']
-                match = re.match(name, edge['node']['title'].lower())
-                if match:
-                    return edge['node']['number']
+        if not merged_prs:
+            self.logger.debug(f'No merged release PR found')
+            return False
+
+        for pr in merged_prs:
+            match = re.match(name, pr.title.lower())
+            if match:
+                return pr.id
 
     def get_user_contact(self):
         """

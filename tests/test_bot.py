@@ -21,6 +21,7 @@ import yaml
 from flexmock import flexmock
 
 from release_bot.releasebot import ReleaseBot
+from release_bot.utils import which_service, which_username
 from tests.conftest import prepare_conf
 from .github_utils import GithubUtils, RELEASE_CONF
 
@@ -130,11 +131,11 @@ class TestBot:
         assert git_service == "Github"
 
     def test_which_service(self):
-        git_service = self.release_bot.which_service()
+        git_service = which_service(self.release_bot.project)
         assert git_service == "Github"
 
     def test_which_username(self):
-        git_username = self.release_bot.which_username()
+        git_username = which_username(self.release_bot.conf)
         assert git_username == self.github_user
         assert git_username == self.release_bot.conf.github_username
 

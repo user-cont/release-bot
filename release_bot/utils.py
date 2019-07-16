@@ -22,10 +22,39 @@ import shlex
 import subprocess
 
 from semantic_version import validate
+from ogr import GithubService, PagureService
 
 from release_bot.exceptions import ReleaseException
 
 logger = logging.getLogger('release-bot')
+
+
+def which_service(project):
+    """
+    Returns name one of the current git forges Github/Pagure/Gitlab
+
+    :param project: ogr-lib GitProject instance
+    :return: str
+    """
+    if isinstance(project.service, GithubService):
+        return "Github"
+    elif isinstance(project.service, PagureService):
+        return "Pagure"
+    return None
+
+
+def which_username(conf):
+    """
+    Returns Github/Pagure username based on current project service
+
+    :param conf: release-bot configuration
+    :return: str
+    """
+    if which_service(conf.project) == "Github":
+        return conf.github_username
+    elif which_service(conf.project) == "Pagure":
+        return conf.pagure_username
+    return None
 
 
 def set_git_credentials(repo_path, name, email):
