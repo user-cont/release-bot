@@ -213,7 +213,12 @@ class Github:
         else:
             if which_service(self.project) == 'Github':
                 # Github returns merged PRs when PRStatus.closed is used
-                return self.project.get_pr_list(PRStatus.closed)
+                closed_prs = self.project.get_pr_list(PRStatus.closed)
+                for closed_pr in closed_prs:
+                    if not closed_pr.is_merged():
+                        closed_prs.remove(closed_prs)
+
+                return closed_prs
             elif which_service(self.project) == 'Pagure':
                 # Pagure returns merged PRs when PRStatus.merged is used
                 return self.project.get_pr_list(PRStatus.merged)
@@ -331,12 +336,11 @@ class Github:
             )
 
             self.logger.info(f"Created PR: {new_pr}")
-            # TODO: waiting for merging this functionality into ogr
-            # if which_service(self.project) == "Github":
-            #     # ogr-lib implements labeling only for Github labels
-            #     self.project.add_pr_labels(labels=labels)
+            if which_service(self.project) == "Github":
+                # ogr-lib implements labeling only for Github labels
+                self.project.add_pr_labels(new_pr.id, labels=labels)
             return new_pr.url
-        except Exception as ex:
+        except Exception:
             msg = (f"Something went wrong with creating "
                    f"PR on {which_service(self.project)}")
             raise ReleaseException(msg)
@@ -404,10 +408,10 @@ class Github:
             self.logger.debug(f'No merged release PR found')
             return False
 
-        for pr in merged_prs:
-            match = re.match(name, pr.title.lower())
+        for merged_pr in merged_prs:
+            match = re.match(name, merged_pr.title.lower())
             if match:
-                return pr.id
+                return merged_pr.id
 
     def get_user_contact(self):
         """
@@ -429,28 +433,6 @@ class Github:
         if not email:
             email = 'bot@releasebot.bot'
         return name, email
-
-    def put_labels_on_issue(self, number, labels):
-        """
-        Put labels on Github issue or PR
-        :param number: number of issue/PR
-        :param labels: list of str
-        :return: True on success, False on fail
-        """
-        if self.conf.dry_run:
-            self.logger.info("I would add labels to issue #%s", number)
-            return False
-        payload = {'labels': labels}
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/issues/{number}")
-        self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
-        response = self.do_request(method='PATCH', url=url,
-                                   json_payload=payload, use_github_auth=True)
-        if response.status_code == 200:
-            self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
-            return True
-        self.logger.error(f'Failed to put labels on issue #{number}')
-        return False
 
     def get_file(self, name):
         """

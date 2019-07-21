@@ -143,17 +143,17 @@ class ReleaseBot:
             self.logger.debug(f'No merged release PR found')
             return False
 
-        for pr in merged_prs:
-            match, version = process_version_from_title(pr.title, latest_version)
+        for merged_pr in merged_prs:
+            match, version = process_version_from_title(merged_pr.title, latest_version)
             if match:
                 self.logger.info(f"Found merged release PR with version {version}")
                 self.new_release.update_pr_details(
                     version=version,
                     commitish='master',
                     pr_id=None,
-                    pr_number=pr.id,
+                    pr_number=merged_pr.id,
                     author_email=None,
-                    author_name=pr.author
+                    author_name=merged_pr.author
                 )
                 return True
 
