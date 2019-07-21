@@ -237,7 +237,6 @@ class ReleaseBot:
             except ReleaseException:
                 release_handler(success=False)
                 raise
-        self.github.update_changelog(self.new_release.version)
         return self.new_release
 
     def make_new_pypi_release(self):

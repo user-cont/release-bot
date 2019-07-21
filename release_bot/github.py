@@ -214,58 +214,51 @@ class Github:
     def make_new_release(self, new_release):
         """
         Makes new release to Github.
-        This has to be done using github api v3 because v4 (GraphQL) doesn't support this yet
 
         :param new_release: version number of the new release
         :return: tuple (released, new_release) - released is bool, new_release contains info about
                  the new release
         """
-        payload = {"tag_name": new_release.version,
-                   "target_commitish": new_release.commitish,
-                   "name": new_release.version,
-                   "prerelease": False,
-                   "draft": False}
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/releases")
-        self.logger.debug(f"About to release {new_release.version} on Github")
-        response = self.do_request(method="POST", url=url, json_payload=payload,
-                                   use_github_auth=True)
-        if response.status_code != 201:
-            msg = f"Failed to create new release on github:\n{response.text}"
+        try:
+            self.project.create_release(
+                tag=new_release.version,
+                name=new_release.version,
+                message=self.get_changelog(new_release.version)
+            )
+        except Exception:
+            msg = f"Failed to create new release on github!"
             raise ReleaseException(msg)
+
         return True, new_release
 
-    def update_changelog(self, new_version):
+    def get_changelog(self, new_version):
+        """
+        Get changelog for new version
+
+        :param new_version: version number
+        :return:
+        """
         self.git.fetch_tags()
-        self.git.checkout(new_version)
-        # FIXME: make the file name configurable
+        self.git.checkout(f'{new_version}-release')
+        self.git.pull_branch(f'{new_version}-release')
         p = os.path.join(self.git.repo_path, "CHANGELOG.md")
         try:
             with open(p, "r") as fd:
                 changelog_content = fd.read()
         except FileNotFoundError:
             logger.info("CHANGELOG.md not found")
-            return
+            return ''
         finally:
             self.git.checkout('master')
 
-        # get latest release
         changelog = parse_changelog(new_version, changelog_content)
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/releases/latest")
-        latest_release = self.do_request(method="GET", url=url, use_github_auth=True).json()
+        latest_release = self.project.get_latest_release()
 
         # check if the changelog needs updating
-        if latest_release["body"] == changelog:
-            return
+        if latest_release.body == changelog:
+            return ''
 
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/releases/{latest_release['id']}")
-        response = self.do_request(method="POST", url=url, json_payload={'body': changelog},
-                                   use_github_auth=True)
-        if response.status_code != 200:
-            self.logger.error((f"Something went wrong during changelog "
-                               f"update for {new_version}:\n{response.text}"))
+        return changelog
 
     def branch_exists(self, branch):
         """
