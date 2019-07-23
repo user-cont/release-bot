@@ -208,22 +208,7 @@ class Github:
         :param pr_status: ogr.abstract.PRStatus
         :return: list of merged prs
         """
-        if pr_status == PRStatus.open:
-            return self.project.get_pr_list(PRStatus.open)
-        else:
-            if which_service(self.project) == 'Github':
-                # Github returns merged PRs when PRStatus.closed is used
-                closed_prs = self.project.get_pr_list(PRStatus.closed)
-                for closed_pr in closed_prs:
-                    if not closed_pr.is_merged():
-                        closed_prs.remove(closed_prs)
-
-                return closed_prs
-            elif which_service(self.project) == 'Pagure':
-                # Pagure returns merged PRs when PRStatus.merged is used
-                return self.project.get_pr_list(PRStatus.merged)
-
-        return []
+        return self.project.get_pr_list(pr_status)
 
     def make_new_release(self, new_release):
         """
@@ -336,7 +321,7 @@ class Github:
             )
 
             self.logger.info(f"Created PR: {new_pr}")
-            if which_service(self.project) == "Github":
+            if which_service(self.project) == "Github" and labels:
                 # ogr-lib implements labeling only for Github labels
                 self.project.add_pr_labels(new_pr.id, labels=labels)
             return new_pr.url
