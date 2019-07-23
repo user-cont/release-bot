@@ -321,7 +321,7 @@ class Github:
             )
 
             self.logger.info(f"Created PR: {new_pr}")
-            if which_service(self.project) == "Github" and labels:
+            if labels and which_service(self.project) == "Github":
                 # ogr-lib implements labeling only for Github labels
                 self.project.add_pr_labels(new_pr.id, labels=labels)
             return new_pr.url
@@ -387,16 +387,16 @@ class Github:
         :param name: name of the PR
         :return: PR number if exists, False if not
         """
-        merged_prs = self.walk_through_prs(PRStatus.open)
+        opened_prs = self.walk_through_prs(PRStatus.open)
 
-        if not merged_prs:
+        if not opened_prs:
             self.logger.debug(f'No merged release PR found')
             return False
 
-        for merged_pr in merged_prs:
-            match = re.match(name, merged_pr.title.lower())
+        for opened_pr in opened_prs:
+            match = re.match(name, opened_pr.title.lower())
             if match:
-                return merged_pr.id
+                return opened_pr.id
 
     def get_user_contact(self):
         """
