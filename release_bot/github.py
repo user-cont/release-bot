@@ -22,6 +22,7 @@ from release_bot.utils import (
     insert_in_changelog,
     parse_changelog,
     look_for_version_files,
+    GitService,
     which_service,
 )
 import jwt
@@ -321,13 +322,13 @@ class Github:
             )
 
             self.logger.info(f"Created PR: {new_pr}")
-            if labels and which_service(self.project) == "Github":
+            if labels and which_service(self.project) == GitService.Github:
                 # ogr-lib implements labeling only for Github labels
                 self.project.add_pr_labels(new_pr.id, labels=labels)
             return new_pr.url
         except Exception:
             msg = (f"Something went wrong with creating "
-                   f"PR on {which_service(self.project)}")
+                   f"PR on {which_service(self.project).name}")
             raise ReleaseException(msg)
 
     def make_release_pr(self, new_pr, gitchangelog):

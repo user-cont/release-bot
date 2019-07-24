@@ -33,9 +33,14 @@ from release_bot.github import Github
 from release_bot.new_pr import NewPR
 from release_bot.new_release import NewRelease
 from release_bot.pypi import PyPi
-from release_bot.utils import process_version_from_title, which_service, which_username
 from release_bot.webhooks import GithubWebhooksHandler
 from release_bot.init_repo import Init
+from release_bot.utils import (
+    process_version_from_title,
+    GitService,
+    which_service,
+    which_username,
+)
 
 
 class ReleaseBot:
@@ -113,9 +118,9 @@ class ReleaseBot:
             self.logger.error(msg)
             return False
         if len(release_issues) == 1:
-            if which_service(self.project) == "Github":
+            if which_service(self.project) == GitService.Github:
                 labels = self.new_release.labels
-            else:
+            elif which_service(self.project) == GitService.Pagure:
                 # Putting labels on Pagure issues is not implemented yet inside ogr-lib
                 labels = None
 
@@ -209,7 +214,7 @@ class ReleaseBot:
     def make_new_github_release(self):
         def release_handler(success):
             result = "released" if success else "failed to release"
-            msg = f"I just {result} version {self.new_release.version} on {self.git_service}"
+            msg = f"I just {result} version {self.new_release.version} on {self.git_service.name}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
@@ -217,11 +222,11 @@ class ReleaseBot:
         try:
             latest_release = self.github.latest_release()
         except ReleaseException as exc:
-            raise ReleaseException(f"Failed getting latest {self.git_service} release (zip).\n{exc}")
+            raise ReleaseException(f"Failed getting latest {self.git_service.name} release (zip).\n{exc}")
 
         if Version.coerce(latest_release) >= Version.coerce(self.new_release.version):
             self.logger.info(
-                f"{self.new_release.version} has already been released on {self.git_service}")
+                f"{self.new_release.version} has already been released on {self.git_service.name}")
         else:
             try:
                 if self.conf.dry_run:
