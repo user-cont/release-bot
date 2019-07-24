@@ -37,10 +37,10 @@ class GitService(IntEnum):
 
 def which_service(project):
     """
-    Returns name one of the current git forges Github/Pagure/Gitlab
+    Returns name one of the current git forges Github/Pagure based on GitService enum
 
     :param project: ogr-lib GitProject instance
-    :return: str
+    :return: GitService
     """
     if isinstance(project.service, GithubService):
         return GitService.Github
