@@ -18,11 +18,17 @@ import time
 import re
 
 from release_bot.exceptions import ReleaseException, GitException
-from release_bot.utils import insert_in_changelog, parse_changelog, look_for_version_files
-
+from release_bot.utils import (
+    insert_in_changelog,
+    parse_changelog,
+    look_for_version_files,
+    GitService,
+    which_service,
+)
 import jwt
 import requests
 from semantic_version import Version
+from ogr.abstract import PRStatus
 
 logger = logging.getLogger('release-bot')
 
@@ -196,41 +202,14 @@ class Github:
         release_versions.sort(key=Version)
         return release_versions[-1]
 
-    def walk_through_prs(self, start='', direction='after', which="last", closed=True):
+    def walk_through_prs(self, pr_status):
         """
         Searches merged pull requests
 
-        :param start: A cursor to start at
-        :param direction: Direction to go from cursor, can be 'after' or 'before'
-        :param which: Indicates which part of the result list
-                      should be returned, can be 'first' or 'last'
-        :param closed: filters PRs by state (closed/open). True by default
-        :return: edges from API query response
+        :param pr_status: ogr.abstract.PRStatus
+        :return: list of merged prs
         """
-        state = 'MERGED' if closed else 'OPEN'
-        while True:
-            query = (f"pullRequests(states: {state} {which}: 5 " +
-                     (f'{direction}: "{start}"' if start else '') +
-                     '''){
-                  edges {
-                    cursor
-                    node {
-                      id
-                      title
-                      number
-                      mergeCommit {
-                        oid
-                        author {
-                            name
-                            email
-                        }
-                      }
-                    }
-                  }
-                }''')
-            response = self.query_repository(query).json()
-            self.detect_api_errors(response)
-            return response['data']['repository']['pullRequests']['edges']
+        return self.project.get_pr_list(pr_status)
 
     def make_new_release(self, new_release):
         """
@@ -334,28 +313,22 @@ class Github:
         for file in changed_version_files:
             message += f'* {file}\n'
 
-        payload = {'title': f'{version} release',
-                   'head': branch,
-                   'base': base,
-                   'body': message,
-                   'maintainer_can_modify': True}
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/pulls")
-        self.logger.debug(f'Attempting a PR for {branch} branch')
-        response = self.do_request(method="POST", url=url, json_payload=payload,
-                                   use_github_auth=True)
-        if response.status_code == 201:
-            parsed = response.json()
-            self.logger.info(f"Created PR: {parsed['html_url']}")
+        try:
+            new_pr = self.project.pr_create(
+                title=f'{version} release',
+                body=message,
+                target_branch=base,
+                source_branch=branch
+            )
 
-            # put labels on PR
-            if labels is not None:
-                self.put_labels_on_issue(parsed['number'], labels)
-
-            return parsed['html_url']
-        else:
+            self.logger.info(f"Created PR: {new_pr}")
+            if labels and which_service(self.project) == GitService.Github:
+                # ogr-lib implements labeling only for Github labels
+                self.project.add_pr_labels(new_pr.id, labels=labels)
+            return new_pr.url
+        except Exception:
             msg = (f"Something went wrong with creating "
-                   f"PR on github:\n{response.text}")
+                   f"PR on {which_service(self.project).name}")
             raise ReleaseException(msg)
 
     def make_release_pr(self, new_pr, gitchangelog):
@@ -397,7 +370,10 @@ class Github:
             repo.commit(f'{version} release', allow_empty=True)
             repo.push(branch)
             if not self.pr_exists(f'{version} release'):
-                new_pr.pr_url = self.make_pr(branch, f'{version}', changelog, changed,
+                new_pr.pr_url = self.make_pr(branch=branch,
+                                             version=f'{version}',
+                                             log=changelog,
+                                             changed_version_files=changed,
                                              labels=new_pr.labels)
                 return True
         except GitException as exc:
@@ -412,18 +388,16 @@ class Github:
         :param name: name of the PR
         :return: PR number if exists, False if not
         """
-        cursor = ''
-        while True:
-            edges = self.walk_through_prs(start=cursor, direction='before', closed=False)
-            if not edges:
-                self.logger.debug(f"No open PR's found")
-                return False
+        opened_prs = self.walk_through_prs(PRStatus.open)
 
-            for edge in reversed(edges):
-                cursor = edge['cursor']
-                match = re.match(name, edge['node']['title'].lower())
-                if match:
-                    return edge['node']['number']
+        if not opened_prs:
+            self.logger.debug(f'No merged release PR found')
+            return False
+
+        for opened_pr in opened_prs:
+            match = re.match(name, opened_pr.title.lower())
+            if match:
+                return opened_pr.id
 
     def get_user_contact(self):
         """
@@ -445,28 +419,6 @@ class Github:
         if not email:
             email = 'bot@releasebot.bot'
         return name, email
-
-    def put_labels_on_issue(self, number, labels):
-        """
-        Put labels on Github issue or PR
-        :param number: number of issue/PR
-        :param labels: list of str
-        :return: True on success, False on fail
-        """
-        if self.conf.dry_run:
-            self.logger.info("I would add labels to issue #%s", number)
-            return False
-        payload = {'labels': labels}
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/issues/{number}")
-        self.logger.debug(f'Attempting to put labels on issue/PR #{number}')
-        response = self.do_request(method='PATCH', url=url,
-                                   json_payload=payload, use_github_auth=True)
-        if response.status_code == 200:
-            self.logger.debug(f'Following labels: #{",".join(labels)} put on issue #{number}:')
-            return True
-        self.logger.error(f'Failed to put labels on issue #{number}')
-        return False
 
     def get_file(self, name):
         """

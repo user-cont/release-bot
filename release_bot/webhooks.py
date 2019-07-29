@@ -66,10 +66,10 @@ class GithubWebhooksHandler(View):
             self.release_bot.load_release_conf()
             if (self.release_bot.new_release.get('trigger_on_issue') and
                     self.release_bot.find_open_release_issues()):
-                if self.release_bot.new_release.get('labels') is not None:
-                    self.release_bot.github.put_labels_on_issue(
-                        self.release_bot.new_pr['issue_number'],
-                        self.release_bot.new_release.get('labels'))
+                if self.release_bot.new_release.labels is not None:
+                    self.release_bot.project.add_issue_labels(
+                        self.release_bot.new_pr.issue_number,
+                        self.release_bot.new_release.labels)
                 self.release_bot.make_release_pull_request()
         except ReleaseException as exc:
             self.logger.error(exc)

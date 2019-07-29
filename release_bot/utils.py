@@ -21,11 +21,46 @@ import re
 import shlex
 import subprocess
 
+from enum import IntEnum
 from semantic_version import validate
+from ogr import GithubService, PagureService
 
 from release_bot.exceptions import ReleaseException
 
 logger = logging.getLogger('release-bot')
+
+
+class GitService(IntEnum):
+    Github = 1
+    Pagure = 2
+
+
+def which_service(project):
+    """
+    Returns name one of the current git forges Github/Pagure based on GitService enum
+
+    :param project: ogr-lib GitProject instance
+    :return: GitService
+    """
+    if isinstance(project.service, GithubService):
+        return GitService.Github
+    elif isinstance(project.service, PagureService):
+        return GitService.Pagure
+    return None
+
+
+def which_username(conf):
+    """
+    Returns Github/Pagure username based on current project service
+
+    :param conf: release-bot configuration
+    :return: str
+    """
+    if which_service(conf.project) == GitService.Github:
+        return conf.github_username
+    elif which_service(conf.project) == GitService.Pagure:
+        return conf.pagure_username
+    return None
 
 
 def set_git_credentials(repo_path, name, email):

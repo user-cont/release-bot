@@ -23,8 +23,7 @@ from sys import exit
 
 from flask import Flask
 from semantic_version import Version
-from ogr import GithubService, PagureService
-from ogr.abstract import IssueStatus
+from ogr.abstract import IssueStatus, PRStatus
 
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
@@ -34,9 +33,14 @@ from release_bot.github import Github
 from release_bot.new_pr import NewPR
 from release_bot.new_release import NewRelease
 from release_bot.pypi import PyPi
-from release_bot.utils import process_version_from_title
 from release_bot.webhooks import GithubWebhooksHandler
 from release_bot.init_repo import Init
+from release_bot.utils import (
+    process_version_from_title,
+    GitService,
+    which_service,
+    which_username,
+)
 
 
 class ReleaseBot:
@@ -50,7 +54,7 @@ class ReleaseBot:
         self.new_release = NewRelease()
         self.new_pr = NewPR()
         self.project = configuration.project
-        self.git_service = self.which_service()  # Github/Pagure
+        self.git_service = which_service(self.project)  # Github/Pagure
 
     def cleanup(self):
         self.new_release = NewRelease()
@@ -88,30 +92,6 @@ class ReleaseBot:
             labels=release_conf.get('labels')
         )
 
-    def which_service(self):
-        """
-        Returns name one of the current git forges Github/Pagure/Gitlab
-
-        :return: str
-        """
-        if isinstance(self.project.service, GithubService):
-            return "Github"
-        elif isinstance(self.project.service, PagureService):
-            return "Pagure"
-        return None
-
-    def which_username(self):
-        """
-        Returns Github/Pagure username based on current project service
-
-        :return: str
-        """
-        if self.which_service() == "Github":
-            return self.conf.github_username
-        elif self.which_service() == "Pagure":
-            return self.conf.pagure_username
-        return None
-
     def find_open_release_issues(self):
         """
         Looks for opened release issues on github
@@ -126,11 +106,11 @@ class ReleaseBot:
             for issue in opened_issues:
                 match, version = process_version_from_title(issue.title, latest_version)
                 if match:
-                    if self.project.can_close_issue(self.which_username(), issue):
+                    if self.project.can_close_issue(which_username(self.conf), issue):
                         release_issues[version] = issue
                         self.logger.info(f'Found new release issue with version: {version}')
                     else:
-                        self.logger.warning(f"User {self.which_username()} "
+                        self.logger.warning(f"User {which_username(self.conf)} "
                                             f"has no permission to modify issue")
 
         if len(release_issues) > 1:
@@ -138,9 +118,9 @@ class ReleaseBot:
             self.logger.error(msg)
             return False
         if len(release_issues) == 1:
-            if self.which_service() == "Github":
+            if which_service(self.project) == GitService.Github:
                 labels = self.new_release.labels
-            else:
+            elif which_service(self.project) == GitService.Pagure:
                 # Putting labels on Pagure issues is not implemented yet inside ogr-lib
                 labels = None
 
@@ -161,32 +141,26 @@ class ReleaseBot:
 
         :return: bool, whether PR was found
         """
-        cursor = ''
         latest_version = Version(self.github.latest_release())
-        while True:
-            edges = self.github.walk_through_prs(start=cursor, direction='before', closed=True)
-            if not edges:
-                self.logger.debug(f'No merged release PR found')
-                return False
+        merged_prs = self.github.walk_through_prs(PRStatus.merged)
 
-            for edge in reversed(edges):
-                cursor = edge['cursor']
-                title = edge['node']['title'].lower().strip()
-                match, version = process_version_from_title(title, latest_version)
+        if not merged_prs:
+            self.logger.debug(f'No merged release PR found')
+            return False
 
-                if match:
-                    merge_commit = edge['node']['mergeCommit']
-                    self.logger.info(f"Found merged release PR with version {version}, "
-                                     f"commit id: {merge_commit['oid']}")
-                    self.new_release.update_pr_details(
-                        version=version,
-                        commitish=merge_commit['oid'],
-                        pr_id=edge['node']['id'],
-                        pr_number=edge['node']['number'],
-                        author_email=merge_commit['author']['email'],
-                        author_name=merge_commit['author']['name']
-                    )
-                    return True
+        for merged_pr in merged_prs:
+            match, version = process_version_from_title(merged_pr.title, latest_version)
+            if match:
+                self.logger.info(f"Found merged release PR with version {version}")
+                self.new_release.update_pr_details(
+                    version=version,
+                    commitish='master',
+                    pr_id=None,
+                    pr_number=merged_pr.id,
+                    author_email=None,
+                    author_name=merged_pr.author
+                )
+                return True
 
     def make_release_pull_request(self):
         """
@@ -240,7 +214,7 @@ class ReleaseBot:
     def make_new_github_release(self):
         def release_handler(success):
             result = "released" if success else "failed to release"
-            msg = f"I just {result} version {self.new_release.version} on {self.git_service}"
+            msg = f"I just {result} version {self.new_release.version} on {self.git_service.name}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
             self.github.comment.append(msg)
@@ -248,11 +222,11 @@ class ReleaseBot:
         try:
             latest_release = self.github.latest_release()
         except ReleaseException as exc:
-            raise ReleaseException(f"Failed getting latest {self.git_service} release (zip).\n{exc}")
+            raise ReleaseException(f"Failed getting latest {self.git_service.name} release (zip).\n{exc}")
 
         if Version.coerce(latest_release) >= Version.coerce(self.new_release.version):
             self.logger.info(
-                f"{self.new_release.version} has already been released on {self.git_service}")
+                f"{self.new_release.version} has already been released on {self.git_service.name}")
         else:
             try:
                 if self.conf.dry_run:
