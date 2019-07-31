@@ -1,4 +1,7 @@
-# Release bot [![Build Status](https://travis-ci.org/user-cont/release-bot.svg?branch=master)](https://travis-ci.org/user-cont/release-bot) [![PyPI version](https://badge.fury.io/py/release-bot.svg)](https://badge.fury.io/py/release-bot) [![Build Status](https://ci.centos.org/job/release-bot-push/badge/icon)](https://ci.centos.org/job/release-bot-push/)
+[![Build Status](https://travis-ci.org/user-cont/release-bot.svg?branch=master)](https://travis-ci.org/user-cont/release-bot) [![PyPI version](https://badge.fury.io/py/release-bot.svg)](https://badge.fury.io/py/release-bot) [![Build Status](https://ci.centos.org/job/release-bot-push/badge/icon)](https://ci.centos.org/job/release-bot-push/)
+
+![Realease Bot](logo_design/logo-bot-extended-v1-readme-border.png)
+
 
 Automate releases on Github and PyPi.
 
