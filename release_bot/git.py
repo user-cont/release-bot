@@ -93,6 +93,17 @@ class Git:
             'git pull --rebase origin master',
             'Unable to pull from remote repository', True)
 
+    def pull_branch(self, branch):
+        """
+        Pull from origin/master to local master branch.
+        :param branch: branch to pull
+        :return:
+        """
+        run_command(
+            self.repo_path,
+            f'git pull --rebase origin {branch}',
+            'Unable to pull from remote repository', True)
+
     def push(self, branch):
         """
         Executes git push
