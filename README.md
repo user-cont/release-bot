@@ -262,3 +262,7 @@ $ sudo pacman -U release-bot-...tar.xz
 # Contributing
 
 If you are interested in making contribution to release-bot project, please read [Contribution guide](/CONTRIBUTING.md) for more information.
+
+## Logo design
+
+Created by `Marián Mrva` - [@surfer19](https://github.com/surfer19)
