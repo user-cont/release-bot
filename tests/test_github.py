@@ -68,16 +68,6 @@ class TestGithub:
         """Opens issue in a repository"""
         return self.g_utils.open_issue()
 
-    @pytest.fixture()
-    def open_issue_graphql(self):
-        """Opens issue and returns it's GraphQL id"""
-        number = self.g_utils.open_issue()
-        query = f"issue(number: {number}) {{id}}"
-        response = self.github.query_repository(query).json()
-        self.github.detect_api_errors(response)
-
-        return number, response['data']['repository']['issue']['id']
-
     def test_get_file(self):
         """Tests fetching release-conf from Github"""
         assert self.github.get_file("release-conf.yaml") == RELEASE_CONF
