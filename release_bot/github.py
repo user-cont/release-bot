@@ -200,10 +200,7 @@ class Github:
         :param branch: name of the branch
         :return: True if exists, False if not
         """
-        branches = self.project.get_branches()
-        if branch in branches:
-            return True
-        return False
+        return branch in self.project.get_branches()
 
     def make_pr(self, branch, version, log, changed_version_files, base='master', labels=None):
         """
@@ -324,16 +321,11 @@ class Github:
         Get user's contact details
         :return: name and email
         """
-        name = None
-        mail = None
+        name = 'Release bot'
+        mail = 'bot@releasebot.bot'
         if which_service(self.project) == GitService.Github:
             name = self.project.service.user.get_username()
             mail = self.project.service.user.get_email()
-
-        if not name:
-            name = 'Release bot'
-        if not mail:
-            mail = 'bot@releasebot.bot'
         return name, mail
 
     def get_file(self, name):
