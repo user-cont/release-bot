@@ -97,8 +97,6 @@ class GitHubApp:
 
 
 class Github:
-    API_ENDPOINT = "https://api.github.com/graphql"
-    API3_ENDPOINT = "https://api.github.com/"
 
     def __init__(self, configuration, git):
         """
@@ -122,70 +120,6 @@ class Github:
         token = self.github_app.get_installation_access_token(self.conf.github_app_installation_id)
         self.logger.debug("github app token obtained")
         self.github_app_session.headers.update({'Authorization': f'token {token}'})
-
-    def do_request(self, query=None, method=None, json_payload=None, url=None,
-                   use_github_auth=False):
-        """
-        a single wrapper to make any type of request:
-
-        * query using graphql
-        * a request with selected method and json payload
-        * utilizing both tokens: github app and user token
-
-        this method returns requests.Response so that methods can play with return code
-
-        :param query:
-        :param method:
-        :param json_payload:
-        :param url:
-        :param use_github_auth: auth as github app, not as user (default is user)
-        :return: requests.Response
-        """
-        if query:
-            self.logger.debug(f'query = {query}')
-            if use_github_auth and self.github_app_session:
-                response = self.github_app_session.post(url=self.API_ENDPOINT,
-                                                        json={'query': query})
-            else:
-                response = self.session.post(url=self.API_ENDPOINT, json={'query': query})
-            if response.status_code == 401 and self.github_app_session:
-                self.update_github_app_token()
-                response = self.github_app_session.post(url=self.API_ENDPOINT,
-                                                        json={'query': query})
-        elif method and url:
-            self.logger.debug(f'{method} {url}')
-            if use_github_auth and self.github_app_session:
-                response = self.github_app_session.request(method=method, url=url,
-                                                           json=json_payload)
-            else:
-                response = self.session.request(method=method, url=url, json=json_payload)
-            if response.status_code == 401 and self.github_app_session:
-                self.update_github_app_token()
-                response = self.github_app_session.request(method=method, url=url,
-                                                           json=json_payload)
-            if not response.ok:
-                self.logger.error(f"error message: {response.content}")
-        else:
-            raise RuntimeError("please specify query or both method and url")
-        return response
-
-    def query_repository(self, query):
-        """
-        Query a Github repo using GraphQL API
-
-        :param query: str
-        :return: requests.Response
-        """
-        repo_query = (f'query {{repository(owner: "{self.conf.repository_owner}", '
-                      f'name: "{self.conf.repository_name}") {{{query}}}}}')
-        return self.do_request(query=repo_query)
-
-    @staticmethod
-    def detect_api_errors(response):
-        """This function looks for errors in API response"""
-        msg = '\n'.join((err['message'] for err in response.get('errors', [])))
-        if msg:
-            raise ReleaseException(msg)
 
     def latest_release(self):
         """
@@ -262,21 +196,11 @@ class Github:
 
     def branch_exists(self, branch):
         """
-        Makes a call to github api to check if branch already exists
+        Check if branch already exists
         :param branch: name of the branch
         :return: True if exists, False if not
         """
-        url = (f"{self.API3_ENDPOINT}repos/{self.conf.repository_owner}/"
-               f"{self.conf.repository_name}/branches/{branch}")
-        response = self.do_request(method="GET", url=url)
-        if response.status_code == 200:
-            return True
-        elif response.status_code == 404:
-            self.logger.debug(response.text)
-            return False
-        else:
-            msg = f"Unexpected response code from Github:\n{response.text}"
-            raise ReleaseException(msg)
+        return branch in self.project.get_branches()
 
     def make_pr(self, branch, version, log, changed_version_files, base='master', labels=None):
         """
@@ -394,24 +318,15 @@ class Github:
 
     def get_user_contact(self):
         """
-        Makes a call to github api to get user's contact details
+        Get user's contact details
         :return: name and email
         """
-        query = (f'query {{user(login: "{self.conf.github_username}")'
-                 '''  {
-                     email
-                     name
-                   }
-                 }''')
-        response = self.do_request(query=query).json()
-        self.detect_api_errors(response)
-        name = response['data']['user']['name']
-        email = response['data']['user']['email']
-        if not name:
-            name = 'Release bot'
-        if not email:
-            email = 'bot@releasebot.bot'
-        return name, email
+        name = 'Release bot'
+        mail = 'bot@releasebot.bot'
+        if which_service(self.project) == GitService.Github:
+            name = self.project.service.user.get_username()
+            mail = self.project.service.user.get_email()
+        return name, mail
 
     def get_file(self, name):
         """
