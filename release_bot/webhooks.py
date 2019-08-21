@@ -27,14 +27,11 @@ class GithubWebhooksHandler(View):
         Handler for github callbacks.
     """
 
-    def __init__(self, release_bot, conf):
-        self.release_bot = release_bot
-        self.conf = conf
+    def __init__(self, conf):
         self.logger = conf.logger
 
     def dispatch_request(self):
-        self.logger.info(f'New github webhook call from '
-                         f'{self.conf.repository_owner}/{self.conf.repository_name}')
+        self.logger.info(f'New github webhook call from detected')
         if request.is_json:
             celery_app.send_task(name="task.celery_task.parse_web_hook_payload",
                                  kwargs={"webhook_payload": request.get_json()})

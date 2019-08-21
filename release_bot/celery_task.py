@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from pathlib import Path
+from os import getenv
 
 from release_bot.celerizer import celery_app
 from release_bot.exceptions import ReleaseException
@@ -47,12 +48,14 @@ def handle_issue(webhook_payload):
     """Handler for newly opened issues"""
     configuration.configuration = Path(
         '/Users/marusinm/Documents/Python/tmp/bot-test-conf/conf.yaml').resolve()
-    configuration.load_configuration()
+    # configuration.configuration = Path(getenv("CONF_PATH", "secrets/prod/conf.yaml")).resolve()
+
     # add configuration from Github webhook
     configuration.repository_name = webhook_payload['repository']['name']
     configuration.repository_owner = webhook_payload['repository']['owner']['login']
     configuration.github_username = webhook_payload['issue']['user']['login']
     configuration.clone_url = webhook_payload['repository']['clone_url']
+    configuration.load_configuration()  # load the rest of configuration if there is any
 
     logger = configuration.logger
     release_bot = ReleaseBot(configuration)
@@ -76,12 +79,14 @@ def handle_pr(webhook_payload):
     """Handler for merged PR"""
     configuration.configuration = Path(
         '/Users/marusinm/Documents/Python/tmp/bot-test-conf/conf.yaml').resolve()
-    configuration.load_configuration()
+    # configuration.configuration = Path(getenv("CONF_PATH", "secrets/prod/conf.yaml")).resolve()
+
     # add configuration from Github webhook
     configuration.repository_name = webhook_payload['repository']['name']
     configuration.repository_owner = webhook_payload['repository']['owner']['login']
     configuration.github_username = webhook_payload['pull_request']['user']['login']
     configuration.clone_url = webhook_payload['repository']['clone_url']
+    configuration.load_configuration()  # load the rest of configuration if there is any
 
     logger = configuration.logger
     release_bot = ReleaseBot(configuration)
