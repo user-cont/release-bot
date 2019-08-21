@@ -26,9 +26,6 @@ from release_bot.version import __version__
 
 
 class Configuration:
-    # note that required items need to reference strings as their length is checked
-    REQUIRED_ITEMS = {"conf": ['repository_name', 'repository_owner'],
-                      "release-conf": []}
 
     def __init__(self):
         self.version = __version__
@@ -105,11 +102,6 @@ class Configuration:
         for key, value in file.items():
             if hasattr(self, key):
                 setattr(self, key, value)
-        # check if required items are present
-        for item in self.REQUIRED_ITEMS['conf']:
-            if item not in file:
-                self.logger.error(f"Item {item!r} is required in configuration!")
-                sys.exit(1)
         # if user hasn't specified clone_url, use default
         if 'clone_url' not in file:
             self.clone_url = (f'https://github.com/{self.repository_owner}'
@@ -128,8 +120,6 @@ class Configuration:
             self.logger.error("No release-conf.yaml found in "
                               f"{self.repository_owner}/{self.repository_name} repository root!\n"
                               "You have to add one for releasing to PyPi")
-            if self.REQUIRED_ITEMS['release-conf']:
-                sys.exit(1)
 
         parsed_conf = yaml.safe_load(conf) or {}
         # If pypi option is not specified in release-conf.yaml,
@@ -137,10 +127,6 @@ class Configuration:
         parsed_conf.setdefault('pypi', True)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
-        for item in self.REQUIRED_ITEMS['release-conf']:
-            if item not in parsed_conf:
-                self.logger.error(f"Item {item!r} is required in release-conf!")
-                sys.exit(1)
         for index, label in enumerate(parsed_conf.get('labels', [])):
             parsed_conf['labels'][index] = str(label)
 
@@ -195,6 +181,18 @@ class Configuration:
         Project instance is used for manipulating with Github/Pagure repo.
         :return: ogr Github/Pagure project instance or None
         """
+        # Return instance for github app
+        if self.github_app_id != '':
+            with open(self.github_app_cert_path, 'r') as cert:
+                github_cert = cert.read()
+            return get_project(url=self.clone_url,
+                               custom_instances=[
+                                   GithubService(token=None,
+                                                 github_app_id=self.github_app_id,
+                                                 github_app_private_key=github_cert,
+                                                 )])
+
+        # Return instance for regular user (local machine)
         return get_project(url=self.clone_url,
                            custom_instances=[
                                GithubService(token=self.github_token),

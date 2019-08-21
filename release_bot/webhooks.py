@@ -19,7 +19,7 @@ This module is backend for WSGI.
 from flask import request, jsonify
 from flask.views import View
 
-from release_bot.exceptions import ReleaseException
+from release_bot.celerizer import celery_app
 
 
 class GithubWebhooksHandler(View):
@@ -36,59 +36,8 @@ class GithubWebhooksHandler(View):
         self.logger.info(f'New github webhook call from '
                          f'{self.conf.repository_owner}/{self.conf.repository_name}')
         if request.is_json:
-            self.parse_payload(request.get_json())
+            celery_app.send_task(name="task.celery_task.parse_web_hook_payload",
+                                 kwargs={"webhook_payload": request.get_json()})
         else:
             self.logger.error("This webhook doesn't contain JSON")
         return jsonify(result={"status": 200})
-
-    def parse_payload(self, webhook_payload):
-        """
-        Parse json webhook payload callback
-        :param webhook_payload: json from github webhook
-        """
-        self.logger.info(f"release-bot v{self.conf.version} reporting for duty!")
-        if 'issue' in webhook_payload.keys():
-            if webhook_payload['action'] == 'opened':
-                self.handle_issue()
-        elif 'pull_request' in webhook_payload.keys():
-            if webhook_payload['action'] == 'closed':
-                if webhook_payload['pull_request']['merged'] is True:
-                    self.handle_pr()
-        else:
-            self.logger.info("This webhook doesn't contain opened issue or merged PR")
-        self.logger.debug("Done. Waiting for another github webhook callback")
-
-    def handle_issue(self):
-        """Handler for newly opened issues"""
-        self.logger.info("Resolving opened issue")
-        self.release_bot.git.pull()
-        try:
-            self.release_bot.load_release_conf()
-            if (self.release_bot.new_release.trigger_on_issue and
-                    self.release_bot.find_open_release_issues()):
-                if self.release_bot.new_release.labels is not None:
-                    self.release_bot.project.add_issue_labels(
-                        self.release_bot.new_pr.issue_number,
-                        self.release_bot.new_release.labels)
-                self.release_bot.make_release_pull_request()
-        except ReleaseException as exc:
-            self.logger.error(exc)
-
-    def handle_pr(self):
-        """Handler for merged PR"""
-        self.logger.info("Resolving opened PR")
-        self.release_bot.git.pull()
-        try:
-            self.release_bot.load_release_conf()
-            if self.release_bot.find_newest_release_pull_request():
-                self.release_bot.make_new_github_release()
-                # Try to do PyPi release regardless whether we just did github release
-                # for case that in previous iteration (of the 'while True' loop)
-                # we succeeded with github release, but failed with PyPi release
-                self.release_bot.make_new_pypi_release()
-        except ReleaseException as exc:
-            self.logger.error(exc)
-
-        msg = ''.join(self.release_bot.github.comment)
-        self.release_bot.project.pr_comment(self.release_bot.new_release.pr_number, msg)
-        self.release_bot.github.comment = []  # clean up

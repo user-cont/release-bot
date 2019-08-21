@@ -323,9 +323,12 @@ class Github:
         """
         name = 'Release bot'
         mail = 'bot@releasebot.bot'
-        if which_service(self.project) == GitService.Github:
-            name = self.project.service.user.get_username()
-            mail = self.project.service.user.get_email()
+
+        # don't set in case of Github app instance, it uses defaults
+        if self.conf.github_app_id == '':
+            if which_service(self.project) == GitService.Github:
+                name = self.project.service.user.get_username()
+                mail = self.project.service.user.get_email()
         return name, mail
 
     def get_file(self, name):
