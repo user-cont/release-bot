@@ -1,0 +1,19 @@
+FROM registry.fedoraproject.org/fedora:30
+
+EXPOSE 8080
+
+ENV HOME=/src \
+    PATH=/src/bin:/bin:/src/.local/bin:$PATH
+
+RUN dnf install -y git nss_wrapper
+
+COPY . /src/release-bot/
+
+WORKDIR $HOME
+
+USER 1001
+
+RUN cd /src/release-bot && \
+    pip3 install --user .
+
+CMD $HOME
