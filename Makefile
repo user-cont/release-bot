@@ -1,11 +1,11 @@
 .PHONY: test
 
-IMAGE_NAME := usercont/release-bot
+IMAGE_NAME := rpitonak/release-bot
 IMAGE_NAME_DEV := usercont/release-bot:dev
 TEST_IMAGE_NAME := release-bot-tests
 
-image:
-	docker build --tag=$(IMAGE_NAME) .
+image: files/install-rpm-packages.yaml files/recipe.yaml
+	docker build --rm -f Dockerfile.githubapp --tag=$(IMAGE_NAME) .
 
 image-dev:
 	docker build --tag=$(IMAGE_NAME_DEV) -f Dockerfile.dev .

@@ -1,0 +1,35 @@
+---
+- name: Install dependencies for packit-service.
+  hosts: all
+  tasks:
+  - name: Install all RPM packages needed to run packit-service.
+    dnf:
+      name:
+      - fedpkg
+      - git-core
+      - mod_md
+      - nss_wrapper
+      - origin-clients
+      - python3-GitPython
+      - python3-gnupg
+      - python3-click
+      - python3-copr
+      - python3-devel
+      - python3-fedmsg
+      - python3-flask
+      - python3-ipdb  # for easy debugging
+      - python3-jsonschema
+      - python3-libpagure
+      - python3-mod_wsgi
+      - python3-munch
+      - python3-ogr
+      - python3-packaging
+      - python3-pip
+      - python3-pyyaml
+      - python3-requests
+      - python3-setuptools
+      - python3-setuptools_scm
+      - python3-setuptools_scm_git_archive
+      - python3-wheel  # for bdist_wheel
+      - nss_wrapper  # openshift anyuid passwd madness
+      state: present
