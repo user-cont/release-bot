@@ -19,6 +19,7 @@ from flexmock import flexmock
 import json
 
 from release_bot.webhooks import GithubWebhooksHandler
+from release_bot.celerizer import celery_app
 
 
 @pytest.fixture()
@@ -29,7 +30,6 @@ def flask_instance():
     :return: flask instance for tests
     """
 
-    release_bot = flexmock()
     configuration = flexmock(
         logger=flexmock(),
         repository_owner='repo-owner',
@@ -46,7 +46,6 @@ def flask_instance():
     app = Flask(__name__)
     app.add_url_rule('/webhook-handler/',
                      view_func=GithubWebhooksHandler.as_view('github_webhooks_handler',
-                                                             release_bot=release_bot,
                                                              conf=configuration),
                      methods=['POST', ])
 
@@ -64,37 +63,13 @@ def test_bad_requests(flask_instance):
 
 def test_json_requests(flask_instance):
     """Test if POST method which contains JSON call correct methods"""
-    flexmock(GithubWebhooksHandler).should_receive("handle_issue").once()
-    flexmock(GithubWebhooksHandler).should_receive("handle_pr").once()
+    flexmock(celery_app).should_receive("send_task").and_return('vooosh!').once()
 
     json_dummy_dict = {
       'dummy': 'dummy',
     }
     # will not call handle_issue or handle_pr within GithubWebhooksHandler instance
     response = flask_instance.post('/webhook-handler/', data=json.dumps(json_dummy_dict),
-                                   content_type='application/json')
-    assert response.status_code == 200
-
-    json_expected_dict = {
-        'action': 'opened',
-        'issue': {
-            'dummy': 'dummy'
-        }
-    }
-    # call handle_issue once within GithubWebhooksHandler instance
-    response = flask_instance.post('/webhook-handler/', data=json.dumps(json_expected_dict),
-                                   content_type='application/json')
-    assert response.status_code == 200
-
-    json_expected_dict = {
-        'action': 'closed',
-        'pull_request': {
-            'merged': True,
-            'dummy': 'dummy'
-        }
-    }
-    # call handle_pr once within GithubWebhooksHandler instance
-    response = flask_instance.post('/webhook-handler/', data=json.dumps(json_expected_dict),
                                    content_type='application/json')
     assert response.status_code == 200
 

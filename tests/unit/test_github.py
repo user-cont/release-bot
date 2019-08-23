@@ -12,26 +12,27 @@ from release_bot.github import Github
 
 
 def test_latest_release():
-    mocked_releases = [
-        GithubRelease(
-            tag_name="0.0.1",
-            url="",
-            created_at="",
-            tarball_url="",
-            git_tag=GitTag(name="0.0.1", commit_sha="123"),
-            project=flexmock(GitProject),
-            raw_release=flexmock(title="0.0.1", body=""),
-        ),
-        GithubRelease(
-            tag_name="0.0.2",
-            url="",
-            created_at="",
-            tarball_url="",
-            git_tag=GitTag(name="0.0.2", commit_sha="123"),
-            project=flexmock(GitProject),
-            raw_release=flexmock(title="0.0.2", body=""),
-        ),
-    ]
+    r1 = GithubRelease(
+                tag_name='',
+                url='',
+                created_at='',
+                tarball_url='',
+                git_tag=GitTag(name='0.0.1', commit_sha='123'),
+                project=flexmock(GitProject),
+                raw_release=flexmock(title='0.0.1')
+                )
+
+    r2 = GithubRelease(
+        tag_name='',
+        url='',
+        created_at='',
+        tarball_url='',
+        git_tag=GitTag(name='0.0.2', commit_sha='123'),
+        project=flexmock(GitProject),
+        raw_release=flexmock(title='0.0.2')
+    )
+
+    mocked_releases = [r1, r2]
 
     git = flexmock(Git)
     c = flexmock(configuration)

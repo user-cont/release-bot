@@ -26,6 +26,9 @@ from release_bot.version import __version__
 
 
 class Configuration:
+    # note that required items need to reference strings as their length is checked
+    REQUIRED_ITEMS = {"conf": [],
+                      "release-conf": []}
 
     def __init__(self):
         self.version = __version__
@@ -102,6 +105,11 @@ class Configuration:
         for key, value in file.items():
             if hasattr(self, key):
                 setattr(self, key, value)
+        # check if required items are present
+        for item in self.REQUIRED_ITEMS['conf']:
+            if item not in file:
+                self.logger.error(f"Item {item!r} is required in configuration!")
+                sys.exit(1)
         # if user hasn't specified clone_url, use default
         if 'clone_url' not in file:
             self.clone_url = (f'https://github.com/{self.repository_owner}'
@@ -120,6 +128,8 @@ class Configuration:
             self.logger.error("No release-conf.yaml found in "
                               f"{self.repository_owner}/{self.repository_name} repository root!\n"
                               "You have to add one for releasing to PyPi")
+            if self.REQUIRED_ITEMS['release-conf']:
+                sys.exit(1)
 
         parsed_conf = yaml.safe_load(conf) or {}
         # If pypi option is not specified in release-conf.yaml,
@@ -127,6 +137,10 @@ class Configuration:
         parsed_conf.setdefault('pypi', True)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
+        for item in self.REQUIRED_ITEMS['release-conf']:
+            if item not in parsed_conf:
+                self.logger.error(f"Item {item!r} is required in release-conf!")
+                sys.exit(1)
         for index, label in enumerate(parsed_conf.get('labels', [])):
             parsed_conf['labels'][index] = str(label)
 
