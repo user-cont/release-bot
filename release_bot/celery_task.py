@@ -46,9 +46,9 @@ def parse_web_hook_payload(self, webhook_payload):
 
 def handle_issue(webhook_payload):
     """Handler for newly opened issues"""
-    configuration.configuration = Path(
-        '/Users/marusinm/Documents/Python/tmp/bot-test-conf/conf.yaml').resolve()
-    # configuration.configuration = Path(getenv("CONF_PATH", "/secrets/prod/conf.yaml")).resolve()
+    # configuration.configuration = Path(
+    #     '/Users/marusinm/Documents/Python/tmp/bot-test-conf/conf.yaml').resolve()
+    configuration.configuration = Path(getenv("CONF_PATH", "/secrets/prod/conf.yaml")).resolve()
 
     # add configuration from Github webhook
     configuration.repository_name = webhook_payload['repository']['name']
@@ -77,9 +77,9 @@ def handle_issue(webhook_payload):
 
 def handle_pr(webhook_payload):
     """Handler for merged PR"""
-    configuration.configuration = Path(
-        '/Users/marusinm/Documents/Python/tmp/bot-test-conf/conf.yaml').resolve()
-    # configuration.configuration = Path(getenv("CONF_PATH", "/secrets/prod/conf.yaml")).resolve()
+    # configuration.configuration = Path(
+    #     '/Users/marusinm/Documents/Python/tmp/bot-test-conf/conf.yaml').resolve()
+    configuration.configuration = Path(getenv("CONF_PATH", "/secrets/prod/conf.yaml")).resolve()
 
     # add configuration from Github webhook
     configuration.repository_name = webhook_payload['repository']['name']
