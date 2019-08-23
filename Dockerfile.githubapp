@@ -33,4 +33,4 @@ USER 1001
 ENV USER=release-bot
 ENV HOME=/home/release-bot
 
-CMD ["release-bot -c /secrets/prod/conf.yaml"]
+CMD ["release-bot -c /home/release-bot/.config/conf.yaml"]
