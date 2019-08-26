@@ -36,6 +36,10 @@
       state: directory
       path: /secrets
       mode: 0777
+  - name: Copy gitconfig
+    copy:
+      src: gitconfig
+      dest: '{{ home_path }}/.gitconfig'
   - name: stat /src
     stat:
       path: /src

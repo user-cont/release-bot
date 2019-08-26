@@ -23,6 +23,7 @@ import yaml
 from ogr import GithubService, PagureService, get_project
 
 from release_bot.version import __version__
+from release_bot.github import GitHubApp
 
 
 class Configuration:
@@ -199,6 +200,13 @@ class Configuration:
         if self.github_app_id != '':
             with open(self.github_app_cert_path, 'r') as cert:
                 github_cert = cert.read()
+
+            # github token will be used as a credential over http (commit/push)
+            github_app = GitHubApp(self.github_app_id, self.github_app_cert_path)
+            self.github_token = github_app.get_installation_access_token(
+                self.github_app_installation_id
+            )
+
             return get_project(url=self.clone_url,
                                custom_instances=[
                                    GithubService(token=None,

@@ -15,4 +15,8 @@ __pycache__/
 # Editors and IDEs
 .idea/
 .vscode/
+.DS_Store
+
+dump.rdb
+
 
