@@ -7,22 +7,14 @@
       base_image: FROM registry.fedoraproject.org/fedora:30
       #base_image: fedora:29
       target_image:
-        name: docker.io/usercont/packit-service
+        name: docker.io/usercont/release-bot
         environment:
-          FLASK_APP: packit.service.web_hook
+          FLASK_APP: releasebot.service.web_hook
         cmd: flask-3 run -h 0.0.0.0
       working_container:
         volumes:
         - '{{ playbook_dir }}:/src:Z'
   tasks:
-  - name: Create /usr/share/packit directory
-    file:
-      state: directory
-      path: '{{ item }}'
-    with_items:
-    - /usr/share/packit
-    - /packit-ssh  # this is where we put ssh creds
-    - /sandcastle  # working dir for the upstream git which is mapped to the sandbox pod
   - name: Create some home dirs
     file:
       state: directory

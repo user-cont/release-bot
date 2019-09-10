@@ -9,10 +9,6 @@ COPY files/ /src/files/
 USER 0
 
 RUN mkdir /home/release-bot && chmod 0776 /home/release-bot
-COPY files/passwd /home/release-bot/passwd
-ENV LD_PRELOAD=libnss_wrapper.so
-ENV NSS_WRAPPER_PASSWD=/home/release-bot/passwd
-ENV NSS_WRAPPER_GROUP=/etc/group
 
 # Install packages first and reuse the cache as much as possible
 RUN dnf install -y ansible \
