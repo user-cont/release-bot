@@ -1,24 +1,17 @@
-# MIT License
+# -*- coding: utf-8 -*-
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from pathlib import Path
 from os import getenv
@@ -28,9 +21,11 @@ from release_bot.exceptions import ReleaseException
 from release_bot.configuration import configuration
 from release_bot.releasebot import ReleaseBot
 
+DEFAULT_CONF_FILE = "/home/release-bot/.config/conf.yaml"
 
-@celery_app.task(bind=True, name="task.celery_task.parse_web_hook_payload")
-def parse_web_hook_payload(self, webhook_payload):
+
+@celery_app.task(name="task.celery_task.parse_web_hook_payload")
+def parse_web_hook_payload(webhook_payload):
     """
     Parse json webhook payload callback
     :param webhook_payload: json from github webhook
@@ -44,15 +39,23 @@ def parse_web_hook_payload(self, webhook_payload):
                 handle_pr(webhook_payload)
 
 
-def handle_issue(webhook_payload):
-    """Handler for newly opened issues"""
+def set_configuration(webhook_payload, issue=True):
+    """
+    Prepare configuration from parsed web hook payload and return ReleaseBot instance with logger
+    :param webhook_payload: payload from web hook
+    :param issue: if true parse Github issue payload otherwise parse Github pull request payload
+    :return: ReleaseBot instance, configuration logger
+    """
     configuration.configuration = Path(getenv("CONF_PATH",
-                                              "/home/release-bot/.config/conf.yaml")).resolve()
+                                              DEFAULT_CONF_FILE)).resolve()
 
     # add configuration from Github webhook
     configuration.repository_name = webhook_payload['repository']['name']
     configuration.repository_owner = webhook_payload['repository']['owner']['login']
-    configuration.github_username = webhook_payload['issue']['user']['login']
+    if issue:
+        configuration.github_username = webhook_payload['issue']['user']['login']
+    else:
+        configuration.github_username = webhook_payload['pull_request']['user']['login']
     configuration.load_configuration()  # load the rest of configuration if there is any
 
     # create url for github app to enable access over http
@@ -60,8 +63,12 @@ def handle_issue(webhook_payload):
         f'{configuration.github_token}@github.com/' \
         f'{configuration.repository_owner}/{configuration.repository_name}.git'
 
-    logger = configuration.logger
-    release_bot = ReleaseBot(configuration)
+    return ReleaseBot(configuration), configuration.logger
+
+
+def handle_issue(webhook_payload):
+    """Handler for newly opened issues"""
+    release_bot, logger = set_configuration(webhook_payload, issue=True)
 
     logger.info("Resolving opened issue")
     release_bot.git.pull()
@@ -80,22 +87,7 @@ def handle_issue(webhook_payload):
 
 def handle_pr(webhook_payload):
     """Handler for merged PR"""
-    configuration.configuration = Path(getenv("CONF_PATH",
-                                              "/home/release-bot/.config/conf.yaml")).resolve()
-
-    # add configuration from Github webhook
-    configuration.repository_name = webhook_payload['repository']['name']
-    configuration.repository_owner = webhook_payload['repository']['owner']['login']
-    configuration.github_username = webhook_payload['pull_request']['user']['login']
-    configuration.load_configuration()  # load the rest of configuration if there is any
-
-    # create url for github app to enable access over http
-    configuration.clone_url = f'https://x-access-token:' \
-        f'{configuration.github_token}@github.com/' \
-        f'{configuration.repository_owner}/{configuration.repository_name}.git'
-
-    logger = configuration.logger
-    release_bot = ReleaseBot(configuration)
+    release_bot, logger = set_configuration(webhook_payload, issue=False)
 
     logger.info("Resolving opened PR")
     release_bot.git.pull()
@@ -113,5 +105,3 @@ def handle_pr(webhook_payload):
     msg = ''.join(release_bot.github.comment)
     release_bot.project.pr_comment(release_bot.new_release.pr_number, msg)
     release_bot.github.comment = []  # clean up
-
-

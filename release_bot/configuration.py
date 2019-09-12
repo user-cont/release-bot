@@ -197,9 +197,8 @@ class Configuration:
         :return: ogr Github/Pagure project instance or None
         """
         # Return instance for github app
-        if self.github_app_id != '':
-            with open(self.github_app_cert_path, 'r') as cert:
-                github_cert = cert.read()
+        if self.github_app_id:
+            github_cert = Path(self.github_app_cert_path).read_text()
 
             # github token will be used as a credential over http (commit/push)
             github_app = GitHubApp(self.github_app_id, self.github_app_cert_path)
@@ -211,8 +210,7 @@ class Configuration:
                                custom_instances=[
                                    GithubService(token=None,
                                                  github_app_id=self.github_app_id,
-                                                 github_app_private_key=github_cert,
-                                                 )])
+                                                 github_app_private_key=github_cert)])
 
         # Return instance for regular user (local machine)
         return get_project(url=self.clone_url,

@@ -325,7 +325,7 @@ class Github:
         mail = 'bot@releasebot.bot'
 
         # don't set in case of Github app instance, it uses defaults
-        if self.conf.github_app_id == '':
+        if not self.conf.github_app_id:
             if which_service(self.project) == GitService.Github:
                 name = self.project.service.user.get_username()
                 mail = self.project.service.user.get_email()
