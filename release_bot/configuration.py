@@ -200,11 +200,12 @@ class Configuration:
         if self.github_app_id:
             github_cert = Path(self.github_app_cert_path).read_text()
 
-            # github token will be used as a credential over http (commit/push)
-            github_app = GitHubApp(self.github_app_id, self.github_app_cert_path)
-            self.github_token = github_app.get_installation_access_token(
-                self.github_app_installation_id
-            )
+            if self.github_app_installation_id:
+                # github token will be used as a credential over http (commit/push)
+                github_app = GitHubApp(self.github_app_id, self.github_app_cert_path)
+                self.github_token = github_app.get_installation_access_token(
+                    self.github_app_installation_id
+                )
 
             return get_project(url=self.clone_url,
                                custom_instances=[

@@ -1,6 +1,6 @@
 .PHONY: test
 
-IMAGE_NAME := marusinm/release-bot
+IMAGE_NAME := usercont/release-bot
 IMAGE_NAME_DEV := usercont/release-bot:dev
 TEST_IMAGE_NAME := release-bot-tests
 
