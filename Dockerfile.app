@@ -16,7 +16,7 @@ RUN dnf install -y ansible \
     && ansible-playbook -vv -c local -i localhost, files/install-rpm-packages.yaml \
     && dnf clean all
 
-COPY setup.py setup.cfg requirements.txt files/recipe.yaml /src/
+COPY setup.py setup.cfg files/recipe.yaml /src/
 # setuptools-scm
 COPY .git /src/.git
 COPY release_bot/ /src/release_bot/
