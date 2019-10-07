@@ -5,6 +5,8 @@ Thanks for your interest in contributing to `release-bot`.
 The following is a set of guidelines for contributing to `release-bot`.
 Use your best judgement, and feel free to propose changes to this document in a pull request.
 
+By contributing to this project you agree to the Developer Certificate of Origin (DCO). This document is a simple statement that you, as a contributor, have the legal right to submit the contribution. See the [DCO](DCO) file for details.
+
 ## Reporting Bugs
 
 Before creating bug reports, please check a [list of known issues](https://github.com/user-cont/release-bot/issues) to see if the problem has already been reported (or fixed in a master branch).
