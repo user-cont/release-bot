@@ -16,14 +16,20 @@
 import os
 import warnings
 from pathlib import Path
+
 import pytest
 import yaml
 from flexmock import flexmock
 
+from ogr.abstract import PRComment
+
 from release_bot.releasebot import ReleaseBot
 from release_bot.utils import GitService, which_service, which_username
 from tests.conftest import prepare_conf
-from .github_utils import GithubUtils, RELEASE_CONF
+
+from .github_utils import RELEASE_CONF, GithubUtils
+
+DEFAULT_REFRESH_INTERVAL = 1
 
 
 @pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN'),
@@ -48,7 +54,7 @@ class TestBot:
         configuration.repository_owner = self.github_user
         configuration.github_username = self.github_user
         configuration.clone_url = f'https://github.com/{self.github_user}/{self.g_utils.repo}.git'
-        configuration.refresh_interval = 1
+        configuration.refresh_interval = DEFAULT_REFRESH_INTERVAL 
         configuration.project = configuration.get_project()
 
         self.release_bot = ReleaseBot(configuration)
@@ -183,3 +189,15 @@ class TestBot:
         assert (path / f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz').is_file()
         self.release_bot.new_release.pypi = False
         assert not self.release_bot.make_new_pypi_release()
+
+    @pytest.mark.timeout(max(30, DEFAULT_REFRESH_INTERVAL))
+    def test_run_once(self):
+        """Test that the bot runs only once and exits."""
+        flexmock(self.release_bot.conf, refresh_interval=None)
+
+        (flexmock(self.release_bot.project)  # make sure it interes the loop
+         .should_receive('pr_comment')
+         .once()
+         .and_return(PRComment("Fake comment", "FakeAuthor"))
+        )
+        self.release_bot.run()

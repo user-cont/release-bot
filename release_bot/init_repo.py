@@ -122,10 +122,10 @@ from shell run 'release-bot -c conf.yaml'"""
             while not (refresh_interval.isdigit() or refresh_interval == ""):
                 refresh_interval = input("""In how many seconds would you like the
     bot to check for updates (Default 180):""")
-            if refresh_interval:
+            if refresh_interval > 0:
                 self.conf['refresh_interval'] = int(refresh_interval)
             else:
-                self.conf['refresh_interval'] = 180
+                self.conf['refresh_interval'] = None
             is_owner_user = input('Are you the owner of the repo? (Y/n):')
             if is_owner_user.lower() == 'y' or is_owner_user == '':
                 self.conf['github_username'] = self.conf['repository_owner']
