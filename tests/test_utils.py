@@ -49,18 +49,20 @@ def test_process_version_from_title():
 
 def test_look_for_version_files(tmpdir):
     """Test finding the correct files with all possible version variables"""
-    dir1 = tmpdir / "subdir"
-    dir1.mkdir()
+    fake_dir = tmpdir / "subdir"
+    fake_dir.mkdir()
 
-    file1 = dir1 / "__init__.py"
-    file1.write_text('__version__="1.2.3"', "utf-8")
+    version_files = ["__about__.py", "__init__.py", "version.py"]
+    for f_name in version_files:
+        v_file = fake_dir / f_name
+        v_file.write_text('__version__="1.2.0"', "utf-8")
 
-    assert look_for_version_files(str(dir1), "1.2.4") == ["__init__.py"]
+        assert look_for_version_files(str(fake_dir), "1.2.3") == [f_name]
 
-    file2 = dir1 / "setup.py"
-    file2.write_text('version="1.2.3"', "utf-8")
+    setup_file = fake_dir / "setup.py"
+    setup_file.write_text('version="1.2.0"', "utf-8")
 
-    assert look_for_version_files(str(dir1), "1.2.4") == ["setup.py"]
+    assert look_for_version_files(str(fake_dir), "1.2.3") == ["setup.py"]
 
-    assert set(look_for_version_files(str(dir1), "1.2.5")) == \
-        {"setup.py", "__init__.py"}
+    assert set(look_for_version_files(str(fake_dir), "1.2.4")) == \
+        {"setup.py", "__about__.py", "__init__.py", "version.py"}

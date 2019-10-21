@@ -243,7 +243,13 @@ def look_for_version_files(repo_directory, new_version):
     changed = []
     for root, _, files in os.walk(repo_directory):
         for file in files:
-            if file in ('setup.py', 'setup.cfg', '__init__.py', 'version.py'):
+            if file in (
+                    'setup.py',
+                    'setup.cfg',
+                    '__about__.py',
+                    '__init__.py',
+                    'version.py'
+            ):
                 filename = os.path.join(root, file)
                 if file in ('setup.py', 'setup.cfg'):
                     success = update_version(filename, new_version, ("__version__", "version"))
