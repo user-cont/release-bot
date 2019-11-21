@@ -308,6 +308,12 @@ class ReleaseBot:
                 self.project.pr_comment(self.new_release.pr_number, msg)
                 self.github.comment = []  # clean up
 
+                if not self.conf.refresh_interval:
+                    self.logger.debug(
+                        "Refresh interval has not been provided."
+                        "Reconciliation finished."
+                    )
+                    break
                 self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
                 time.sleep(self.conf.refresh_interval)
         finally:
