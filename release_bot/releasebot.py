@@ -62,12 +62,12 @@ class ReleaseBot:
         self.github.comment = []
         self.git.cleanup()
 
-    def create_flask_instance(self):
+    @staticmethod
+    def create_flask_instance(configuration):
         """Create flask instance for receiving Github webhooks"""
         app = Flask(__name__)
         app.add_url_rule('/webhook-handler/',  # route for github callbacks
                          view_func=GithubWebhooksHandler.as_view('github_webhooks_handler',
-                                                                 release_bot=self,
                                                                  conf=configuration),
                          methods=['POST', ])
         app.run(host='0.0.0.0', port=8080)
@@ -323,10 +323,10 @@ def main():
     else:
         CLI.get_configuration(args)
         configuration.load_configuration()
-        rb = ReleaseBot(configuration)
         if configuration.webhook_handler:
-            rb.create_flask_instance()
+            ReleaseBot.create_flask_instance(configuration)
         else:
+            rb = ReleaseBot(configuration)
             rb.run()
 
 

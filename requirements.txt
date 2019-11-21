@@ -7,4 +7,6 @@ PyJWT
 flask
 gitchangelog
 pystache
-ogr@git+https://github.com/packit-service/ogr@master#egg=ogr
+celery[redis]
+cryptography
+ogr

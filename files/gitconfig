@@ -1,0 +1,5 @@
+[user]
+    name = Release Bot
+    email = user-cont-team+release-bot@redhat.com
+[push]
+    default = current

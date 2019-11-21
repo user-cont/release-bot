@@ -43,8 +43,7 @@ Note that you have to setup your login details (see [Requirements](#requirements
 ```
 $ pip install release-bot
 ```
-Other possible installations are through
-[Docker](#docker-image), [OpenShift](#openshift-template), [Arch User Repository](#arch-user-repository).
+Other possible installations are through [Arch User Repository](#arch-user-repository) or install on repo as [Github Application](#github-application).
 
 First interaction with release bot may be automated releases on Github. Let's do it.
 
@@ -187,60 +186,10 @@ Are specified in `requirements.txt`.
 You have to setup your PyPI login details in `$HOME/.pypirc` as described in
 [PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
 
-## Docker image
-To make it easier to run this, release-bot is available as an
- [source-to-image](https://github.com/openshift/source-to-image) builder image.
+## Github Application
 
- You can then create the final image like this:
-```
-$ s2i build $CONFIGURATION_REPOSITORY_URL usercont/release-bot app-name
-```
-
-where $CONFIGURATION_REPOSITORY_URL is link to repository with conf.yaml and .pypirc files.
-
-To test it locally, you can the run the final image like this:
-
-```
-$ docker run <app-name>
-```
-
-once all changes, configuration files exist in GitHub and git repository contains needed files,
-you can try to create an issue  in your GitHub repository with string like "X.Y.Z release"
-and you can see log like this:
-```
-$ docker run meta-test-family-bot
----> Setting up ssh key...
-Agent pid 12
-Identity added: ./.ssh/id_rsa (./.ssh/id_rsa)
-11:47:36.212 configuration.py  DEBUG  Loaded configuration for fedora-modularity/meta-test-family
-11:47:36.212 releasebot.py     INFO   release-bot v0.4.1 reporting for duty!
-11:47:36.212 github.py         DEBUG  Fetching release-conf.yaml
-11:47:51.636 releasebot.py     DEBUG  No merged release PR found
-11:47:52.196 releasebot.py     INFO   Found new release issue with version: 0.8.4
-11:47:55.578 releasebot.py     DEBUG  No more open issues found
-11:47:56.098 releasebot.py     INFO   Making a new PR for release of version 0.8.5 based on an issue.
-11:47:57.608 utils.py          DEBUG  ['git', 'clone', 'https://github.com/fedora-modularity/meta-test-family.git', '.']
-...
-```
-## OpenShift template
-You can also run this bot in OpenShift using [openshift-template.yml](openshift-template.yml) in this repository.
-You must set two environment variables, the `$APP_NAME` is the name of your release-bot deployment,
-and `$CONFIGURATION_REPOSITORY` which contains configuration for the release-bot.
-The contents of the repository are described [above](#docker-image).
-Note that if you use private repository (which you **absolutely** should),
-you will need to set up a new [OpenShift secret](https://docs.openshift.com/container-platform/3.7/dev_guide/secrets.html) named
-`release-bot-secret` to authenticate. It can be a ssh private key that you can use to access the repository
-(for GitHub see [deploy keys](https://developer.github.com/v3/guides/managing-deploy-keys/)).
-Here's an [guide](https://blog.openshift.com/deploy-private-git-repositories/) on
-how to do that in OpenShift GUI, or another
-[guide](https://blog.openshift.com/deploying-from-private-git-repositories/)
-that uses `oc` commandline tool.
-
-By default, the release-bot builder image won't update itself when a
-new version of this image is pushed to docker hub.
-You can change it by uncommenting lines with `#importPolicy:`
-and `#scheduled: true` in [openshift-template.yml](openshift-template.yml).
-Then the image will be pulled on a new release.
+Release-bot as Github Application is currently in testing and will be available soon in Github market.
+Github application will speed-up configuration process.   
 
 ## Arch User Repository
 For Arch or Arch based Linux distributions, you can install the bot from the [AUR Package](https://aur.archlinux.org/packages/release-bot).
