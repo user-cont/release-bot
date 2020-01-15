@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import shutil
 from glob import glob
 import os
 import requests
@@ -93,6 +93,9 @@ class PyPi:
         """
         project_root = self.git.repo_path
         if os.path.isdir(project_root):
+            if os.path.isdir(os.path.join(project_root, "dist")):
+                self.logger.debug("cleaning up dist/")
+                shutil.rmtree(os.path.join(project_root, "dist"))
             self.logger.debug("About to release on PyPi")
             self.build_sdist(project_root)
             self.build_wheel(project_root)
