@@ -263,7 +263,7 @@ class ReleaseBot:
         self.git.fetch_tags()
         self.git.checkout(self.new_release.version)
         try:
-            if self.pypi.release() == False:
+            if self.pypi.release() is False:
                 return False
             release_handler(success=True)
         except ReleaseException:
