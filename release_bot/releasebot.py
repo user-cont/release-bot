@@ -222,7 +222,8 @@ class ReleaseBot:
         try:
             latest_release = self.github.latest_release()
         except ReleaseException as exc:
-            raise ReleaseException(f"Failed getting latest {self.git_service.name} release (zip).\n{exc}")
+            raise ReleaseException(
+                f"Failed getting latest {self.git_service.name} release (zip).\n{exc}")
 
         if Version.coerce(latest_release) >= Version.coerce(self.new_release.version):
             self.logger.info(
@@ -257,7 +258,7 @@ class ReleaseBot:
         latest_pypi = self.pypi.latest_version()
         if Version.coerce(latest_pypi) >= Version.coerce(self.new_release.version):
             msg = f"{self.conf.pypi_project}-{self.new_release.version} " \
-                f"or higher version has already been released on PyPi"
+                  f"or higher version has already been released on PyPi"
             self.logger.info(msg)
             return False
         self.git.fetch_tags()
@@ -304,9 +305,10 @@ class ReleaseBot:
                 except ReleaseException as exc:
                     self.logger.error(exc)
 
-                msg = '\n'.join(self.github.comment)
-                self.project.pr_comment(self.new_release.pr_number, msg)
-                self.github.comment = []  # clean up
+                if self.github.comment:
+                    msg = '\n'.join(self.github.comment)
+                    self.project.pr_comment(self.new_release.pr_number, msg)
+                    self.github.comment = []  # clean up
 
                 if not self.conf.refresh_interval:
                     self.logger.debug(

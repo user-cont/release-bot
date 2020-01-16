@@ -47,6 +47,7 @@ GITCHANGELOG_RC_STRING = """
 output_engine =  mustache("markdown.tpl")
 """
 
+
 class Init:
     """
     Creates all of the required configuration script required for the ReleaseBot
