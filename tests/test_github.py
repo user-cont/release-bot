@@ -44,7 +44,6 @@ class TestGithub:
         configuration.repository_name = self.g_utils.repo
         configuration.github_username = self.g_utils.github_user
         configuration.clone_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}.git"
-        configuration.refresh_interval = 1
         configuration.project = configuration.get_project()
 
         repo_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}"

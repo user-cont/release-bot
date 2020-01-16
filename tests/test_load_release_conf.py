@@ -114,8 +114,7 @@ class TestLoadReleaseConf:
 
     def test_missing_required_items(self, missing_items_conf):
         backup = configuration.REQUIRED_ITEMS['release-conf']
-        # set trigger_on_issue as required
-        configuration.REQUIRED_ITEMS['release-conf'] = ['trigger_on_issue']
+        configuration.REQUIRED_ITEMS['release-conf'] = ['foo']
         with pytest.raises(SystemExit) as error:
             configuration.load_release_conf(missing_items_conf)
         assert error.type == SystemExit

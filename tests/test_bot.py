@@ -194,8 +194,8 @@ class TestBot:
     def test_run_once(self):
         """Test that the bot runs only once and exits."""
         flexmock(self.release_bot.conf, refresh_interval=None)
-
-        (flexmock(self.release_bot.project)  # make sure it interes the loop
+        flexmock(self.release_bot.github, comment=["foo", "bar"])
+        (flexmock(self.release_bot.project)  # make sure it walks through the loop
          .should_receive('pr_comment')
          .once()
          .and_return(PRComment("Fake comment", "FakeAuthor"))

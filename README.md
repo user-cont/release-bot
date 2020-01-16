@@ -169,7 +169,7 @@ Here are possible options:
 | `author_email`| Author email for changelog. If not set, author of the merge commit is used	| No |
 | `pypi`        | Whether to release on pypi. True by default | No |
 | `pypi_project`| Name of your PyPI repository | No |
-| `trigger_on_issue`| Whether to allow bot to make PRs based on issues. False by default. | No |
+| `trigger_on_issue`| Whether to allow bot to make PRs based on issues. True by default. | No |
 | `labels`      | List of labels that bot will put on issues and PRs | No |
 
 Sample config named [release-conf-example.yaml](release-conf-example.yaml) can be found in this repository.

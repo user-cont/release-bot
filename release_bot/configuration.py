@@ -133,9 +133,9 @@ class Configuration:
                 sys.exit(1)
 
         parsed_conf = yaml.safe_load(conf) or {}
-        # If pypi option is not specified in release-conf.yaml,
-        # it defaults to true.
+        # Set defaults for options not specified in release-conf.yaml
         parsed_conf.setdefault('pypi', True)
+        parsed_conf.setdefault('trigger_on_issue', True)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
         for item in self.REQUIRED_ITEMS['release-conf']:
@@ -152,6 +152,7 @@ class Configuration:
                 self.logger.warning(msg)
                 parsed_conf['trigger_on_issue'] = False
 
+        self.logger.debug(f"Config: {parsed_conf}")
         return parsed_conf
 
     def set_pypi_project(self, parsed_conf, setup_cfg=None):
