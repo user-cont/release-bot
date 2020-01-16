@@ -310,8 +310,7 @@ class ReleaseBot:
 
                 if not self.conf.refresh_interval:
                     self.logger.debug(
-                        "Refresh interval has not been provided."
-                        "Reconciliation finished."
+                        "Refresh interval has not been provided. Reconciliation finished."
                     )
                     break
                 self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")

@@ -39,7 +39,7 @@ class Configuration:
         self.github_username = ''
         self.pagure_token = ''
         self.pagure_username = ''
-        self.refresh_interval = 3 * 60
+        self.refresh_interval = None
         self.debug = False
         self.configuration = ''
         self.logger = None
