@@ -1,6 +1,3 @@
-# whether to allow bot to make PRs based on issues
-trigger_on_issue: true
-
 labels:
   - bot
   - release-bot

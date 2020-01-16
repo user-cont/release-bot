@@ -10,6 +10,10 @@
       - python3-jsonschema
       #- python3-ogr  # temporary install 0.8.0 from PyPI
       - python3-pip
+      - python3-pygithub
+      - python3-gitlab
+      - python3-GitPython
+      - python3-deprecated
       - python3-pyyaml
       - python3-requests
       - python3-setuptools

@@ -12,7 +12,7 @@ image-test:
 
 test-in-container:
 	docker run -it \
-		-v $(CURDIR):/usr/src/app:Z \
+		-v $(CURDIR)/release_bot:/usr/local/lib/python3.7/site-packages/release_bot:Z \
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
 		$(TEST_IMAGE_NAME) \
 		make test TEST_TARGET='$(TEST_TARGET)'
