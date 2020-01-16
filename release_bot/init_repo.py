@@ -47,6 +47,7 @@ GITCHANGELOG_RC_STRING = """
 output_engine =  mustache("markdown.tpl")
 """
 
+
 class Init:
     """
     Creates all of the required configuration script required for the ReleaseBot
@@ -56,7 +57,7 @@ class Init:
             'repository_name': '<repository_name>',
             'repository_owner': '<owner_of_repository>',
             'github_token': '<your_github_token>',
-            'refresh_interval': '180',
+            'refresh_interval': None,
             'github_username': '<your_github_username>',
             'gitchangelog': False,
         }
@@ -121,7 +122,7 @@ from shell run 'release-bot -c conf.yaml'"""
             refresh_interval = "dummy"
             while not (refresh_interval.isdigit() or refresh_interval == ""):
                 refresh_interval = input("""In how many seconds would you like the
-    bot to check for updates (Default 180):""")
+    bot to recheck for updates (Default: don't recheck and exit):""")
             if refresh_interval > 0:
                 self.conf['refresh_interval'] = int(refresh_interval)
             else:

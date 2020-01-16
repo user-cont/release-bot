@@ -140,7 +140,7 @@ Here are the `conf.yaml` configuration options:
 | `github_app_installation_id` | Installation ID (a number) of the Github app. | No |
 | `github_app_id`              | ID (a number) of the Github app. | No |
 | `github_app_cert_path`       | Path to a certificate which Github provides as an auth mechanism for Github apps. | No |
-| `refresh_interval`           | Time in seconds between checks on repository. Default is 180 | No |
+| `refresh_interval`           | Time in seconds between checks on repository. If not provided, run only once and exit. | No |
 | `clone_url`                  | URL used to clone your Github repository. By default, `https` variant is used. | No |
 | `gitchangelog`               | Whether to use gitchangelog to generate change logs. False by default. | No |
 
