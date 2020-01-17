@@ -41,8 +41,7 @@ Please take a few minutes to read GitHub's guide on [How to Contribute to Open S
 
 ### Dependencies
 
-If you are introducing a new dependency, please make sure it's added to:
- * requirements.txt
+If you are introducing a new dependency, please make sure it's added to `setup.cfg`.
 
 ### Documentation
 
@@ -154,13 +153,10 @@ __Note:__ You may need to specify your token in the above command depending on t
 
 ### Direct Installation
 
-#### Installing dependencies
-
 Go to the cloned `release-bot` git repository, and run the following commands in a terminal:
 
 ```
-pip3 install -r requirements.txt
-pip3 install -r tests/requirements.txt
+pip3 install .
 ```
 
 #### Running release-bot
