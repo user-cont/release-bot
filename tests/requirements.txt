@@ -1,3 +1,0 @@
-flexmock
-pytest
-pytest-timeout

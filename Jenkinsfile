@@ -34,8 +34,8 @@ node('userspace-containerization'){
 
             stage ("setup"){
                 onmyduffynode "yum -y install docker make"
-                synctoduffynode "*" // copy all source files
                 onmyduffynode "systemctl start docker"
+                synctoduffynode "*" // copy all source files
             }
 
             stage("build test image"){
@@ -46,7 +46,7 @@ node('userspace-containerization'){
                 test_targets.each { test_target ->
                     tests["$test_target"] = {
                         stage("Test target: $test_target"){
-                            onmyduffynode "docker run -v /root:/usr/src/app:Z -e GITHUB_TOKEN= release-bot-tests make test TEST_TARGET=tests/$test_target"
+                            onmyduffynode "docker run -e GITHUB_TOKEN= release-bot-tests make test TEST_TARGET=tests/$test_target"
                         }
                     }
                 }

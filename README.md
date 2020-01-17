@@ -182,7 +182,7 @@ For using the [gitchangelog](https://github.com/vaab/gitchangelog) you must add 
 The default template `markdown.tpl` is configured to create Markdown divided into sections (New, Changes, Fix, Others) based on the commits. The data sent to the output engine [pystache](https://github.com/defunkt/pystache) by the gitchangelog is in the following [format](https://github.com/vaab/gitchangelog/edit/master/README.rst#L331-L356). You can use it to create a custom template, please refer [mustache](http://mustache.github.io/).
 
 ## Requirements
-Are specified in `requirements.txt`.
+Are specified in `setup.cfg`.
 You have to setup your PyPI login details in `$HOME/.pypirc` as described in
 [PyPI documentation](https://packaging.python.org/tutorials/distributing-packages/#create-an-account).
 
