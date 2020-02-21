@@ -64,7 +64,7 @@ class TestLoadLocalConf:
         with pytest.raises(SystemExit) as error:
             c.load_configuration()
         assert error.type == SystemExit
-        assert error.value.code == 1    
+        assert error.value.code == 1
 
     def test_conf_with_clone_url(self, conf_with_clone_url):
         """Tests if the user-defined clone_url is loaded"""

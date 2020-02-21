@@ -29,12 +29,14 @@ class CLI:
         Parse application arguments
         :return args:
         """
-        parser = argparse.ArgumentParser(description="Automatic releases bot", prog='release-bot')
+        parser = argparse.ArgumentParser(description="Automatic releases bot",
+                                         prog='release-bot')
         parser.add_argument("-d", "--debug", help="turn on debugging output",
                             action="store_true", default=False)
         parser.add_argument("-c", "--configuration", help="use custom YAML configuration",
                             default='')
-        parser.add_argument("-v", "--version", help="display program version", action='version',
+        parser.add_argument("-v", "--version", help="display program version",
+                            action='version',
                             version=f"%(prog)s {configuration.version}")
         parser.add_argument("-n", "--dry-run", default=False,
                             help="Don’t change anything, just show what would be done.",

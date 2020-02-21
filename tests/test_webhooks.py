@@ -72,4 +72,3 @@ def test_json_requests(flask_instance):
     response = flask_instance.post('/webhook-handler/', data=json.dumps(json_dummy_dict),
                                    content_type='application/json')
     assert response.status_code == 200
-

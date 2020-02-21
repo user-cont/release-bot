@@ -40,12 +40,14 @@ def parse_web_hook_payload(webhook_payload):
             if webhook_payload['pull_request']['merged'] is True:
                 handle_pr(webhook_payload, db)
     elif 'installation' in webhook_payload.keys():
-        if webhook_payload['action'] == 'added':  # detect new repo installation
+        # detect new repo installation
+        if webhook_payload['action'] == 'added':
             installation_id = webhook_payload['installation']['id']
             repositories_added = webhook_payload['repositories_added']
             save_new_installations(installation_id, repositories_added, db)
 
-        if webhook_payload['action'] == 'removed':  # detect when repo uninstall app
+        # detect when repo uninstall app
+        if webhook_payload['action'] == 'removed':
             repositories_removed = webhook_payload['repositories_removed']
             delete_installations(repositories_removed, db)
 
@@ -62,9 +64,12 @@ def get_redis_instance():
 
 def set_configuration(webhook_payload, db, issue=True):
     """
-    Prepare configuration from parsed web hook payload and return ReleaseBot instance with logger
+    Prepare configuration from parsed web hook payload
+    and return ReleaseBot instance with logger
+
     :param webhook_payload: payload from web hook
-    :param issue: if true parse Github issue payload otherwise parse Github pull request payload
+    :param issue: if true parse Github issue payload otherwise parse
+                  Github pull request payload
     :return: ReleaseBot instance, configuration logger
     """
     configuration.configuration = Path(getenv("CONF_PATH",
