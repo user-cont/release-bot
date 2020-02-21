@@ -82,4 +82,3 @@ class TestGithub:
     def test_branch_exists_false(self):
         """Tests if branch doesn't exist"""
         assert not self.github.branch_exists('not-master')
-

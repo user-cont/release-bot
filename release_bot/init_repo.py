@@ -106,7 +106,7 @@ from shell run 'release-bot -c conf.yaml'"""
         self.release_conf['author_email'] = run_command_get_output(cwd, f'git config user.email')[1].strip()
         self.release_conf['author_name'] = run_command_get_output(cwd, f'git config user.name')[1].strip()
         if self.release_conf['author_email'] == "":
-            print("WARNING: your e-mail ID from git config is not set."+
+            print("WARNING: your e-mail ID from git config is not set." +
                   "\nPlease set it using 'git config user.email \"email@example.com\"'")
         elif not re.match(r"[^@]+@[^@]+\.[^@]+", self.release_conf["author_email"]):
             print("WARNING: your e-mail ID from git config is not a valid e-mail address.")
@@ -153,7 +153,6 @@ from shell run 'release-bot -c conf.yaml'"""
         """
         with open('.gitignore', 'a+') as gitignore_file:
             gitignore_file.write('\nconf.yaml')
-
 
     @staticmethod
     def create_yaml(_dict, file_name):

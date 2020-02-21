@@ -54,7 +54,7 @@ class TestBot:
         configuration.repository_owner = self.github_user
         configuration.github_username = self.github_user
         configuration.clone_url = f'https://github.com/{self.github_user}/{self.g_utils.repo}.git'
-        configuration.refresh_interval = DEFAULT_REFRESH_INTERVAL 
+        configuration.refresh_interval = DEFAULT_REFRESH_INTERVAL
         configuration.project = configuration.get_project()
 
         self.release_bot = ReleaseBot(configuration)
@@ -198,6 +198,5 @@ class TestBot:
         (flexmock(self.release_bot.project)  # make sure it walks through the loop
          .should_receive('pr_comment')
          .once()
-         .and_return(PRComment("Fake comment", "FakeAuthor"))
-        )
+         .and_return(PRComment("Fake comment", "FakeAuthor")))
         self.release_bot.run()

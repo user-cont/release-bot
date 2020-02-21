@@ -165,7 +165,10 @@ class Git:
         """
         Fetch all tags from origin
         """
-        return run_command(self.repo_path, 'git fetch --tags', 'Unable to fetch tags from remote server', fail=True)
+        return run_command(self.repo_path,
+                           'git fetch --tags',
+                           'Unable to fetch tags from remote server',
+                           fail=True)
 
     def cleanup(self):
         """
