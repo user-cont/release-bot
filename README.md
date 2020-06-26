@@ -59,7 +59,7 @@ release-bot init
 Enter the required details when asked by the bot. All of the default choices provided by the init should be enough for the current trial. You will also need to generate a [Github personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/).
 Recommended permissions for access token are: `repo`, `delete_repo`, `user`.
 
-You can later on modify all the config files. For possible advanced setup check [the documentation for an upstream repository](#upstream-repository) and [gitchanelog](#GitChangeLog).
+You can later on modify all the config files. For possible advanced setup check [the documentation for an upstream repository](#upstream-repository) and [gitchangelog](#GitChangeLog).
 
 After the init is completed **commit all of the changes and push it** to the upstream repo.
 
@@ -78,7 +78,7 @@ trigger_on_issue: true
 ```
 Then copy [.gitchangelog.rc](/gitchangelog/.gitchangelog.rc) and [markdown.tpl](/gitchangelog/.gitchangelog.rc) (which are the config files for the [gitchangelog](https://github.com/vaab/gitchangelog.git))
 to the root dir of the upstream repository.
-For possible advanced setup check [the documentation for an upstream repository](#upstream-repository) and [gitchanelog](#GitChangeLog).
+For possible advanced setup check [the documentation for an upstream repository](#upstream-repository) and [gitchangelog](#GitChangeLog).
 
 ##### 2. Create `conf.yaml`
 
