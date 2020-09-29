@@ -258,9 +258,7 @@ def look_for_version_files(repo_directory, new_version):
 
                 if success:
                     changed.append(filename.replace(repo_directory + '/', '', 1))
-    if len(changed) > 1:
-        logger.error('Multiple version files found. Aborting version update.')
-    elif not changed:
+    if not changed:
         logger.error('No version files found. Aborting version update.')
 
     return changed
