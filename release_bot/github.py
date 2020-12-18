@@ -255,7 +255,7 @@ class Github:
         try:
             if base is None:
                 base = self.project.default_branch
-            new_pr = self.project.pr_create(
+            new_pr = self.project.create_pr(
                 title=f"{version} release",
                 body=message,
                 target_branch=base,

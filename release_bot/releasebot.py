@@ -110,7 +110,7 @@ class ReleaseBot:
             for issue in opened_issues:
                 match, version = process_version_from_title(issue.title, latest_version)
                 if match:
-                    if self.project.can_close_issue(which_username(self.conf), issue):
+                    if issue.can_close(which_username(self.conf)):
                         release_issues[version] = issue
                         self.logger.info(
                             f"Found new release issue with version: {version}"
@@ -187,10 +187,10 @@ class ReleaseBot:
                 msg += f"\n Here's a [link to the PR]({self.new_pr.pr_url})"
             comment_backup = self.github.comment.copy()
             self.github.comment = [msg]
-            self.project.issue_comment(self.new_pr.issue_number, msg)
+            self.project.get_issue(self.new_pr.issue_number).comment(msg)
             self.github.comment = comment_backup
             if success:
-                self.project.issue_close(self.new_pr.issue_number)
+                self.project.get_issue(self.new_pr.issue_number).close()
                 self.logger.debug(f"Closed issue #{self.new_pr.issue_number}")
 
         latest_gh_str = self.github.latest_release()
