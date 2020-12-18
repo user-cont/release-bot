@@ -32,22 +32,23 @@ def flask_instance():
 
     configuration = flexmock(
         logger=flexmock(),
-        repository_owner='repo-owner',
-        repository_name='repo-name',
-        version="0.0.0"
+        repository_owner="repo-owner",
+        repository_name="repo-name",
+        version="0.0.0",
     )
 
-    flexmock(
-        configuration.logger,
-        info="info",
-        error="error",
-        debug="debug")
+    flexmock(configuration.logger, info="info", error="error", debug="debug")
 
     app = Flask(__name__)
-    app.add_url_rule('/webhook-handler/',
-                     view_func=GithubWebhooksHandler.as_view('github_webhooks_handler',
-                                                             conf=configuration),
-                     methods=['POST', ])
+    app.add_url_rule(
+        "/webhook-handler/",
+        view_func=GithubWebhooksHandler.as_view(
+            "github_webhooks_handler", conf=configuration
+        ),
+        methods=[
+            "POST",
+        ],
+    )
 
     test_client = app.test_client()
     return test_client
@@ -55,20 +56,23 @@ def flask_instance():
 
 def test_bad_requests(flask_instance):
     """Test GET method request on different routes"""
-    response = flask_instance.get('/')
+    response = flask_instance.get("/")
     assert response.status_code == 404
-    response = flask_instance.get('/webhook-handler/')
+    response = flask_instance.get("/webhook-handler/")
     assert response.status_code == 405
 
 
 def test_json_requests(flask_instance):
     """Test if POST method which contains JSON call correct methods"""
-    flexmock(celery_app).should_receive("send_task").and_return('vooosh!').once()
+    flexmock(celery_app).should_receive("send_task").and_return("vooosh!").once()
 
     json_dummy_dict = {
-      'dummy': 'dummy',
+        "dummy": "dummy",
     }
     # will not call handle_issue or handle_pr within GithubWebhooksHandler instance
-    response = flask_instance.post('/webhook-handler/', data=json.dumps(json_dummy_dict),
-                                   content_type='application/json')
+    response = flask_instance.post(
+        "/webhook-handler/",
+        data=json.dumps(json_dummy_dict),
+        content_type="application/json",
+    )
     assert response.status_code == 200

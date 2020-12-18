@@ -22,29 +22,28 @@ import time
 from sys import exit
 
 from flask import Flask
-from semantic_version import Version
 from ogr.abstract import IssueStatus, PRStatus
+from semantic_version import Version
 
 from release_bot.cli import CLI
 from release_bot.configuration import configuration
 from release_bot.exceptions import ReleaseException
 from release_bot.git import Git
 from release_bot.github import Github
+from release_bot.init_repo import Init
 from release_bot.new_pr import NewPR
 from release_bot.new_release import NewRelease
 from release_bot.pypi import PyPi
-from release_bot.webhooks import GithubWebhooksHandler
-from release_bot.init_repo import Init
 from release_bot.utils import (
     process_version_from_title,
     GitService,
     which_service,
     which_username,
 )
+from release_bot.webhooks import GithubWebhooksHandler
 
 
 class ReleaseBot:
-
     def __init__(self, configuration):
         self.conf = configuration
         self.git = Git(self.conf.clone_url, self.conf)
@@ -66,11 +65,16 @@ class ReleaseBot:
     def create_flask_instance(configuration):
         """Create flask instance for receiving Github webhooks"""
         app = Flask(__name__)
-        app.add_url_rule('/webhook-handler/',  # route for github callbacks
-                         view_func=GithubWebhooksHandler.as_view('github_webhooks_handler',
-                                                                 conf=configuration),
-                         methods=['POST', ])
-        app.run(host='0.0.0.0', port=8080)
+        app.add_url_rule(
+            "/webhook-handler/",  # route for github callbacks
+            view_func=GithubWebhooksHandler.as_view(
+                "github_webhooks_handler", conf=configuration
+            ),
+            methods=[
+                "POST",
+            ],
+        )
+        app.run(host="0.0.0.0", port=8080)
 
     def load_release_conf(self):
         """
@@ -84,12 +88,12 @@ class ReleaseBot:
         self.conf.set_pypi_project(release_conf, setup_cfg)
 
         self.new_release.update(
-            changelog=release_conf.get('changelog'),
-            author_name=release_conf.get('author_name'),
-            author_email=release_conf.get('author_email'),
-            pypi=release_conf.get('pypi'),
-            trigger_on_issue=release_conf.get('trigger_on_issue'),
-            labels=release_conf.get('labels')
+            changelog=release_conf.get("changelog"),
+            author_name=release_conf.get("author_name"),
+            author_email=release_conf.get("author_email"),
+            pypi=release_conf.get("pypi"),
+            trigger_on_issue=release_conf.get("trigger_on_issue"),
+            labels=release_conf.get("labels"),
         )
 
     def find_open_release_issues(self):
@@ -101,20 +105,24 @@ class ReleaseBot:
         latest_version = Version(self.github.latest_release())
         opened_issues = self.project.get_issue_list(IssueStatus.open)
         if not opened_issues:
-            self.logger.debug(f'No more open issues found')
+            self.logger.debug("No more open issues found")
         else:
             for issue in opened_issues:
                 match, version = process_version_from_title(issue.title, latest_version)
                 if match:
                     if self.project.can_close_issue(which_username(self.conf), issue):
                         release_issues[version] = issue
-                        self.logger.info(f'Found new release issue with version: {version}')
+                        self.logger.info(
+                            f"Found new release issue with version: {version}"
+                        )
                     else:
-                        self.logger.warning(f"User {which_username(self.conf)} "
-                                            f"has no permission to modify issue")
+                        self.logger.warning(
+                            f"User {which_username(self.conf)} "
+                            "has no permission to modify issue"
+                        )
 
         if len(release_issues) > 1:
-            msg = f'Multiple release issues are open {release_issues}, please reduce them to one'
+            msg = f"Multiple release issues are open {release_issues}, please reduce them to one"
             self.logger.error(msg)
             return False
         if len(release_issues) == 1:
@@ -126,10 +134,7 @@ class ReleaseBot:
 
             for version, issue in release_issues.items():
                 self.new_pr.update_new_pr_details(
-                    version=version,
-                    issue_id=None,
-                    issue_number=issue.id,
-                    labels=labels
+                    version=version, issue_id=None, issue_number=issue.id, labels=labels
                 )
                 return True
         else:
@@ -145,7 +150,7 @@ class ReleaseBot:
         merged_prs = self.github.walk_through_prs(PRStatus.merged)
 
         if not merged_prs:
-            self.logger.debug(f'No merged release PR found')
+            self.logger.debug("No merged release PR found")
             return False
 
         for merged_pr in merged_prs:
@@ -158,7 +163,7 @@ class ReleaseBot:
                     pr_id=None,
                     pr_number=merged_pr.id,
                     author_email=None,
-                    author_name=merged_pr.author
+                    author_name=merged_pr.author,
                 )
                 return True
 
@@ -174,7 +179,7 @@ class ReleaseBot:
             :param success: whether making PR was successful
             :return:
             """
-            result = 'made' if success else 'failed to make'
+            result = "made" if success else "failed to make"
             msg = f"I just {result} a PR request for a release version {self.new_pr.version}"
             level = logging.INFO if success else logging.ERROR
             self.logger.log(level, msg)
@@ -186,7 +191,7 @@ class ReleaseBot:
             self.github.comment = comment_backup
             if success:
                 self.project.issue_close(self.new_pr.issue_number)
-                self.logger.debug(f'Closed issue #{self.new_pr.issue_number}')
+                self.logger.debug(f"Closed issue #{self.new_pr.issue_number}")
 
         latest_gh_str = self.github.latest_release()
         self.new_pr.previous_version = latest_gh_str
@@ -194,8 +199,10 @@ class ReleaseBot:
             msg = f"Version ({latest_gh_str}) is already released and this issue is ignored."
             self.logger.warning(msg)
             return False
-        msg = (f"Making a new PR for release of version "
-               f"{self.new_pr.version} based on the issue.")
+        msg = (
+            f"Making a new PR for release of version "
+            f"{self.new_pr.version} based on the issue."
+        )
         if not self.conf.dry_run:
             self.logger.info(msg)
 
@@ -223,16 +230,20 @@ class ReleaseBot:
             latest_release = self.github.latest_release()
         except ReleaseException as exc:
             raise ReleaseException(
-                f"Failed getting latest {self.git_service.name} release (zip).\n{exc}")
+                f"Failed getting latest {self.git_service.name} release (zip).\n{exc}"
+            )
 
         if Version.coerce(latest_release) >= Version.coerce(self.new_release.version):
             self.logger.info(
-                f"{self.new_release.version} has already been released on {self.git_service.name}")
+                f"{self.new_release.version} has already been released on {self.git_service.name}"
+            )
         else:
             try:
                 if self.conf.dry_run:
                     return None
-                released, self.new_release = self.github.make_new_release(self.new_release)
+                released, self.new_release = self.github.make_new_release(
+                    self.new_release
+                )
                 if released:
                     release_handler(success=True)
             except ReleaseException:
@@ -242,7 +253,7 @@ class ReleaseBot:
 
     def make_new_pypi_release(self):
         if not self.new_release.pypi:
-            self.logger.debug('Skipping PyPi release')
+            self.logger.debug("Skipping PyPi release")
             return False
 
         def release_handler(success):
@@ -257,8 +268,10 @@ class ReleaseBot:
 
         latest_pypi = self.pypi.latest_version()
         if Version.coerce(latest_pypi) >= Version.coerce(self.new_release.version):
-            msg = f"{self.conf.pypi_project}-{self.new_release.version} " \
-                  f"or higher version has already been released on PyPi"
+            msg = (
+                f"{self.conf.pypi_project}-{self.new_release.version} "
+                f"or higher version has already been released on PyPi"
+            )
             self.logger.info(msg)
             return False
         self.git.fetch_tags()
@@ -297,16 +310,20 @@ class ReleaseBot:
                 # encounters ReleaseException while checking for PyPi sources
                 # it doesn't check for GitHub issues.
                 try:
-                    if self.new_release.trigger_on_issue and self.find_open_release_issues():
+                    if (
+                        self.new_release.trigger_on_issue
+                        and self.find_open_release_issues()
+                    ):
                         if self.new_release.labels is not None:
-                            self.project.add_issue_labels(self.new_pr.issue_number,
-                                                          self.new_release.labels)
+                            self.project.add_issue_labels(
+                                self.new_pr.issue_number, self.new_release.labels
+                            )
                         self.make_release_pull_request()
                 except ReleaseException as exc:
                     self.logger.error(exc)
 
                 if self.github.comment:
-                    msg = '\n'.join(self.github.comment)
+                    msg = "\n".join(self.github.comment)
                     self.project.pr_comment(self.new_release.pr_number, msg)
                     self.github.comment = []  # clean up
 
@@ -315,7 +332,9 @@ class ReleaseBot:
                         "Refresh interval has not been provided. Reconciliation finished."
                     )
                     break
-                self.logger.debug(f"Done. Going to sleep for {self.conf.refresh_interval}s")
+                self.logger.debug(
+                    f"Done. Going to sleep for {self.conf.refresh_interval}s"
+                )
                 time.sleep(self.conf.refresh_interval)
         finally:
             self.cleanup()
@@ -337,5 +356,5 @@ def main():
             rb.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

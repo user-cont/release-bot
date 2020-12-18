@@ -17,20 +17,19 @@ from pathlib import Path
 
 import pytest
 
-from release_bot.configuration import configuration, Configuration
+from release_bot.configuration import configuration
 
 
 class TestLoadReleaseConf:
-
     def setup_method(self):
-        """ setup any state tied to the execution of the given method in a
+        """setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
         configuration.set_logging(level=10)
         configuration.debug = True
 
     def teardown_method(self, method):
-        """ teardown any state that was previously setup with a setup_method
+        """teardown any state that was previously setup with a setup_method
         call.
         """
 
@@ -56,12 +55,14 @@ class TestLoadReleaseConf:
         Emulates valid new_release dict
         :return:
         """
-        new_release = {'version': '0.1.0',
-                       'commitish': 'xxx',
-                       'author_name': 'John Doe',
-                       'author_email': 'jdoe@example.com',
-                       'changelog': [],
-                       'tempdir': None}
+        new_release = {
+            "version": "0.1.0",
+            "commitish": "xxx",
+            "author_name": "John Doe",
+            "author_email": "jdoe@example.com",
+            "changelog": [],
+            "tempdir": None,
+        }
         return new_release
 
     @pytest.fixture
@@ -98,7 +99,7 @@ class TestLoadReleaseConf:
 
     def test_empty_conf(self, empty_conf):
         # if there are any required items, this test must fail
-        if configuration.REQUIRED_ITEMS['release-conf']:
+        if configuration.REQUIRED_ITEMS["release-conf"]:
             with pytest.raises(SystemExit) as error:
                 configuration.load_release_conf(empty_conf)
             assert error.type == SystemExit
@@ -106,40 +107,42 @@ class TestLoadReleaseConf:
 
     def test_non_exiting_conf(self, non_existing_conf):
         # if there are any required items, this test must fail
-        if configuration.REQUIRED_ITEMS['release-conf']:
+        if configuration.REQUIRED_ITEMS["release-conf"]:
             with pytest.raises(SystemExit) as error:
                 configuration.load_release_conf(non_existing_conf)
             assert error.type == SystemExit
             assert error.value.code == 1
 
     def test_missing_required_items(self, missing_items_conf):
-        backup = configuration.REQUIRED_ITEMS['release-conf']
-        configuration.REQUIRED_ITEMS['release-conf'] = ['foo']
+        backup = configuration.REQUIRED_ITEMS["release-conf"]
+        configuration.REQUIRED_ITEMS["release-conf"] = ["foo"]
         with pytest.raises(SystemExit) as error:
             configuration.load_release_conf(missing_items_conf)
         assert error.type == SystemExit
         assert error.value.code == 1
-        configuration.REQUIRED_ITEMS['release-conf'] = backup
+        configuration.REQUIRED_ITEMS["release-conf"] = backup
 
     def test_author_overwrites(self, missing_author_conf, valid_new_release):
-        author_name = valid_new_release['author_name']
-        author_email = valid_new_release['author_email']
+        author_name = valid_new_release["author_name"]
+        author_email = valid_new_release["author_email"]
 
         release_conf = configuration.load_release_conf(missing_author_conf)
         valid_new_release.update(release_conf)
 
-        assert valid_new_release['author_name'] == author_name
-        assert valid_new_release['author_email'] == author_email
+        assert valid_new_release["author_name"] == author_name
+        assert valid_new_release["author_email"] == author_email
 
     def test_normal_use_case(self, valid_conf, valid_new_release):
         # test if all items in configuration are properly loaded
         release_conf = configuration.load_release_conf(valid_conf)
         valid_new_release.update(release_conf)
-        assert valid_new_release['changelog'] == ['Example changelog entry',
-                                                  'Another changelog entry']
-        assert valid_new_release['author_name'] == 'John Smith'
-        assert valid_new_release['author_email'] == 'jsmith@example.com'
-        assert valid_new_release['labels'] == ['bot', 'release-bot', 'user-cont']
+        assert valid_new_release["changelog"] == [
+            "Example changelog entry",
+            "Another changelog entry",
+        ]
+        assert valid_new_release["author_name"] == "John Smith"
+        assert valid_new_release["author_email"] == "jsmith@example.com"
+        assert valid_new_release["labels"] == ["bot", "release-bot", "user-cont"]
 
     def test_set_pypi_name_from_release_conf(self, different_pypi_name_conf):
         parsed_conf = configuration.load_release_conf(different_pypi_name_conf)

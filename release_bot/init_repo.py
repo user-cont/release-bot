@@ -18,6 +18,7 @@ This module initializes a repo to be used by ReleaseBot
 """
 import os
 import re
+
 import yaml
 
 from release_bot.utils import run_command_get_output
@@ -52,20 +53,21 @@ class Init:
     """
     Creates all of the required configuration script required for the ReleaseBot
     """
+
     def __init__(self):
         self.conf = {
-            'repository_name': '<repository_name>',
-            'repository_owner': '<owner_of_repository>',
-            'github_token': '<your_github_token>',
-            'refresh_interval': None,
-            'github_username': '<your_github_username>',
-            'gitchangelog': False,
+            "repository_name": "<repository_name>",
+            "repository_owner": "<owner_of_repository>",
+            "github_token": "<your_github_token>",
+            "refresh_interval": None,
+            "github_username": "<your_github_username>",
+            "gitchangelog": False,
         }
         self.release_conf = {
-            'trigger_on_issue': True,
-            'author_email': '<your_email>',
-            'author_name': '<your_name>',
-            'labels': []
+            "trigger_on_issue": True,
+            "author_email": "<your_email>",
+            "author_name": "<your_name>",
+            "labels": [],
         }
 
     def __enter__(self):
@@ -83,7 +85,7 @@ class Init:
         """
         self.create_conf(silent)
         self.append_to_gitignore()
-        if self.conf['gitchangelog']:
+        if self.conf["gitchangelog"]:
             self.create_template()
             self.create_gitchangelog_rc()
         if silent:
@@ -103,56 +105,74 @@ from shell run 'release-bot -c conf.yaml'"""
         Create the release-conf.yaml and conf.yaml
         """
         cwd = os.getcwd()
-        self.release_conf['author_email'] = run_command_get_output(cwd, f'git config user.email')[1].strip()
-        self.release_conf['author_name'] = run_command_get_output(cwd, f'git config user.name')[1].strip()
-        if self.release_conf['author_email'] == "":
-            print("WARNING: your e-mail ID from git config is not set." +
-                  "\nPlease set it using 'git config user.email \"email@example.com\"'")
+        self.release_conf["author_email"] = run_command_get_output(
+            cwd, "git config user.email"
+        )[1].strip()
+        self.release_conf["author_name"] = run_command_get_output(
+            cwd, "git config user.name"
+        )[1].strip()
+        if self.release_conf["author_email"] == "":
+            print(
+                "WARNING: your e-mail ID from git config is not set."
+                + "\nPlease set it using 'git config user.email \"email@example.com\"'"
+            )
         elif not re.match(r"[^@]+@[^@]+\.[^@]+", self.release_conf["author_email"]):
-            print("WARNING: your e-mail ID from git config is not a valid e-mail address.")
-        if self.release_conf['author_name'] == "":
-            print("WARNING: your username from git config is not set." +
-                  "\nPlease set it using 'git config user.name \"John Doe\"'")
+            print(
+                "WARNING: your e-mail ID from git config is not a valid e-mail address."
+            )
+        if self.release_conf["author_name"] == "":
+            print(
+                "WARNING: your username from git config is not set."
+                + "\nPlease set it using 'git config user.name \"John Doe\"'"
+            )
         if not silent:
-            self.conf['repository_name'] = input('Please enter the repository name:')
-            self.conf['repository_owner'] = input('Please enter the repository owner:')
-            print("""For details on how to get github token checkout
-    'https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/'""")
-            self.conf['github_token'] = input('Please enter your valid github token:')
+            self.conf["repository_name"] = input("Please enter the repository name:")
+            self.conf["repository_owner"] = input("Please enter the repository owner:")
+            print(
+                """For details on how to get github token checkout
+    'https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/'"""
+            )
+            self.conf["github_token"] = input("Please enter your valid github token:")
             refresh_interval = "dummy"
             while not (refresh_interval.isdigit() or refresh_interval == ""):
-                refresh_interval = input("""In how many seconds would you like the
-    bot to recheck for updates (Default: don't recheck and exit):""")
+                refresh_interval = input(
+                    """In how many seconds would you like the
+    bot to recheck for updates (Default: don't recheck and exit):"""
+                )
             if refresh_interval > 0:
-                self.conf['refresh_interval'] = int(refresh_interval)
+                self.conf["refresh_interval"] = int(refresh_interval)
             else:
-                self.conf['refresh_interval'] = None
-            is_owner_user = input('Are you the owner of the repo? (Y/n):')
-            if is_owner_user.lower() == 'y' or is_owner_user == '':
-                self.conf['github_username'] = self.conf['repository_owner']
+                self.conf["refresh_interval"] = None
+            is_owner_user = input("Are you the owner of the repo? (Y/n):")
+            if is_owner_user.lower() == "y" or is_owner_user == "":
+                self.conf["github_username"] = self.conf["repository_owner"]
             else:
-                self.conf['github_username'] = input('Please enter your github usename:')
-            trigger_on_issue = input('Would you like to trigger release from issue? (Y/n):')
-            self.release_conf['trigger_on_issue'] = bool(
-                trigger_on_issue.lower() == 'y' or trigger_on_issue == ''
+                self.conf["github_username"] = input(
+                    "Please enter your github usename:"
+                )
+            trigger_on_issue = input(
+                "Would you like to trigger release from issue? (Y/n):"
+            )
+            self.release_conf["trigger_on_issue"] = bool(
+                trigger_on_issue.lower() == "y" or trigger_on_issue == ""
             )
             gitchangelog = input(
-                'Would you like to use gitchangelog to generate next-gen changelogs? (Y/n):'
-                )
-            self.conf['gitchangelog'] = bool(
-                gitchangelog.lower() == 'y' or gitchangelog == ''
+                "Would you like to use gitchangelog to generate next-gen changelogs? (Y/n):"
+            )
+            self.conf["gitchangelog"] = bool(
+                gitchangelog.lower() == "y" or gitchangelog == ""
             )
 
-        self.create_yaml(self.conf, 'conf.yaml')
-        self.create_yaml(self.release_conf, 'release-conf.yaml')
+        self.create_yaml(self.conf, "conf.yaml")
+        self.create_yaml(self.release_conf, "release-conf.yaml")
 
     @staticmethod
     def append_to_gitignore():
         """
         Append conf.yaml to the gitignore
         """
-        with open('.gitignore', 'a+') as gitignore_file:
-            gitignore_file.write('\nconf.yaml')
+        with open(".gitignore", "a+") as gitignore_file:
+            gitignore_file.write("\nconf.yaml")
 
     @staticmethod
     def create_yaml(_dict, file_name):
@@ -161,20 +181,21 @@ from shell run 'release-bot -c conf.yaml'"""
         :param dict: dict to be converted to yaml
         :param filename: name of the yaml file to create
         """
+
         def dump_yaml():
             """
             Dumps the yaml into the file
             """
-            with open(file_name, 'w') as yaml_file:
+            with open(file_name, "w") as yaml_file:
                 yaml.safe_dump(_dict, yaml_file, default_flow_style=False)
 
         if not os.path.isfile(file_name):
             dump_yaml()
         else:
             should_overrite = input(
-                file_name+" already exists, would you like to overwrite it? (y/N):"
-                )
-            if should_overrite.lower() == 'y':
+                file_name + " already exists, would you like to overwrite it? (y/N):"
+            )
+            if should_overrite.lower() == "y":
                 dump_yaml()
 
     @staticmethod
@@ -182,7 +203,7 @@ from shell run 'release-bot -c conf.yaml'"""
         """
         Creates template file for the Markdown output
         """
-        with open('markdown.tpl', 'w') as template_file:
+        with open("markdown.tpl", "w") as template_file:
             template_file.write(TEMPLATE_STRING)
 
     @staticmethod
@@ -190,5 +211,5 @@ from shell run 'release-bot -c conf.yaml'"""
         """
         Creates the .gitchangelog.rc file for the git change log config
         """
-        with open('.gitchangelog.rc', 'w') as gitchangelog_rc_file:
+        with open(".gitchangelog.rc", "w") as gitchangelog_rc_file:
             gitchangelog_rc_file.write(GITCHANGELOG_RC_STRING)

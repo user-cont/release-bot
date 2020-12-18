@@ -19,6 +19,7 @@ from celery import Celery
 
 class Celerizer:
     """Creates instance used by celery lib"""
+
     def __init__(self):
         self._celery_app = None
 

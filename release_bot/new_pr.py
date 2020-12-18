@@ -15,7 +15,6 @@
 
 
 class NewPR:
-
     def __init__(self):
         self.version = None
         self.issue_id = None

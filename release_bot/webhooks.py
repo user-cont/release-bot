@@ -24,17 +24,19 @@ from release_bot.celerizer import celery_app
 
 class GithubWebhooksHandler(View):
     """
-        Handler for github callbacks.
+    Handler for github callbacks.
     """
 
     def __init__(self, conf):
         self.logger = conf.logger
 
     def dispatch_request(self):
-        self.logger.info(f'New github webhook call from detected')
+        self.logger.info("New github webhook call from detected")
         if request.is_json:
-            celery_app.send_task(name="task.celery_task.parse_web_hook_payload",
-                                 kwargs={"webhook_payload": request.get_json()})
+            celery_app.send_task(
+                name="task.celery_task.parse_web_hook_payload",
+                kwargs={"webhook_payload": request.get_json()},
+            )
         else:
             self.logger.error("This webhook doesn't contain JSON")
         return jsonify(result={"status": 200})

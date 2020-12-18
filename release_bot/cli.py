@@ -22,33 +22,53 @@ from release_bot.exceptions import ReleaseException
 
 
 class CLI:
-
     @staticmethod
     def parse_arguments():
         """
         Parse application arguments
         :return args:
         """
-        parser = argparse.ArgumentParser(description="Automatic releases bot",
-                                         prog='release-bot')
-        parser.add_argument("-d", "--debug", help="turn on debugging output",
-                            action="store_true", default=False)
-        parser.add_argument("-c", "--configuration", help="use custom YAML configuration",
-                            default='')
-        parser.add_argument("-v", "--version", help="display program version",
-                            action='version',
-                            version=f"%(prog)s {configuration.version}")
-        parser.add_argument("-n", "--dry-run", default=False,
-                            help="Don’t change anything, just show what would be done.",
-                            action="store_true")
+        parser = argparse.ArgumentParser(
+            description="Automatic releases bot", prog="release-bot"
+        )
+        parser.add_argument(
+            "-d",
+            "--debug",
+            help="turn on debugging output",
+            action="store_true",
+            default=False,
+        )
+        parser.add_argument(
+            "-c", "--configuration", help="use custom YAML configuration", default=""
+        )
+        parser.add_argument(
+            "-v",
+            "--version",
+            help="display program version",
+            action="version",
+            version=f"%(prog)s {configuration.version}",
+        )
+        parser.add_argument(
+            "-n",
+            "--dry-run",
+            default=False,
+            help="Don’t change anything, just show what would be done.",
+            action="store_true",
+        )
         parser.set_defaults(subcommand="none")
 
         subparsers = parser.add_subparsers()
-        parser_init = subparsers.add_parser('init',
-                                            help='Initializes the repository for the release-bot')
+        parser_init = subparsers.add_parser(
+            "init", help="Initializes the repository for the release-bot"
+        )
         parser_init.set_defaults(subcommand="run_init")
-        parser_init.add_argument("-s", "--silent", help="Runs the init in non-interactive way",
-                                 action="store_true", default=False)
+        parser_init.add_argument(
+            "-s",
+            "--silent",
+            help="Runs the init in non-interactive way",
+            action="store_true",
+            default=False,
+        )
 
         args = parser.parse_args()
         return args
@@ -62,7 +82,8 @@ class CLI:
             args.configuration = Path(args.configuration).resolve()
             if not args.configuration.is_file():
                 raise ReleaseException(
-                    f"Supplied configuration file is not found: {args.configuration}")
+                    f"Supplied configuration file is not found: {args.configuration}"
+                )
 
         if args.debug:
             configuration.logger.setLevel(logging.DEBUG)

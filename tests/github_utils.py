@@ -16,10 +16,11 @@
 This module provides functions that help test github dependent part of the bot
 """
 
-from pathlib import Path
-import string
 import base64
 import random
+import string
+from pathlib import Path
+
 import requests
 import yaml
 
@@ -33,16 +34,16 @@ RELEASE_CONF = yaml.dump({"trigger_on_issue": True})
 
 class GithubUtils:
     """Functions to help test github part of the bot"""
+
     def __init__(self):
         self.conf = prepare_conf()
-        self.headers = {'Authorization': f'token {self.conf.github_token}'}
+        self.headers = {"Authorization": f"token {self.conf.github_token}"}
         self.repo = None
         self.random_string = None
 
-        # This token needs github api token scope to delete repositories. If deleting a repo fails with
-        # a message saying that you need to be admin for such action it means the token doesn't have it.
-        # We suggest creating a new token with such scope:
-        #   https://github.com/settings/tokens/new
+        # This token needs github api token scope to delete repositories.
+        # If deleting a repo fails with a message saying that you need to be admin for such action
+        # it means the token doesn't have it.
         self.github_token = self.conf.github_token
         self.github_user = self.get_username()
 
@@ -58,46 +59,56 @@ class GithubUtils:
     def create_repo(self):
         """Creates a new github repository with example files"""
         url = f"{API3_ENDPOINT}user/repos"
-        self.random_string = ''.join(
-            [random.choice(string.ascii_letters + string.digits) for n in range(16)])
-        name = 'release-bot-test-' + self.random_string
-        payload = {"name": name,
-                   "auto_init": True}
+        self.random_string = "".join(
+            [random.choice(string.ascii_letters + string.digits) for n in range(16)]
+        )
+        name = "release-bot-test-" + self.random_string
+        payload = {"name": name, "auto_init": True}
         response = requests.post(url=url, headers=self.headers, json=payload)
 
         if response.status_code != 201:
-            raise Exception(f'Failed creating repository {self.github_user}/{name}:'
-                            f'\n{response.text}')
+            raise Exception(
+                f"Failed creating repository {self.github_user}/{name}:"
+                f"\n{response.text}"
+            )
         self.repo = name
 
         return name
 
     def setup_repo(self):
         """Fills repo with release-conf.yaml and setup.py"""
-        self.upload_file_to_github(RELEASE_CONF, 'release-conf.yaml')
+        self.upload_file_to_github(RELEASE_CONF, "release-conf.yaml")
 
         setup = (Path(__file__).parent / "src/example_setup.py.txt").read_text()
-        setup = setup.format(name=self.repo.replace('-', '_'),
-                             user=self.github_user,
-                             repo=self.repo)
-        self.upload_file_to_github(setup, 'setup.py')
+        setup = setup.format(
+            name=self.repo.replace("-", "_"), user=self.github_user, repo=self.repo
+        )
+        self.upload_file_to_github(setup, "setup.py")
 
-        init = (Path(__file__).parent / "src/release_bot_test/__init__.py.txt").read_text()
-        self.upload_file_to_github(init, 'release_bot_test/__init__.py')
+        init = (
+            Path(__file__).parent / "src/release_bot_test/__init__.py.txt"
+        ).read_text()
+        self.upload_file_to_github(init, "release_bot_test/__init__.py")
 
-        main = (Path(__file__).parent / "src/release_bot_test/release_bot_test.py.txt").read_text()
-        self.upload_file_to_github(main, 'release_bot_test/release_bot_test.py')
+        main = (
+            Path(__file__).parent / "src/release_bot_test/release_bot_test.py.txt"
+        ).read_text()
+        self.upload_file_to_github(main, "release_bot_test/release_bot_test.py")
 
     def upload_file_to_github(self, file, path):
         """Uploads file to path in github repository"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/contents"
-        payload = {"content": base64.b64encode(file.encode('utf-8')).decode('utf-8'),
-                   "message": f"Create {path}"}
-        response = requests.put(url=f'{url}/{path}', headers=self.headers, json=payload)
+        payload = {
+            "content": base64.b64encode(file.encode("utf-8")).decode("utf-8"),
+            "message": f"Create {path}",
+        }
+        response = requests.put(url=f"{url}/{path}", headers=self.headers, json=payload)
 
         if response.status_code != 201:
-            raise Exception(f'Failed creating {path} in {self.github_user}/{self.repo}:'
-                            f'\n{response.text}')
+            raise Exception(
+                f"Failed creating {path} in {self.github_user}/{self.repo}:"
+                f"\n{response.text}"
+            )
 
     def delete_repo(self):
         """Deletes previously setup github repository"""
@@ -105,31 +116,39 @@ class GithubUtils:
         response = requests.delete(url=url, headers=self.headers)
 
         if response.status_code != 204:
-            raise Exception(f'Failed deleting repository {self.github_user}/{self.repo}\n'
-                            f'{response.text}')
+            raise Exception(
+                f"Failed deleting repository {self.github_user}/{self.repo}\n"
+                f"{response.text}"
+            )
         self.repo = None
 
     def open_issue(self, title="Test issue"):
         """Opens issue in a repository"""
         url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/issues"
-        payload = {'title': title}
+        payload = {"title": title}
         response = requests.post(url=url, headers=self.headers, json=payload)
 
         if response.status_code != 201:
-            raise Exception(f'Failed creating issue in repository {self.github_user}/{self.repo}\n'
-                            f'{response.text}')
+            raise Exception(
+                f"Failed creating issue in repository {self.github_user}/{self.repo}\n"
+                f"{response.text}"
+            )
         parsed = response.json()
-        return parsed['number']
+        return parsed["number"]
 
     def merge_pull_request(self, number):
         """Merges open pull request in a repository"""
-        url = f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/pulls/{number}/merge"
+        url = (
+            f"{API3_ENDPOINT}repos/{self.github_user}/{self.repo}/pulls/{number}/merge"
+        )
         response = requests.put(url=url, headers=self.headers)
 
         if response.status_code != 200:
-            raise Exception(f'Failed merging PR #{number} in repository '
-                            f'{self.github_user}/{self.repo}\n'
-                            f'{response.text}')
+            raise Exception(
+                f"Failed merging PR #{number} in repository "
+                f"{self.github_user}/{self.repo}\n"
+                f"{response.text}"
+            )
         return True
 
     def count_comments(self, number):
@@ -138,8 +157,10 @@ class GithubUtils:
         response = requests.get(url=url, headers=self.headers)
 
         if response.status_code != 200:
-            raise Exception(f'Failed counting comments on issue #{number} '
-                            f'in repository {self.github_user}/{self.repo}\n'
-                            f'{response.text}')
+            raise Exception(
+                f"Failed counting comments on issue #{number} "
+                f"in repository {self.github_user}/{self.repo}\n"
+                f"{response.text}"
+            )
         parsed = response.json()
         return len(parsed)

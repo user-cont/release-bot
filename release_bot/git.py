@@ -17,17 +17,18 @@
 This module provides interface to git
 """
 import shutil
-from tempfile import TemporaryDirectory, mkdtemp
 from os import path
+from tempfile import TemporaryDirectory, mkdtemp
 
+from release_bot.exceptions import GitException
 from release_bot.utils import run_command, run_command_get_output
-from release_bot.exceptions import GitException, ReleaseException
 
 
 class Git:
     """
     Interface to git
     """
+
     def __init__(self, url, conf):
         self.repo_path = self.clone(url)
         self.credential_store = None
@@ -42,8 +43,12 @@ class Git:
         :return: TemporaryDirectory object
         """
         temp_directory = mkdtemp()
-        if not run_command(temp_directory, f'git clone {url} .',
-                           "Couldn't clone repository!", fail=True):
+        if not run_command(
+            temp_directory,
+            f"git clone {url} .",
+            "Couldn't clone repository!",
+            fail=True,
+        ):
             raise GitException(f"Can't clone repository {url}")
         return temp_directory
 
@@ -56,11 +61,11 @@ class Git:
         :return: changelog or placeholder
         """
         if gitchangelog:
-            cmd = f'gitchangelog ^{latest_version} HEAD'
+            cmd = f"gitchangelog ^{latest_version} HEAD"
         else:
-            cmd = f'git log {latest_version}... --no-merges --format=\'* %s\''
+            cmd = f"git log {latest_version}... --no-merges --format='* %s'"
         success, changelog = run_command_get_output(self.repo_path, cmd)
-        return changelog if success and changelog else 'No changelog provided'
+        return changelog if success and changelog else "No changelog provided"
 
     def add(self, files: list):
         """
@@ -69,20 +74,22 @@ class Git:
         :return:
         """
         for file in files:
-            success = run_command(self.repo_path, f'git add {file}', '', False)
+            success = run_command(self.repo_path, f"git add {file}", "", False)
             if not success:
                 raise GitException(f"Can't git add file {file}!")
 
-    def commit(self, message='release commit', allow_empty=False):
+    def commit(self, message="release commit", allow_empty=False):
         """
         Executes git commit
         :param message: commit message
         :return:
         """
-        arg = '--allow-empty' if allow_empty else ''
-        success = run_command(self.repo_path, f'git commit {arg} -m \"{message}\"', '', False)
+        arg = "--allow-empty" if allow_empty else ""
+        success = run_command(
+            self.repo_path, f'git commit {arg} -m "{message}"', "", False
+        )
         if not success:
-            raise GitException(f"Can't commit files!")
+            raise GitException("Can't commit files!")
 
     def pull_branch(self, branch: str):
         """
@@ -92,8 +99,10 @@ class Git:
         """
         run_command(
             self.repo_path,
-            f'git pull --rebase origin {branch}',
-            'Unable to pull from remote repository', True)
+            f"git pull --rebase origin {branch}",
+            "Unable to pull from remote repository",
+            True,
+        )
 
     def push(self, branch: str):
         """
@@ -101,7 +110,7 @@ class Git:
         :param branch: branch to push
         :return:
         """
-        success = run_command(self.repo_path, f'git push origin {branch}', '', False)
+        success = run_command(self.repo_path, f"git push origin {branch}", "", False)
         if not success:
             raise GitException(f"Can't push branch {branch} to origin!")
 
@@ -112,8 +121,12 @@ class Git:
         :param email: committer email
         :return: True on success False on fail
         """
-        email = run_command(self.repo_path, f'git config user.email "{email}"', '', fail=False)
-        name = run_command(self.repo_path, f'git config user.name "{name}"', '', fail=False)
+        email = run_command(
+            self.repo_path, f'git config user.email "{email}"', "", fail=False
+        )
+        name = run_command(
+            self.repo_path, f'git config user.name "{name}"', "", fail=False
+        )
         return email and name
 
     def set_credential_store(self):
@@ -124,16 +137,17 @@ class Git:
         if not self.credential_store:
             # TODO: do only a single tmpdir; merge this into tmpdir with git repo itself
             self.credential_store = TemporaryDirectory()
-            store_path = path.join(self.credential_store.name, 'credentials')
+            store_path = path.join(self.credential_store.name, "credentials")
             # write down credentials
-            with open(store_path, 'w+') as credentials:
+            with open(store_path, "w+") as credentials:
                 credentials.write(
-                    f'https://{self.conf.github_username}:{self.conf.github_token}@github.com/'
-                    f'{self.conf.repository_owner}/{self.conf.repository_name}')
+                    f"https://{self.conf.github_username}:{self.conf.github_token}@github.com/"
+                    f"{self.conf.repository_owner}/{self.conf.repository_name}"
+                )
             # let git know
-            with open(path.join(self.repo_path, '.git/config'), 'a+') as config:
-                config.write(f'\n[credential]\n\thelper = store --file={store_path}\n')
-        return path.join(self.credential_store.name, 'credentials')
+            with open(path.join(self.repo_path, ".git/config"), "a+") as config:
+                config.write(f"\n[credential]\n\thelper = store --file={store_path}\n")
+        return path.join(self.credential_store.name, "credentials")
 
     def checkout(self, target: str):
         """
@@ -141,7 +155,7 @@ class Git:
 
         :param target: str (branch, tag, file)
         """
-        return run_command(self.repo_path, f'git checkout "{target}"', '', fail=True)
+        return run_command(self.repo_path, f'git checkout "{target}"', "", fail=True)
 
     def checkout_new_branch(self, branch: str):
         """
@@ -149,16 +163,20 @@ class Git:
         :param branch: branch name
         :return: True on success False on fail
         """
-        return run_command(self.repo_path, f'git checkout -b "{branch}"', '', fail=False)
+        return run_command(
+            self.repo_path, f'git checkout -b "{branch}"', "", fail=False
+        )
 
     def fetch_tags(self):
         """
         Fetch all tags from origin
         """
-        return run_command(self.repo_path,
-                           'git fetch --tags',
-                           'Unable to fetch tags from remote server',
-                           fail=True)
+        return run_command(
+            self.repo_path,
+            "git fetch --tags",
+            "Unable to fetch tags from remote server",
+            fail=True,
+        )
 
     def cleanup(self):
         """

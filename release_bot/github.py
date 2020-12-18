@@ -14,8 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import os
-import time
 import re
+import time
+
+import jwt
+import requests
+from ogr.abstract import PRStatus, GitProject
+from semantic_version import Version
 
 from release_bot.exceptions import ReleaseException, GitException
 from release_bot.utils import (
@@ -25,12 +30,8 @@ from release_bot.utils import (
     GitService,
     which_service,
 )
-import jwt
-import requests
-from semantic_version import Version
-from ogr.abstract import PRStatus, GitProject
 
-logger = logging.getLogger('release-bot')
+logger = logging.getLogger("release-bot")
 
 
 # github app auth code "stolen" from https://github.com/swinton/github-app-demo.py
@@ -44,41 +45,46 @@ class JWTAuth(requests.auth.AuthBase):
         # Generate the JWT
         payload = {
             # issued at time
-            'iat': int(time.time()),
+            "iat": int(time.time()),
             # JWT expiration time (10 minute maximum)
-            'exp': int(time.time()) + self.expiration,
+            "exp": int(time.time()) + self.expiration,
             # GitHub App's identifier
-            'iss': self.iss
+            "iss": self.iss,
         }
 
-        tok = jwt.encode(payload, self.key, algorithm='RS256')
+        tok = jwt.encode(payload, self.key, algorithm="RS256")
 
-        return tok.decode('utf-8')
+        return tok.decode("utf-8")
 
     def __call__(self, r):
-        r.headers['Authorization'] = 'bearer {}'.format(self.generate_token())
+        r.headers["Authorization"] = "bearer {}".format(self.generate_token())
         return r
 
 
 class GitHubApp:
     def __init__(self, app_id, private_key_path):
         self.session = requests.Session()
-        self.session.headers.update(dict(
-            accept='application/vnd.github.machine-man-preview+json'))
+        self.session.headers.update(
+            dict(accept="application/vnd.github.machine-man-preview+json")
+        )
         self.private_key = None
         self.private_key_path = private_key_path
         self.session.auth = JWTAuth(iss=app_id, key=self.read_private_key())
-        self.domain = 'api.github.com'  # not sure if it makes sense to make this configurable
+        self.domain = (
+            "api.github.com"  # not sure if it makes sense to make this configurable
+        )
 
     def _request(self, method, path):
-        response = self.session.request(method, 'https://{}/{}'.format(self.domain, path))
+        response = self.session.request(
+            method, "https://{}/{}".format(self.domain, path)
+        )
         return response.json()
 
     def _get(self, path):
-        return self._request('GET', path)
+        return self._request("GET", path)
 
     def _post(self, path):
-        return self._request('POST', path)
+        return self._request("POST", path)
 
     def read_private_key(self):
         if self.private_key is None:
@@ -87,17 +93,18 @@ class GitHubApp:
         return self.private_key
 
     def get_app(self):
-        return self._get('app')
+        return self._get("app")
 
     def get_installations(self):
-        return self._get('app/installations')
+        return self._get("app/installations")
 
     def get_installation_access_token(self, installation_id):
-        return self._post('installations/{}/access_tokens'.format(installation_id))["token"]
+        return self._post("installations/{}/access_tokens".format(installation_id))[
+            "token"
+        ]
 
 
 class Github:
-
     def __init__(self, configuration, git):
         """
         :param configuration: instance of Configuration
@@ -107,19 +114,29 @@ class Github:
         self.logger = configuration.logger
         self.project: GitProject = configuration.project
         self.session = requests.Session()
-        self.session.headers.update({'Authorization': f'token {configuration.github_token}'})
+        self.session.headers.update(
+            {"Authorization": f"token {configuration.github_token}"}
+        )
         self.github_app_session = None
-        if self.conf.github_app_installation_id and self.conf.github_app_id and self.conf.github_app_cert_path:
+        if (
+            self.conf.github_app_installation_id
+            and self.conf.github_app_id
+            and self.conf.github_app_cert_path
+        ):
             self.github_app_session = requests.Session()
-            self.github_app = GitHubApp(self.conf.github_app_id, self.conf.github_app_cert_path)
+            self.github_app = GitHubApp(
+                self.conf.github_app_id, self.conf.github_app_cert_path
+            )
             self.update_github_app_token()
         self.comment = []
         self.git = git
 
     def update_github_app_token(self):
-        token = self.github_app.get_installation_access_token(self.conf.github_app_installation_id)
+        token = self.github_app.get_installation_access_token(
+            self.conf.github_app_installation_id
+        )
         self.logger.debug("github app token obtained")
-        self.github_app_session.headers.update({'Authorization': f'token {token}'})
+        self.github_app_session.headers.update({"Authorization": f"token {token}"})
 
     def latest_release(self):
         """
@@ -130,7 +147,7 @@ class Github:
         releases = self.project.get_releases()
         if not releases:
             self.logger.debug("There is no github release")
-            return '0.0.0'
+            return "0.0.0"
 
         release_versions = [release.title for release in releases]
         release_versions.sort(key=Version)
@@ -157,11 +174,10 @@ class Github:
             self.project.create_release(
                 tag=new_release.version,
                 name=new_release.version,
-                message=self.get_changelog(new_release.version)
+                message=self.get_changelog(new_release.version),
             )
         except Exception:
-            msg = f"Failed to create new release on github!"
-            raise ReleaseException(msg)
+            raise ReleaseException("Failed to create new release on github!")
 
         return True, new_release
 
@@ -173,15 +189,15 @@ class Github:
         :return:
         """
         self.git.fetch_tags()
-        self.git.checkout(f'{new_version}-release')
-        self.git.pull_branch(f'{new_version}-release')
+        self.git.checkout(f"{new_version}-release")
+        self.git.pull_branch(f"{new_version}-release")
         p = os.path.join(self.git.repo_path, "CHANGELOG.md")
         try:
             with open(p, "r") as fd:
                 changelog_content = fd.read()
         except FileNotFoundError:
             logger.info("CHANGELOG.md not found")
-            return ''
+            return ""
         finally:
             self.git.checkout(self.project.default_branch)
 
@@ -190,7 +206,7 @@ class Github:
 
         # check if the changelog needs updating
         if latest_release.body == changelog:
-            return ''
+            return ""
 
         return changelog
 
@@ -202,7 +218,9 @@ class Github:
         """
         return branch in self.project.get_branches()
 
-    def make_pr(self, branch, version, log, changed_version_files, base: str = None, labels=None):
+    def make_pr(
+        self, branch, version, log, changed_version_files, base: str = None, labels=None
+    ):
         """
         Makes a pull request with info on the new release
         :param branch: name of the branch to make PR from
@@ -214,30 +232,34 @@ class Github:
         :param labels: list of str, labels to be put on PR
         :return: url of the PR
         """
-        message = (f'Hi,\n you have requested a release PR from me. Here it is!\n'
-                   f'This is the changelog I created:\n'
-                   f'### Changes\n{log}\n\nYou can change it by editing `CHANGELOG.md` '
-                   f'in the root of this repository and pushing to `{branch}` branch'
-                   f' before merging this PR.\n')
+        message = (
+            f"Hi,\n you have requested a release PR from me. Here it is!\n"
+            f"This is the changelog I created:\n"
+            f"### Changes\n{log}\n\nYou can change it by editing `CHANGELOG.md` "
+            f"in the root of this repository and pushing to `{branch}` branch"
+            f" before merging this PR.\n"
+        )
         if len(changed_version_files) == 1:
-            message += 'I have also updated the  `__version__ ` in file:\n'
+            message += "I have also updated the  `__version__ ` in file:\n"
         elif len(changed_version_files) > 1:
-            message += ('There were multiple files where  `__version__ ` was set, '
-                        'so I left updating them up to you. These are the files:\n')
+            message += (
+                "There were multiple files where  `__version__ ` was set, "
+                "so I left updating them up to you. These are the files:\n"
+            )
         elif not changed_version_files:
             message += "I didn't find any files where  `__version__` is set."
 
         for file in changed_version_files:
-            message += f'* {file}\n'
+            message += f"* {file}\n"
 
         try:
             if base is None:
                 base = self.project.default_branch
             new_pr = self.project.pr_create(
-                title=f'{version} release',
+                title=f"{version} release",
                 body=message,
                 target_branch=base,
-                source_branch=branch
+                source_branch=branch,
             )
 
             self.logger.info(f"Created PR: {new_pr}")
@@ -246,8 +268,10 @@ class Github:
                 self.project.add_pr_labels(new_pr.id, labels=labels)
             return new_pr.url
         except Exception:
-            msg = (f"Something went wrong with creating "
-                   f"PR on {which_service(self.project).name}")
+            msg = (
+                f"Something went wrong with creating "
+                f"PR on {which_service(self.project).name}"
+            )
             raise ReleaseException(msg)
 
     def make_release_pr(self, new_pr, gitchangelog):
@@ -260,13 +284,17 @@ class Github:
         """
         repo = new_pr.repo
         version = new_pr.version
-        branch = f'{version}-release'
+        branch = f"{version}-release"
         if self.branch_exists(branch):
-            self.logger.warning(f'Branch {branch} already exists, aborting creating PR.')
+            self.logger.warning(
+                f"Branch {branch} already exists, aborting creating PR."
+            )
             return False
         if self.conf.dry_run:
-            msg = (f"I would make a new PR for release of version "
-                   f"{version} based on the issue.")
+            msg = (
+                f"I would make a new PR for release of version "
+                f"{version} based on the issue."
+            )
             self.logger.info(msg)
             return False
         try:
@@ -278,22 +306,27 @@ class Github:
             # This makes sure that the new release_pr branch has all the commits
             # from the default branch for the latest release.
             repo.checkout(self.project.default_branch)
-            changelog = repo.get_log_since_last_release(new_pr.previous_version, gitchangelog)
+            changelog = repo.get_log_since_last_release(
+                new_pr.previous_version, gitchangelog
+            )
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr.version)
-            if insert_in_changelog(f'{repo.repo_path}/CHANGELOG.md',
-                                   new_pr.version, changelog):
-                repo.add(['CHANGELOG.md'])
+            if insert_in_changelog(
+                f"{repo.repo_path}/CHANGELOG.md", new_pr.version, changelog
+            ):
+                repo.add(["CHANGELOG.md"])
             if changed:
                 repo.add(changed)
-            repo.commit(f'{version} release', allow_empty=True)
+            repo.commit(f"{version} release", allow_empty=True)
             repo.push(branch)
-            if not self.pr_exists(f'{version} release'):
-                new_pr.pr_url = self.make_pr(branch=branch,
-                                             version=f'{version}',
-                                             log=changelog,
-                                             changed_version_files=changed,
-                                             labels=new_pr.labels)
+            if not self.pr_exists(f"{version} release"):
+                new_pr.pr_url = self.make_pr(
+                    branch=branch,
+                    version=f"{version}",
+                    log=changelog,
+                    changed_version_files=changed,
+                    labels=new_pr.labels,
+                )
                 return True
         except GitException as exc:
             raise ReleaseException(exc)
@@ -310,7 +343,7 @@ class Github:
         opened_prs = self.walk_through_prs(PRStatus.open)
 
         if not opened_prs:
-            self.logger.debug(f'No merged release PR found')
+            self.logger.debug("No merged release PR found")
             return False
 
         for opened_pr in opened_prs:
@@ -323,11 +356,14 @@ class Github:
         Get user's contact details
         :return: name and email
         """
-        name = 'Release bot'
-        mail = 'bot@releasebot.bot'
+        name = "Release bot"
+        mail = "bot@releasebot.bot"
 
         # don't set in case of Github app instance, it uses defaults
-        if not self.conf.github_app_id and which_service(self.project) == GitService.Github:
+        if (
+            not self.conf.github_app_id
+            and which_service(self.project) == GitService.Github
+        ):
             name = self.project.service.user.get_username()
             mail = self.project.service.user.get_email()
         return name, mail
@@ -338,11 +374,11 @@ class Github:
         @:param: str, name of the file
         :return: file content or None in case of error
         """
-        self.logger.debug(f'Fetching {name}')
+        self.logger.debug(f"Fetching {name}")
         try:
             file = self.project.get_file_content(path=name, ref=ref)
         except FileNotFoundError:
-            self.logger.error(f'Failed to fetch {name}')
+            self.logger.error(f"Failed to fetch {name}")
             return None
 
         return file

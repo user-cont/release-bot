@@ -14,9 +14,9 @@ Before creating bug reports, please check a [list of known issues](https://githu
 If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/user-cont/release-bot/issues/new).
 Be sure to include a **descriptive title and a clear description**. Ideally, please provide:
 
-* version of release-bot you are using (`pip freeze | grep release-bot`)
+- version of release-bot you are using (`pip freeze | grep release-bot`)
 
-* the command you executed with output
+- the command you executed with output
 
 If possible, add a **code sample** or an **executable test case** demonstrating the expected behavior that is not occurring.
 
@@ -35,9 +35,9 @@ If you would like to contribute code to the `release-bot` project, this section 
 
 ### Is this your first contribution?
 
-Never contributed to an open-source project before?  No problem!  We're excited that you are considering `release-bot` for your first contribution!
+Never contributed to an open-source project before? No problem! We're excited that you are considering `release-bot` for your first contribution!
 
-Please take a few minutes to read GitHub's guide on [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/).  It's a quick read, and it's a great way to introduce yourself to how things work behind the scenes in open-source projects.
+Please take a few minutes to read GitHub's guide on [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/). It's a quick read, and it's a great way to introduce yourself to how things work behind the scenes in open-source projects.
 
 ### Dependencies
 
@@ -51,14 +51,13 @@ We are maintaining whole project documentation inside [README.md](/README.md).
 
 When you are contributing to changelog, please follow these suggestions:
 
-* The changelog is meant to be read by everyone. Imagine that an average user
+- The changelog is meant to be read by everyone. Imagine that an average user
   will read it and should understand the changes. `docker_image.mount() via .get_archive()` is
-  not very descriptive. `DockerImage class now utilizes get_archive() from
-  docker-py for its mount() method.` is a more friendly description.
-* Every line should be a complete sentence. Either tell what is the change that the tool is doing or describe it precisely:
-  * Bad: `Use search method in label regex`
-  * Good: `Colin now uses search method when...`
-* And finally, with the changelogs we are essentially selling our projects:
+  not very descriptive. `DockerImage class now utilizes get_archive() from docker-py for its mount() method.` is a more friendly description.
+- Every line should be a complete sentence. Either tell what is the change that the tool is doing or describe it precisely:
+  - Bad: `Use search method in label regex`
+  - Good: `Colin now uses search method when...`
+- And finally, with the changelogs we are essentially selling our projects:
   think about a situation that you met someone at a conference and you are
   trying to convince the person to use the project and that the changelog
   should help with that.
@@ -74,18 +73,18 @@ When you are contributing to changelog, please follow these suggestions:
 
 ### Requirements for Pull Requests
 
-* Please create Pull Requests against the `master` branch.
-* Please make sure that your code complies with [PEP8](https://www.python.org/dev/peps/pep-0008/).
-* One line should not contain more than 100 characters.
-* Make sure that new code is covered by a test case (new or existing one).
-* We don't like [spaghetti code](https://en.wikipedia.org/wiki/Spaghetti_code).
-* All the tests in the test-suite have to pass.
+- Please create Pull Requests against the `master` branch.
+- Please make sure that your code complies with [PEP8](https://www.python.org/dev/peps/pep-0008/).
+- One line should not contain more than 100 characters.
+- Make sure that new code is covered by a test case (new or existing one).
+- We don't like [spaghetti code](https://en.wikipedia.org/wiki/Spaghetti_code).
+- All the tests in the test-suite have to pass.
 
 ## Development Environment
 
 ### Requirements
 
-Currently, the development environment can be set up on __Linux__, and __MacOS__.
+Currently, the development environment can be set up on **Linux**, and **MacOS**.
 We support two methods for setting up the environment.
 
 1. Docker method (using containers)
@@ -114,7 +113,7 @@ make image-test
 
 It builds a Docker image using your local repository, with release-bot installed in it. This may take some time when building for the first time.
 
-To check if the build was successful, run  `docker images`. If the build was successful, an image named `release-bot-tests` will be present in the output list.
+To check if the build was successful, run `docker images`. If the build was successful, an image named `release-bot-tests` will be present in the output list.
 
 #### Testing new changes
 
@@ -124,7 +123,7 @@ To test any new changes you made in the code, first build a test image using the
 docker run -it -v ${PWD}:/home/test-user/app/ -v path/to/conf.yaml:/home/test-user/conf.yaml -e PYTHONPATH=/home/test-user/app release-bot-tests /bin/bash
 ```
 
-* `path/to/conf.yaml` is the absolute path of the configuration file in your machine.
+- `path/to/conf.yaml` is the absolute path of the configuration file in your machine.
 
 A terminal in the container will open up. Now run the bot using the command
 
@@ -149,7 +148,7 @@ You can also run specific tests by setting `TEST_TARGET` variable equal to test 
 make test-in-container TEST_TARGET=tests/test_github.py
 ```
 
-__Note:__ You may need to specify your token in the above command depending on test you are running. We recommend to specify it with every test.
+**Note:** You may need to specify your token in the above command depending on test you are running. We recommend to specify it with every test.
 
 ### Direct Installation
 
@@ -181,11 +180,11 @@ We have an integration test suite in release bot which creates a new project on
 github and tries the functionality in there. It may easily happen that a bunch
 of test repositories will be left out in your account:
 
- * We have a script which is able to delete all of these, please check
-   `./hack/clean-testing-github-repos`. We suggest reading out the sources
-   first before using it.
- * The prerequisite for both, the integration tests and the script mentioned
-   above, is to have a token which is able to delete projects.
+- We have a script which is able to delete all of these, please check
+  `./hack/clean-testing-github-repos`. We suggest reading out the sources
+  first before using it.
+- The prerequisite for both, the integration tests and the script mentioned
+  above, is to have a token which is able to delete projects.
 
 Thank you!
 

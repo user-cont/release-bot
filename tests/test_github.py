@@ -24,13 +24,15 @@ from tests.conftest import prepare_conf
 from .github_utils import GithubUtils, RELEASE_CONF
 
 
-@pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN'),
-                    reason="missing GITHUB_TOKEN environment variable")
+@pytest.mark.skipif(
+    not os.environ.get("GITHUB_TOKEN"),
+    reason="missing GITHUB_TOKEN environment variable",
+)
 class TestGithub:
     """Tests bot communication with Github"""
 
     def setup_method(self):
-        """ setup any state tied to the execution of the given method in a
+        """setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
         configuration = prepare_conf()
@@ -43,7 +45,9 @@ class TestGithub:
         # set conf
         configuration.repository_name = self.g_utils.repo
         configuration.github_username = self.g_utils.github_user
-        configuration.clone_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}.git"
+        configuration.clone_url = (
+            f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}.git"
+        )
         configuration.project = configuration.get_project()
 
         repo_url = f"https://github.com/{self.g_utils.github_user}/{self.g_utils.repo}"
@@ -51,7 +55,7 @@ class TestGithub:
         self.github = Github(configuration, git)
 
     def teardown_method(self):
-        """ teardown any state that was previously setup with a setup_method
+        """teardown any state that was previously setup with a setup_method
         call.
         """
         if self.g_utils.repo:
@@ -59,7 +63,9 @@ class TestGithub:
                 self.g_utils.delete_repo()
             except Exception as ex:
                 # no need to fail the test, just warn
-                warnings.warn(f"Could not delete repository {self.g_utils.repo}: {ex!r}")
+                warnings.warn(
+                    f"Could not delete repository {self.g_utils.repo}: {ex!r}"
+                )
         self.g_utils.repo = None
 
     @pytest.fixture()
@@ -73,12 +79,12 @@ class TestGithub:
 
     def test_latest_rls_not_existing(self):
         """Tests version number when there is no latest release"""
-        assert self.github.latest_release() == '0.0.0'
+        assert self.github.latest_release() == "0.0.0"
 
     def test_branch_exists_true(self):
         """Tests if branch exists"""
-        assert self.github.branch_exists('main')
+        assert self.github.branch_exists("main")
 
     def test_branch_exists_false(self):
         """Tests if branch doesn't exist"""
-        assert not self.github.branch_exists('not-main')
+        assert not self.github.branch_exists("not-main")

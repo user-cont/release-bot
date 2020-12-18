@@ -13,45 +13,45 @@
         cmd: flask-3 run -h 0.0.0.0
       working_container:
         volumes:
-        - '{{ playbook_dir }}:/src:Z'
+          - "{{ playbook_dir }}:/src:Z"
   tasks:
-  - name: Create some home dirs
-    file:
-      state: directory
-      path: '{{ home_path }}/{{ item }}'
-      mode: 0700
-    with_items:
-    - .ssh
-    - .config
-  - name: Create /secrets
-    file:
-      state: directory
-      path: /secrets
-      mode: 0777
-  - name: Copy gitconfig
-    copy:
-      src: gitconfig
-      dest: '{{ home_path }}/.gitconfig'
-  - name: stat /src
-    stat:
-      path: /src
-    tags:
-    - no-cache
-    register: src_path
-  - name: Let's make sure /src is present
-    assert:
-      that:
-      - 'src_path.stat.isdir'
-  - name: Copy run.sh
-    copy:
-      src: run.sh
-      dest: /usr/bin/run.sh
-      mode: 0777
-  - name: Install release-bot from /src
-    pip:
-      name: /src
-      executable: pip3
-  - name: Clean all the cache files (especially pip)
-    file:
-      state: absent
-      path: ~/.cache/
+    - name: Create some home dirs
+      file:
+        state: directory
+        path: "{{ home_path }}/{{ item }}"
+        mode: 0700
+      with_items:
+        - .ssh
+        - .config
+    - name: Create /secrets
+      file:
+        state: directory
+        path: /secrets
+        mode: 0777
+    - name: Copy gitconfig
+      copy:
+        src: gitconfig
+        dest: "{{ home_path }}/.gitconfig"
+    - name: stat /src
+      stat:
+        path: /src
+      tags:
+        - no-cache
+      register: src_path
+    - name: Let's make sure /src is present
+      assert:
+        that:
+          - "src_path.stat.isdir"
+    - name: Copy run.sh
+      copy:
+        src: run.sh
+        dest: /usr/bin/run.sh
+        mode: 0777
+    - name: Install release-bot from /src
+      pip:
+        name: /src
+        executable: pip3
+    - name: Clean all the cache files (especially pip)
+      file:
+        state: absent
+        path: ~/.cache/
