@@ -198,5 +198,5 @@ class TestBot:
         (flexmock(self.release_bot.project)  # make sure it walks through the loop
          .should_receive('pr_comment')
          .once()
-         .and_return(PRComment("Fake comment", "FakeAuthor")))
+         .and_return(PRComment(body="Fake comment", author="FakeAuthor")))
         self.release_bot.run()

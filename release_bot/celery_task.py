@@ -106,7 +106,7 @@ def handle_issue(webhook_payload, db):
     release_bot, logger = set_configuration(webhook_payload, db=db, issue=True)
 
     logger.info("Resolving opened issue")
-    release_bot.git.pull()
+    release_bot.git.pull_branch(release_bot.project.default_branch)
     try:
         release_bot.load_release_conf()
         if (release_bot.new_release.trigger_on_issue and
@@ -130,7 +130,7 @@ def handle_pr(webhook_payload, db):
     release_bot, logger = set_configuration(webhook_payload, db=db, issue=False)
 
     logger.info("Resolving opened PR")
-    release_bot.git.pull()
+    release_bot.git.pull_branch(release_bot.project.default_branch)
     try:
         release_bot.load_release_conf()
         if release_bot.find_newest_release_pull_request():

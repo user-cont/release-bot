@@ -8,7 +8,7 @@
       - python3-flask
       - python3-ipdb  # for easy debugging
       - python3-jsonschema
-      #- python3-ogr  # temporary install 0.8.0 from PyPI
+      - python3-ogr
       - python3-pip
       - python3-pygithub
       - python3-gitlab

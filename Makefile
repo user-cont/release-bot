@@ -12,7 +12,8 @@ image-test:
 
 test-in-container:
 	docker run -it \
-		-v $(CURDIR)/release_bot:/usr/local/lib/python3.7/site-packages/release_bot:Z \
+		-v $(CURDIR)/release_bot:/usr/local/lib/python3.9/site-packages/release_bot:Z \
+		-v $(CURDIR)/tests:/home/test-user/tests:Z \
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
 		$(TEST_IMAGE_NAME) \
 		make test TEST_TARGET='$(TEST_TARGET)'

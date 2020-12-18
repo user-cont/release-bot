@@ -77,8 +77,8 @@ class TestGithub:
 
     def test_branch_exists_true(self):
         """Tests if branch exists"""
-        assert self.github.branch_exists('master')
+        assert self.github.branch_exists('main')
 
     def test_branch_exists_false(self):
         """Tests if branch doesn't exist"""
-        assert not self.github.branch_exists('not-master')
+        assert not self.github.branch_exists('not-main')

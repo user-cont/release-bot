@@ -18,9 +18,11 @@ import configparser
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 
 import yaml
 from ogr import GithubService, PagureService, get_project
+from ogr.abstract import GitProject
 
 from release_bot.version import __version__
 from release_bot.github import GitHubApp
@@ -57,7 +59,7 @@ class Configuration:
         self.pagure_instance_url = 'https://pagure.io'
         self.webhook_handler = False
         self.gitchangelog = False
-        self.project = None
+        self.project: Optional[GitProject] = None
 
     def set_logging(self,
                     logger_name="release-bot",

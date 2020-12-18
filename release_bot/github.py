@@ -28,7 +28,7 @@ from release_bot.utils import (
 import jwt
 import requests
 from semantic_version import Version
-from ogr.abstract import PRStatus
+from ogr.abstract import PRStatus, GitProject
 
 logger = logging.getLogger('release-bot')
 
@@ -105,7 +105,7 @@ class Github:
         """
         self.conf = configuration
         self.logger = configuration.logger
-        self.project = configuration.project
+        self.project: GitProject = configuration.project
         self.session = requests.Session()
         self.session.headers.update({'Authorization': f'token {configuration.github_token}'})
         self.github_app_session = None
@@ -183,7 +183,7 @@ class Github:
             logger.info("CHANGELOG.md not found")
             return ''
         finally:
-            self.git.checkout('master')
+            self.git.checkout(self.project.default_branch)
 
         changelog = parse_changelog(new_version, changelog_content)
         latest_release = self.project.get_latest_release()
@@ -202,7 +202,7 @@ class Github:
         """
         return branch in self.project.get_branches()
 
-    def make_pr(self, branch, version, log, changed_version_files, base='master', labels=None):
+    def make_pr(self, branch, version, log, changed_version_files, base: str = None, labels=None):
         """
         Makes a pull request with info on the new release
         :param branch: name of the branch to make PR from
@@ -210,7 +210,7 @@ class Github:
         :param log: changelog
         :param changed_version_files: list of files that have been changed
                                       in order to update version
-        :param base: base of the PR. 'master' by default
+        :param base: base of the PR. defaults to project's default branch
         :param labels: list of str, labels to be put on PR
         :return: url of the PR
         """
@@ -231,6 +231,8 @@ class Github:
             message += f'* {file}\n'
 
         try:
+            if base is None:
+                base = self.project.default_branch
             new_pr = self.project.pr_create(
                 title=f'{version} release',
                 body=message,
@@ -271,11 +273,11 @@ class Github:
             name, email = self.get_user_contact()
             repo.set_credentials(name, email)
             repo.set_credential_store()
-            # The bot first checks out the master branch and from master
+            # The bot first checks out the default branch and from it
             # it creates the new branch, checks out to it and then perform the release
             # This makes sure that the new release_pr branch has all the commits
-            # from the master branch for the latest release.
-            repo.checkout('master')
+            # from the default branch for the latest release.
+            repo.checkout(self.project.default_branch)
             changelog = repo.get_log_since_last_release(new_pr.previous_version, gitchangelog)
             repo.checkout_new_branch(branch)
             changed = look_for_version_files(repo.repo_path, new_pr.version)
@@ -296,7 +298,7 @@ class Github:
         except GitException as exc:
             raise ReleaseException(exc)
         finally:
-            repo.checkout('master')
+            repo.checkout(self.project.default_branch)
         return False
 
     def pr_exists(self, name):
@@ -325,13 +327,12 @@ class Github:
         mail = 'bot@releasebot.bot'
 
         # don't set in case of Github app instance, it uses defaults
-        if not self.conf.github_app_id:
-            if which_service(self.project) == GitService.Github:
-                name = self.project.service.user.get_username()
-                mail = self.project.service.user.get_email()
+        if not self.conf.github_app_id and which_service(self.project) == GitService.Github:
+            name = self.project.service.user.get_username()
+            mail = self.project.service.user.get_email()
         return name, mail
 
-    def get_file(self, name):
+    def get_file(self, name: str, ref: str = None):
         """
         Fetches a specific file via Github API
         @:param: str, name of the file
@@ -339,7 +340,7 @@ class Github:
         """
         self.logger.debug(f'Fetching {name}')
         try:
-            file = self.project.get_file_content(path=name)
+            file = self.project.get_file_content(path=name, ref=ref)
         except FileNotFoundError:
             self.logger.error(f'Failed to fetch {name}')
             return None

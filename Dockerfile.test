@@ -1,6 +1,6 @@
-FROM registry.fedoraproject.org/fedora:30
+FROM fedora:33
 
-RUN dnf install -y git make
+RUN dnf install -y git make python3-pip
 
 ENV HOME=/home/test-user \
     PYTHONDONTWRITEBYTECODE=1
@@ -9,10 +9,10 @@ RUN useradd -u 1000 -d ${HOME} test-user
 
 WORKDIR ${HOME}
 
-COPY Makefile ${HOME}/
+COPY Makefile ./
 
-COPY ./tests/ ${HOME}/tests/
-RUN chown -R 1000 ${HOME}
+COPY ./tests/ tests/
+RUN chown -R 1000 ./
 
 COPY . /tmp/tmp/
 RUN cd /tmp/tmp/ && pip3 install ".[tests]" && rm -rf /tmp/tmp/

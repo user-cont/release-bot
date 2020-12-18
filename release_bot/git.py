@@ -21,7 +21,7 @@ from tempfile import TemporaryDirectory, mkdtemp
 from os import path
 
 from release_bot.utils import run_command, run_command_get_output
-from release_bot.exceptions import GitException
+from release_bot.exceptions import GitException, ReleaseException
 
 
 class Git:
@@ -84,19 +84,10 @@ class Git:
         if not success:
             raise GitException(f"Can't commit files!")
 
-    def pull(self):
+    def pull_branch(self, branch: str):
         """
-        Pull from origin/master to local master branch.
-        """
-        run_command(
-            self.repo_path,
-            'git pull --rebase origin master',
-            'Unable to pull from remote repository', True)
-
-    def pull_branch(self, branch):
-        """
-        Pull from origin/master to local master branch.
-        :param branch: branch to pull
+        Pull (with rebase) from branch.
+        :param branch: branch to pull, default's to
         :return:
         """
         run_command(
@@ -104,7 +95,7 @@ class Git:
             f'git pull --rebase origin {branch}',
             'Unable to pull from remote repository', True)
 
-    def push(self, branch):
+    def push(self, branch: str):
         """
         Executes git push
         :param branch: branch to push
@@ -144,16 +135,15 @@ class Git:
                 config.write(f'\n[credential]\n\thelper = store --file={store_path}\n')
         return path.join(self.credential_store.name, 'credentials')
 
-    def checkout(self, target):
+    def checkout(self, target: str):
         """
         checkout the target
 
         :param target: str (branch, tag, file)
-        :return: None
         """
         return run_command(self.repo_path, f'git checkout "{target}"', '', fail=True)
 
-    def checkout_new_branch(self, branch):
+    def checkout_new_branch(self, branch: str):
         """
         Creates a new local branch
         :param branch: branch name

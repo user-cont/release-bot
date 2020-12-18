@@ -154,7 +154,7 @@ class ReleaseBot:
                 self.logger.info(f"Found merged release PR with version {version}")
                 self.new_release.update_pr_details(
                     version=version,
-                    commitish='master',
+                    commitish=self.github.project.default_branch,
                     pr_id=None,
                     pr_number=merged_pr.id,
                     author_email=None,
@@ -271,7 +271,7 @@ class ReleaseBot:
             release_handler(success=False)
             raise
         finally:
-            self.git.checkout('master')
+            self.git.checkout(self.project.default_branch)
 
         return True
 
@@ -281,7 +281,7 @@ class ReleaseBot:
             self.logger.info("Running in dry-run mode.")
         try:
             while True:
-                self.git.pull()
+                self.git.pull_branch(self.project.default_branch)
                 try:
                     self.load_release_conf()
                     if self.find_newest_release_pull_request():
