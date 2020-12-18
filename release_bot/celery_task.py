@@ -32,23 +32,23 @@ def parse_web_hook_payload(webhook_payload):
     :param webhook_payload: json from github webhook
     """
     db = get_redis_instance()
-    if 'issue' in webhook_payload.keys():
-        if webhook_payload['action'] == 'opened':
+    if "issue" in webhook_payload.keys():
+        if webhook_payload["action"] == "opened":
             handle_issue(webhook_payload, db)
-    elif 'pull_request' in webhook_payload.keys():
-        if webhook_payload['action'] == 'closed':
-            if webhook_payload['pull_request']['merged'] is True:
+    elif "pull_request" in webhook_payload.keys():
+        if webhook_payload["action"] == "closed":
+            if webhook_payload["pull_request"]["merged"] is True:
                 handle_pr(webhook_payload, db)
-    elif 'installation' in webhook_payload.keys():
+    elif "installation" in webhook_payload.keys():
         # detect new repo installation
-        if webhook_payload['action'] == 'added':
-            installation_id = webhook_payload['installation']['id']
-            repositories_added = webhook_payload['repositories_added']
+        if webhook_payload["action"] == "added":
+            installation_id = webhook_payload["installation"]["id"]
+            repositories_added = webhook_payload["repositories_added"]
             save_new_installations(installation_id, repositories_added, db)
 
         # detect when repo uninstall app
-        if webhook_payload['action'] == 'removed':
-            repositories_removed = webhook_payload['repositories_removed']
+        if webhook_payload["action"] == "removed":
+            repositories_removed = webhook_payload["repositories_removed"]
             delete_installations(repositories_removed, db)
 
 
@@ -72,26 +72,27 @@ def set_configuration(webhook_payload, db, issue=True):
                   Github pull request payload
     :return: ReleaseBot instance, configuration logger
     """
-    configuration.configuration = Path(getenv("CONF_PATH",
-                                              DEFAULT_CONF_FILE)).resolve()
+    configuration.configuration = Path(getenv("CONF_PATH", DEFAULT_CONF_FILE)).resolve()
 
     # add configuration from Github webhook
-    configuration.repository_name = webhook_payload['repository']['name']
-    configuration.repository_owner = webhook_payload['repository']['owner']['login']
+    configuration.repository_name = webhook_payload["repository"]["name"]
+    configuration.repository_owner = webhook_payload["repository"]["owner"]["login"]
     if issue:
-        configuration.github_username = webhook_payload['issue']['user']['login']
+        configuration.github_username = webhook_payload["issue"]["user"]["login"]
     else:
-        configuration.github_username = webhook_payload['pull_request']['user']['login']
+        configuration.github_username = webhook_payload["pull_request"]["user"]["login"]
 
-    repo_installation_id = db.get(webhook_payload['repository']['full_name'])
+    repo_installation_id = db.get(webhook_payload["repository"]["full_name"])
     configuration.github_app_installation_id = repo_installation_id
 
     configuration.load_configuration()  # load the rest of configuration if there is any
 
     # create url for github app to enable access over http
-    configuration.clone_url = f'https://x-access-token:' \
-        f'{configuration.github_token}@github.com/' \
-        f'{configuration.repository_owner}/{configuration.repository_name}.git'
+    configuration.clone_url = (
+        f"https://x-access-token:"
+        f"{configuration.github_token}@github.com/"
+        f"{configuration.repository_owner}/{configuration.repository_name}.git"
+    )
 
     return ReleaseBot(configuration), configuration.logger
 
@@ -106,15 +107,17 @@ def handle_issue(webhook_payload, db):
     release_bot, logger = set_configuration(webhook_payload, db=db, issue=True)
 
     logger.info("Resolving opened issue")
-    release_bot.git.pull()
+    release_bot.git.pull_branch(release_bot.project.default_branch)
     try:
         release_bot.load_release_conf()
-        if (release_bot.new_release.trigger_on_issue and
-                release_bot.find_open_release_issues()):
+        if (
+            release_bot.new_release.trigger_on_issue
+            and release_bot.find_open_release_issues()
+        ):
             if release_bot.new_release.labels is not None:
                 release_bot.project.add_issue_labels(
-                    release_bot.new_pr.issue_number,
-                    release_bot.new_release.labels)
+                    release_bot.new_pr.issue_number, release_bot.new_release.labels
+                )
             release_bot.make_release_pull_request()
     except ReleaseException as exc:
         logger.error(exc)
@@ -130,7 +133,7 @@ def handle_pr(webhook_payload, db):
     release_bot, logger = set_configuration(webhook_payload, db=db, issue=False)
 
     logger.info("Resolving opened PR")
-    release_bot.git.pull()
+    release_bot.git.pull_branch(release_bot.project.default_branch)
     try:
         release_bot.load_release_conf()
         if release_bot.find_newest_release_pull_request():
@@ -142,7 +145,7 @@ def handle_pr(webhook_payload, db):
     except ReleaseException as exc:
         logger.error(exc)
 
-    msg = ''.join(release_bot.github.comment)
+    msg = "".join(release_bot.github.comment)
     release_bot.project.pr_comment(release_bot.new_release.pr_number, msg)
     release_bot.github.comment = []  # clean up
 

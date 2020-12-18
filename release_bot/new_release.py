@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-class NewRelease:
 
+class NewRelease:
     def __init__(self):
         # Init to default values.
         self.changelog = None
@@ -28,7 +28,9 @@ class NewRelease:
         self.commitish = None
         self.version = None
 
-    def update(self, changelog, author_name, author_email, pypi, trigger_on_issue, labels):
+    def update(
+        self, changelog, author_name, author_email, pypi, trigger_on_issue, labels
+    ):
         # Update release-conf data
         self.changelog = changelog
         self.author_name = author_name
@@ -37,7 +39,9 @@ class NewRelease:
         self.trigger_on_issue = trigger_on_issue
         self.labels = labels
 
-    def update_pr_details(self, version, author_name, author_email, pr_id, pr_number, commitish):
+    def update_pr_details(
+        self, version, author_name, author_email, pr_id, pr_number, commitish
+    ):
         # Update attributes for making a PR
         self.author_name = author_name
         self.author_email = author_email

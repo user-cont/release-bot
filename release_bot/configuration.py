@@ -18,9 +18,11 @@ import configparser
 import logging
 import sys
 from pathlib import Path
+from typing import Optional, List, Dict
 
 import yaml
 from ogr import GithubService, PagureService, get_project
+from ogr.abstract import GitProject
 
 from release_bot.version import __version__
 from release_bot.github import GitHubApp
@@ -28,44 +30,45 @@ from release_bot.github import GitHubApp
 
 class Configuration:
     # note that required items need to reference strings as their length is checked
-    REQUIRED_ITEMS = {"conf": [],
-                      "release-conf": []}
+    REQUIRED_ITEMS: Dict[str, List] = {"conf": [], "release-conf": []}
 
     def __init__(self):
         self.version = __version__
-        self.repository_name = ''
-        self.repository_owner = ''
-        self.github_token = ''
-        self.github_username = ''
-        self.pagure_token = ''
-        self.pagure_username = ''
+        self.repository_name = ""
+        self.repository_owner = ""
+        self.github_token = ""
+        self.github_username = ""
+        self.pagure_token = ""
+        self.pagure_username = ""
         self.refresh_interval = None
         self.debug = False
-        self.configuration = ''
+        self.configuration = ""
         self.logger = None
         self.init = False
         self.set_logging()
         self.dry_run = False
         # used when PyPI project name != repository name
-        self.pypi_project = ''
+        self.pypi_project = ""
         # configuration when bot is deployed as github app
-        self.github_app_installation_id = ''
-        self.github_app_id = ''
-        self.github_app_cert_path = ''
-        self.clone_url = ''
+        self.github_app_installation_id = ""
+        self.github_app_id = ""
+        self.github_app_cert_path = ""
+        self.clone_url = ""
         # used for different pagure forges pagure.io by default
-        self.pagure_instance_url = 'https://pagure.io'
+        self.pagure_instance_url = "https://pagure.io"
         self.webhook_handler = False
         self.gitchangelog = False
-        self.project = None
+        self.project: Optional[GitProject] = None
 
-    def set_logging(self,
-                    logger_name="release-bot",
-                    level=logging.INFO,
-                    handler_class=logging.StreamHandler,
-                    handler_kwargs=None,
-                    msg_format='%(asctime)s.%(msecs).03d %(filename)-17s %(levelname)-6s %(message)s',
-                    date_format='%H:%M:%S'):
+    def set_logging(
+        self,
+        logger_name="release-bot",
+        level=logging.INFO,
+        handler_class=logging.StreamHandler,
+        handler_kwargs=None,
+        msg_format="%(asctime)s.%(msecs).03d %(filename)-17s %(levelname)-6s %(message)s",
+        date_format="%H:%M:%S",
+    ):
         """
         Set personal logger for this library.
         :param logger_name: str, name of the logger
@@ -95,7 +98,7 @@ class Configuration:
         """Load bot configuration from .yaml file"""
         if not self.configuration:
             # configuration not supplied, look for conf.yaml in cwd
-            path = Path.cwd() / 'conf.yaml'
+            path = Path.cwd() / "conf.yaml"
             if path.is_file():
                 self.configuration = path
             else:
@@ -107,16 +110,20 @@ class Configuration:
             if hasattr(self, key):
                 setattr(self, key, value)
         # check if required items are present
-        for item in self.REQUIRED_ITEMS['conf']:
+        for item in self.REQUIRED_ITEMS["conf"]:
             if item not in file:
                 self.logger.error(f"Item {item!r} is required in configuration!")
                 sys.exit(1)
         # if user hasn't specified clone_url, use default
-        if 'clone_url' not in file:
-            self.clone_url = (f'https://github.com/{self.repository_owner}'
-                              f'/{self.repository_name}.git')
+        if "clone_url" not in file:
+            self.clone_url = (
+                f"https://github.com/{self.repository_owner}"
+                f"/{self.repository_name}.git"
+            )
         self.project = self.get_project()
-        self.logger.debug(f"Loaded configuration for {self.repository_owner}/{self.repository_name}")
+        self.logger.debug(
+            f"Loaded configuration for {self.repository_owner}/{self.repository_name}"
+        )
 
     def load_release_conf(self, conf):
         """
@@ -126,31 +133,35 @@ class Configuration:
         :return dict with configuration
         """
         if not conf:
-            self.logger.error("No release-conf.yaml found in "
-                              f"{self.repository_owner}/{self.repository_name} repository root!\n"
-                              "You have to add one for releasing to PyPi")
-            if self.REQUIRED_ITEMS['release-conf']:
+            self.logger.error(
+                "No release-conf.yaml found in "
+                f"{self.repository_owner}/{self.repository_name} repository root!\n"
+                "You have to add one for releasing to PyPi"
+            )
+            if self.REQUIRED_ITEMS["release-conf"]:
                 sys.exit(1)
 
         parsed_conf = yaml.safe_load(conf) or {}
         # Set defaults for options not specified in release-conf.yaml
-        parsed_conf.setdefault('pypi', True)
-        parsed_conf.setdefault('trigger_on_issue', True)
+        parsed_conf.setdefault("pypi", True)
+        parsed_conf.setdefault("trigger_on_issue", True)
 
         parsed_conf = {k: v for (k, v) in parsed_conf.items() if v}
-        for item in self.REQUIRED_ITEMS['release-conf']:
+        for item in self.REQUIRED_ITEMS["release-conf"]:
             if item not in parsed_conf:
                 self.logger.error(f"Item {item!r} is required in release-conf!")
                 sys.exit(1)
-        for index, label in enumerate(parsed_conf.get('labels', [])):
-            parsed_conf['labels'][index] = str(label)
+        for index, label in enumerate(parsed_conf.get("labels", [])):
+            parsed_conf["labels"][index] = str(label)
 
-        if parsed_conf.get('trigger_on_issue'):
+        if parsed_conf.get("trigger_on_issue"):
             if not self.github_username and not self.pagure_username:
-                msg = ("Can't trigger on issue if "
-                       "'github_username/pagure_username' is not known, disabling")
+                msg = (
+                    "Can't trigger on issue if "
+                    "'github_username/pagure_username' is not known, disabling"
+                )
                 self.logger.warning(msg)
-                parsed_conf['trigger_on_issue'] = False
+                parsed_conf["trigger_on_issue"] = False
 
         self.logger.debug(f"Config: {parsed_conf}")
         return parsed_conf
@@ -162,9 +173,10 @@ class Configuration:
         :param parsed_conf: parsed release-conf.yaml content, load_release_conf() result
         :param setup_cfg: setup.cfg content
         """
-        if parsed_conf.get('pypi'):
-            self.pypi_project = parsed_conf.get('pypi_project') or \
-                                self.get_pypi_project_from_setup_cfg(setup_cfg)
+        if parsed_conf.get("pypi"):
+            self.pypi_project = parsed_conf.get(
+                "pypi_project"
+            ) or self.get_pypi_project_from_setup_cfg(setup_cfg)
             if self.pypi_project is None:
                 msg = "pypi_project is not set, falling back to repository_name"
                 self.logger.warning(msg)
@@ -208,18 +220,27 @@ class Configuration:
                     self.github_app_installation_id
                 )
 
-            return get_project(url=self.clone_url,
-                               custom_instances=[
-                                   GithubService(token=None,
-                                                 github_app_id=self.github_app_id,
-                                                 github_app_private_key=github_cert)])
+            return get_project(
+                url=self.clone_url,
+                custom_instances=[
+                    GithubService(
+                        token=None,
+                        github_app_id=self.github_app_id,
+                        github_app_private_key=github_cert,
+                    )
+                ],
+            )
 
         # Return instance for regular user (local machine)
-        return get_project(url=self.clone_url,
-                           custom_instances=[
-                               GithubService(token=self.github_token),
-                               PagureService(token=self.pagure_token,
-                                             instance_url=self.pagure_instance_url)])
+        return get_project(
+            url=self.clone_url,
+            custom_instances=[
+                GithubService(token=self.github_token),
+                PagureService(
+                    token=self.pagure_token, instance_url=self.pagure_instance_url
+                ),
+            ],
+        )
 
 
 configuration = Configuration()

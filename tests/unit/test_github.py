@@ -13,23 +13,23 @@ from release_bot.github import Github
 
 def test_latest_release():
     r1 = GithubRelease(
-                tag_name='',
-                url='',
-                created_at='',
-                tarball_url='',
-                git_tag=GitTag(name='0.0.1', commit_sha='123'),
-                project=flexmock(GitProject),
-                raw_release=flexmock(title='0.0.1')
-                )
+        tag_name="",
+        url="",
+        created_at="",
+        tarball_url="",
+        git_tag=GitTag(name="0.0.1", commit_sha="123"),
+        project=flexmock(GitProject),
+        raw_release=flexmock(title="0.0.1"),
+    )
 
     r2 = GithubRelease(
-        tag_name='',
-        url='',
-        created_at='',
-        tarball_url='',
-        git_tag=GitTag(name='0.0.2', commit_sha='123'),
+        tag_name="",
+        url="",
+        created_at="",
+        tarball_url="",
+        git_tag=GitTag(name="0.0.2", commit_sha="123"),
         project=flexmock(GitProject),
-        raw_release=flexmock(title='0.0.2')
+        raw_release=flexmock(title="0.0.2"),
     )
 
     mocked_releases = [r1, r2]

@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:30
+FROM fedora:33
 
 ENV LANG=en_US.UTF-8
 # nicer output from the playbook run

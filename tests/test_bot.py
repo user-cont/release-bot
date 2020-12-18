@@ -32,13 +32,15 @@ from .github_utils import RELEASE_CONF, GithubUtils
 DEFAULT_REFRESH_INTERVAL = 1
 
 
-@pytest.mark.skipif(not os.environ.get('GITHUB_TOKEN'),
-                    reason="missing GITHUB_TOKEN environment variable")
+@pytest.mark.skipif(
+    not os.environ.get("GITHUB_TOKEN"),
+    reason="missing GITHUB_TOKEN environment variable",
+)
 class TestBot:
     """ Tests parts of bot workflow"""
 
     def setup_method(self):
-        """ setup any state tied to the execution of the given method in a
+        """setup any state tied to the execution of the given method in a
         class.  setup_method is invoked for every test method of a class.
         """
         configuration = prepare_conf()
@@ -53,14 +55,16 @@ class TestBot:
         configuration.repository_name = self.g_utils.repo
         configuration.repository_owner = self.github_user
         configuration.github_username = self.github_user
-        configuration.clone_url = f'https://github.com/{self.github_user}/{self.g_utils.repo}.git'
+        configuration.clone_url = (
+            f"https://github.com/{self.github_user}/{self.g_utils.repo}.git"
+        )
         configuration.refresh_interval = DEFAULT_REFRESH_INTERVAL
         configuration.project = configuration.get_project()
 
         self.release_bot = ReleaseBot(configuration)
 
     def teardown_method(self):
-        """ teardown any state that was previously setup with a setup_method
+        """teardown any state that was previously setup with a setup_method
         call.
         """
         if self.g_utils.repo:
@@ -68,7 +72,9 @@ class TestBot:
                 self.g_utils.delete_repo()
             except Exception as ex:
                 # no need to fail the test, just warn
-                warnings.warn(f"Could not delete repository {self.g_utils.repo}: {ex!r}")
+                warnings.warn(
+                    f"Could not delete repository {self.g_utils.repo}: {ex!r}"
+                )
 
     @pytest.fixture()
     def open_issue(self):
@@ -85,12 +91,12 @@ class TestBot:
         """Opens two release issues in a repository"""
         conf = yaml.safe_load(RELEASE_CONF) or {}
         self.release_bot.new_release.update(
-            changelog=conf.get('changelog'),
-            author_name=conf.get('author_name'),
-            author_email=conf.get('author_email'),
-            pypi=conf.get('pypi'),
-            trigger_on_issue=conf.get('trigger_on_issue'),
-            labels=conf.get('labels')
+            changelog=conf.get("changelog"),
+            author_name=conf.get("author_name"),
+            author_email=conf.get("author_email"),
+            pypi=conf.get("pypi"),
+            trigger_on_issue=conf.get("trigger_on_issue"),
+            labels=conf.get("labels"),
         )
         self.g_utils.open_issue("0.0.1 release")
         self.release_bot.find_open_release_issues()
@@ -127,8 +133,8 @@ class TestBot:
         """Tests loading release configuration from repository"""
         self.release_bot.load_release_conf()
         conf = yaml.safe_load(RELEASE_CONF) or {}
-        if conf.get('pypi') is None:
-            conf['pypi'] = True
+        if conf.get("pypi") is None:
+            conf["pypi"] = True
         for key, value in conf.items():
             assert getattr(self.release_bot.new_release, key) == value
 
@@ -148,7 +154,7 @@ class TestBot:
     def test_find_open_rls_issue(self, open_issue):
         """Tests if bot can find opened release issue"""
         assert self.release_bot.find_open_release_issues()
-        assert self.release_bot.new_pr.version == '0.0.1'
+        assert self.release_bot.new_pr.version == "0.0.1"
         assert self.release_bot.new_pr.issue_number == open_issue
 
     def test_find_open_rls_issue_none(self):
@@ -185,8 +191,14 @@ class TestBot:
         self.release_bot.conf.dry_run = False
         assert self.release_bot.make_new_pypi_release()
         path = Path(self.release_bot.git.repo_path)
-        assert list(path.glob(f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1-py3*.whl'))
-        assert (path / f'dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz').is_file()
+        assert list(
+            path.glob(
+                f"dist/release_bot_test_{self.g_utils.random_string}-0.0.1-py3*.whl"
+            )
+        )
+        assert (
+            path / f"dist/release_bot_test_{self.g_utils.random_string}-0.0.1.tar.gz"
+        ).is_file()
         self.release_bot.new_release.pypi = False
         assert not self.release_bot.make_new_pypi_release()
 
@@ -195,8 +207,10 @@ class TestBot:
         """Test that the bot runs only once and exits."""
         flexmock(self.release_bot.conf, refresh_interval=None)
         flexmock(self.release_bot.github, comment=["foo", "bar"])
-        (flexmock(self.release_bot.project)  # make sure it walks through the loop
-         .should_receive('pr_comment')
-         .once()
-         .and_return(PRComment("Fake comment", "FakeAuthor")))
+        (
+            flexmock(self.release_bot.project)  # make sure it walks through the loop
+            .should_receive("pr_comment")
+            .once()
+            .and_return(PRComment(body="Fake comment", author="FakeAuthor"))
+        )
         self.release_bot.run()

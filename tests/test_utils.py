@@ -13,35 +13,33 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests utility functions"""
-from pathlib import Path
 
 from semantic_version import Version
 
-from release_bot.utils import (process_version_from_title,
-                               look_for_version_files)
+from release_bot.utils import process_version_from_title, look_for_version_files
 
 
 def test_process_version_from_title():
     """Test converting title into version as per SemVer versioning"""
     latest_version = Version("0.0.1")
 
-    title = '3.7.8 release'
+    title = "3.7.8 release"
     match, version = process_version_from_title(title, latest_version)
     assert version == "3.7.8"
     assert match is True
-    title = 'new major release'
+    title = "new major release"
     match, version = process_version_from_title(title, latest_version)
     assert version == "1.0.0"
     assert match is True
-    title = 'new minor release'
+    title = "new minor release"
     match, version = process_version_from_title(title, latest_version)
     assert version == "0.1.0"
     assert match is True
-    title = 'new patch release'
+    title = "new patch release"
     match, version = process_version_from_title(title, latest_version)
     assert version == "0.0.2"
     assert match is True
-    title = 'random release'
+    title = "random release"
     match, version = process_version_from_title(title, latest_version)
     assert version == ""
     assert match is False
@@ -64,5 +62,9 @@ def test_look_for_version_files(tmpdir):
 
     assert look_for_version_files(str(fake_dir), "1.2.3") == ["setup.py"]
 
-    assert set(look_for_version_files(str(fake_dir), "1.2.4")) == \
-        {"setup.py", "__about__.py", "__init__.py", "version.py"}
+    assert set(look_for_version_files(str(fake_dir), "1.2.4")) == {
+        "setup.py",
+        "__about__.py",
+        "__init__.py",
+        "version.py",
+    }

@@ -19,7 +19,6 @@ from release_bot.utils import parse_changelog
 
 
 class TestChangelog:
-
     @pytest.fixture
     def empty_changelog(self):
         return ""
@@ -30,13 +29,14 @@ class TestChangelog:
 
     @pytest.fixture
     def changelog_with_two_entries(self):
-        return ("# 0.0.2\n* New entry\n* Fixes\n"
-                "# 0.0.1\n* Test entry\n* Another test entry\n")
+        return (
+            "# 0.0.2\n* New entry\n* Fixes\n"
+            "# 0.0.1\n* Test entry\n* Another test entry\n"
+        )
 
     @pytest.fixture
     def changelog_with_no_changes(self):
-        return ("# 0.0.2\n"
-                "# 0.0.1\n* Test entry\n* Another test entry\n")
+        return "# 0.0.2\n" "# 0.0.1\n* Test entry\n* Another test entry\n"
 
     def test_no_changelog(self):
         changelog = parse_changelog("2.0.0", "nochangelogpath")

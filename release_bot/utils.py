@@ -20,14 +20,14 @@ import os
 import re
 import shlex
 import subprocess
-
 from enum import IntEnum
-from semantic_version import validate
+
 from ogr import GithubService, PagureService
+from semantic_version import validate
 
 from release_bot.exceptions import ReleaseException
 
-logger = logging.getLogger('release-bot')
+logger = logging.getLogger("release-bot")
 
 
 class GitService(IntEnum):
@@ -71,8 +71,8 @@ def set_git_credentials(repo_path, name, email):
     :param email: committer email
     :return: True on success False on fail
     """
-    email = run_command(repo_path, f'git config user.email "{email}"', '', fail=False)
-    name = run_command(repo_path, f'git config user.name "{name}"', '', fail=False)
+    email = run_command(repo_path, f'git config user.email "{email}"', "", fail=False)
+    name = run_command(repo_path, f'git config user.name "{name}"', "", fail=False)
     return email and name
 
 
@@ -86,8 +86,8 @@ def process_version_from_title(title, latest_version):
     :return version: version string for requested latest release
     """
     match = False
-    version = ''
-    re_match = re.match(r'(.+) release$', title)
+    version = ""
+    re_match = re.match(r"(.+) release$", title)
     if re_match:
         keyword = re_match[1].strip()
         if validate(keyword):
@@ -120,7 +120,7 @@ def parse_changelog(version, changelog_content):
     try:
         first_chunk = chunks[0]
     except IndexError:
-        logger.info("changelog is probably in incorrect format: new releases are not separated by \\n# 1.2.3")
+        logger.info("changelog: new releases are not separated by \\n# 1.2.3")
     else:
         if first_chunk.startswith(f"# {version}"):
             return first_chunk
@@ -139,8 +139,10 @@ def update_spec(spec_path, new_release):
 
     # make changelog and get version
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
-    changelog = (f"* {datetime.datetime.now():%a %b %d %Y} {new_release.author_name!s} "
-                 f"<{new_release.author_email!s}> {new_release.version}-1\n")
+    changelog = (
+        f"* {datetime.datetime.now():%a %b %d %Y} {new_release.author_name!s} "
+        f"<{new_release.author_email!s}> {new_release.version}-1\n"
+    )
     # add entries
     if new_release.changelog:
         for item in new_release.changelog:
@@ -148,14 +150,16 @@ def update_spec(spec_path, new_release):
     else:
         changelog += f"- {new_release.version} release\n"
     # change the version and add changelog in spec file
-    with open(spec_path, 'r+') as spec_file:
+    with open(spec_path, "r+") as spec_file:
         spec = spec_file.read()
         # replace version
-        spec = re.sub(r'(Version:\s*)([0-9]|[.])*', r'\g<1>' + new_release.version, spec)
+        spec = re.sub(
+            r"(Version:\s*)([0-9]|[.])*", r"\g<1>" + new_release.version, spec
+        )
         # make release 1
-        spec = re.sub(r'(Release:\s*)([0-9]*)(.*)', r'\g<1>1\g<3>', spec)
+        spec = re.sub(r"(Release:\s*)([0-9]*)(.*)", r"\g<1>1\g<3>", spec)
         # insert changelog
-        spec = re.sub(r'(%changelog\n)', r'\g<1>' + changelog + '\n', spec)
+        spec = re.sub(r"(%changelog\n)", r"\g<1>" + changelog + "\n", spec)
         # write and close
         spec_file.seek(0)
         spec_file.write(spec)
@@ -180,7 +184,8 @@ def run_command(work_directory, cmd, error_message, fail=True):
         stderr=subprocess.PIPE,
         shell=False,
         cwd=work_directory,
-        universal_newlines=True)
+        universal_newlines=True,
+    )
 
     logger.debug(f"{shell.args}\n{shell.stdout}")
     if shell.returncode != 0:
@@ -205,7 +210,8 @@ def run_command_get_output(work_directory, cmd):
         stderr=subprocess.PIPE,
         shell=False,
         cwd=work_directory,
-        universal_newlines=True)
+        universal_newlines=True,
+    )
     success = shell.returncode == 0
     if not success:
         return success, shell.stderr
@@ -222,7 +228,7 @@ def insert_in_changelog(changelog, version, log):
     """
     content = f"# {version}\n\n{log}\n"
     try:
-        with open(changelog, 'r+') as file:
+        with open(changelog, "r+") as file:
             original = file.read()
             file.seek(0)
             file.write(content + original)
@@ -244,22 +250,24 @@ def look_for_version_files(repo_directory, new_version):
     for root, _, files in os.walk(repo_directory):
         for file in files:
             if file in (
-                    'setup.py',
-                    'setup.cfg',
-                    '__about__.py',
-                    '__init__.py',
-                    'version.py'
+                "setup.py",
+                "setup.cfg",
+                "__about__.py",
+                "__init__.py",
+                "version.py",
             ):
                 filename = os.path.join(root, file)
-                if file in ('setup.py', 'setup.cfg'):
-                    success = update_version(filename, new_version, ("__version__", "version"))
+                if file in ("setup.py", "setup.cfg"):
+                    success = update_version(
+                        filename, new_version, ("__version__", "version")
+                    )
                 else:
                     success = update_version(filename, new_version, ("__version__"))
 
                 if success:
-                    changed.append(filename.replace(repo_directory + '/', '', 1))
+                    changed.append(filename.replace(repo_directory + "/", "", 1))
     if not changed:
-        logger.error('No version files found. Aborting version update.')
+        logger.error("No version files found. Aborting version update.")
 
     return changed
 
@@ -272,14 +280,14 @@ def update_version(file, new_version, prefix):
     :param prefix: the prefix (or a tuple of prefixes) a variable has to start with to be updated
     :return: True if file was changed, else False
     """
-    with open(file, 'r') as input_file:
+    with open(file, "r") as input_file:
         content = input_file.read().splitlines()
         content_original = content.copy()
 
     changed = False
     for index, line in enumerate(content):
         if line.startswith(prefix):
-            pieces = line.split('=', maxsplit=1)
+            pieces = line.split("=", maxsplit=1)
             if len(pieces) == 2:
                 logger.info(f"Editing line with new version:\n{line}")
                 old_version = (pieces[1].strip())[1:-1]  # strip whitespace and ' or "
@@ -289,10 +297,10 @@ def update_version(file, new_version, prefix):
                     changed = True if content != content_original else False
                     break
                 else:
-                    logger.warning(f"Failed to validate version, aborting")
+                    logger.warning("Failed to validate version, aborting")
                     return False
     if changed:
-        with open(file, 'w') as output:
-            output.write('\n'.join(content) + '\n')
-        logger.info('Version replaced.')
+        with open(file, "w") as output:
+            output.write("\n".join(content) + "\n")
+        logger.info("Version replaced.")
     return changed

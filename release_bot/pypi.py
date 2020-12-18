@@ -39,9 +39,9 @@ class PyPi:
         """Get latest version of the package from PyPi or 0.0.0"""
         response = requests.get(url=f"{self.PYPI_URL}{self.conf.pypi_project}/json")
         if response.status_code == 200:
-            return response.json()['info']['version']
+            return response.json()["info"]["version"]
         elif response.status_code == 404:
-            return '0.0.0'
+            return "0.0.0"
         else:
             msg = f"Error getting latest version from PyPi:\n{response.text}"
             raise ReleaseException(msg)
@@ -53,7 +53,7 @@ class PyPi:
 
         :param project_root: location of setup.py
         """
-        if os.path.isfile(os.path.join(project_root, 'setup.py')):
+        if os.path.isfile(os.path.join(project_root, "setup.py")):
             run_command(project_root, "python3 setup.py sdist", "Cannot build sdist:")
         else:
             raise ReleaseException("Cannot find setup.py:")
@@ -65,7 +65,7 @@ class PyPi:
 
         :param project_root: location of setup.py
         """
-        if not os.path.isfile(os.path.join(project_root, 'setup.py')):
+        if not os.path.isfile(os.path.join(project_root, "setup.py")):
             raise ReleaseException("Cannot find setup.py:")
 
         run_command(project_root, "python3 setup.py bdist_wheel", "Cannot build wheel:")
@@ -76,14 +76,17 @@ class PyPi:
 
         :param project_root: directory with dist/ folder
         """
-        if os.path.isdir(os.path.join(project_root, 'dist')):
+        if os.path.isdir(os.path.join(project_root, "dist")):
             spec_files = glob(os.path.join(project_root, "dist/*"))
             files = ""
             for file in spec_files:
                 files += f"{file} "
             self.logger.debug(f"Uploading {files} to PyPi")
-            run_command(project_root, f"twine upload {files}",
-                        "Cannot upload python distribution:")
+            run_command(
+                project_root,
+                f"twine upload {files}",
+                "Cannot upload python distribution:",
+            )
         else:
             raise ReleaseException("dist/ folder cannot be found:")
 
