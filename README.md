@@ -4,6 +4,8 @@
 
 Automate releases on Github and PyPi.
 
+This repository is no longer maintained, for replacement see [PyPI publish GitHub Action](https://github.com/pypa/gh-action-pypi-publish) and [Packit](https://packit.dev)
+
 ## Description
 
 This is a bot that helps maintainers deliver their software to users. It is meant to watch github repositories for
